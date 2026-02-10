@@ -2865,6 +2865,7 @@ console.log('✅ Dynamic Team Performance module loaded');
 let fleetData = null; // { targets: [], actuals: [], months: [] }
 let fleetChartInstances = {};
 let fleetSaleTrackingData = []; // Raw rows from sale-tracking tab
+let fleetSaleTrackingRaw = []; // Raw 2D array from sale-tracking tab (header:false)
 
 // Extract spreadsheet ID and GID from URL
 function parseSheetUrl(url) {
@@ -2939,12 +2940,15 @@ function fetchFleetData() {
                 // Parse sale-tracking if available
                 if (saleTrackingCSV) {
                     Papa.parse(saleTrackingCSV, {
-                        header: true,
+                        header: false,
                         skipEmptyLines: true,
-                        transformHeader: function(h) { return h.trim(); },
                         complete: function(stResults) {
                             console.log('Sale-tracking parsed rows:', stResults.data.length);
-                            fleetSaleTrackingData = stResults.data;
+                            if (stResults.data.length > 0) {
+                                console.log('Sale-tracking ROW 0 (headers):', stResults.data[0]);
+                                if (stResults.data.length > 1) console.log('Sale-tracking ROW 1 (first data):', stResults.data[1]);
+                            }
+                            fleetSaleTrackingRaw = stResults.data;
                             processFleetSheetData(summaryResults.data);
                         },
                         error: function() {
@@ -3418,18 +3422,73 @@ function buildFleetHighlights(currentMonthIdx, currentMonthName, currentActual, 
 
 // Analyze sale-tracking data for a given month
 function analyzeSaleTracking(monthName) {
-    var result = { currentLeads: 0, prevLeads: 0, closedCases: 0 };
+    var result = { currentLeads: 0, prevLeads: 0, closedCases: 0, prevClosedCases: 0 };
     
-    if (!fleetSaleTrackingData || fleetSaleTrackingData.length === 0) return result;
+    if (!fleetSaleTrackingRaw || fleetSaleTrackingRaw.length < 2) {
+        console.warn('No sale-tracking raw data available. Rows:', fleetSaleTrackingRaw ? fleetSaleTrackingRaw.length : 0);
+        return result;
+    }
     
     console.log('=== ANALYZING SALE TRACKING for month:', monthName, '===');
+    console.log('Total sale-tracking rows:', fleetSaleTrackingRaw.length);
     
-    // Find the column that contains check-premium month (เดือนเช็คเบี้ย)
-    // From the sheet: column headers include เดือนเช็คเบี้ย and สรุปสถานะกรมธรรม์
-    var headers = Object.keys(fleetSaleTrackingData[0] || {});
-    console.log('Sale-tracking headers:', headers);
+    // Step 1: Find header row and detect column indices
+    var headerRow = fleetSaleTrackingRaw[0];
+    console.log('Header row (' + headerRow.length + ' cols):', headerRow.slice(0, 10), '...');
     
-    // Match month format: "2026-Jan" -> need to convert from "January, 2026" to "2026-Jan"
+    var premiumMonthColIdx = -1;  // เดือนเช็คเบี้ย
+    var statusColIdx = -1;         // สรุปสถานะกรมธรรม์
+    var jobMonthColIdx = -1;       // เดือนแจ้งงาน
+    
+    for (var c = 0; c < headerRow.length; c++) {
+        var h = String(headerRow[c] || '').trim();
+        
+        // เดือนเช็คเบี้ย = premium check month (NOT the week column)
+        if (h.indexOf('เดือนเช็คเบี้ย') !== -1 && h.indexOf('week') === -1 && h.indexOf('Week') === -1) {
+            premiumMonthColIdx = c;
+            console.log('Found เดือนเช็คเบี้ย at col index', c, ':', h);
+        }
+        
+        // สรุปสถานะกรมธรรม์ = policy status summary
+        if (h.indexOf('สรุปสถานะกรมธรรม์') !== -1 || h.indexOf('สรุปสถานะ') !== -1) {
+            statusColIdx = c;
+            console.log('Found สรุปสถานะ at col index', c, ':', h);
+        }
+        
+        // เดือนแจ้งงาน (backup - job report month, not ครั้งแรก or ล่าสุด)
+        if (h.indexOf('เดือนแจ้งงาน') !== -1 && h.indexOf('ครั้งแรก') === -1 && h.indexOf('ล่าสุด') === -1) {
+            jobMonthColIdx = c;
+            console.log('Found เดือนแจ้งงาน at col index', c, ':', h);
+        }
+    }
+    
+    // If no premium month column found by header, try value-scanning
+    var monthColIdx = premiumMonthColIdx >= 0 ? premiumMonthColIdx : jobMonthColIdx;
+    
+    if (monthColIdx < 0) {
+        console.log('Column detection failed by name, trying value scan...');
+        for (var sc = 0; sc < headerRow.length; sc++) {
+            for (var sr = 1; sr < Math.min(fleetSaleTrackingRaw.length, 10); sr++) {
+                var cellVal = String((fleetSaleTrackingRaw[sr] || [])[sc] || '').trim();
+                if (cellVal.match(/^\d{4}-(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)$/)) {
+                    if (monthColIdx < 0) monthColIdx = sc;
+                    console.log('Found month-like value at col', sc, 'row', sr, ':', cellVal);
+                    break;
+                }
+            }
+            if (monthColIdx >= 0) break;
+        }
+        console.log('Value scan result - month col:', monthColIdx);
+    }
+    
+    if (monthColIdx < 0) {
+        console.warn('Could not find any month column in sale-tracking data');
+        console.log('All headers:', headerRow);
+        return result;
+    }
+    
+    // Step 2: Convert monthName to sheet format
+    // monthName = "January, 2026" -> Sheet format = "2026-Jan"
     var monthMap2 = { 'January': 'Jan', 'February': 'Feb', 'March': 'Mar', 'April': 'Apr',
                      'May': 'May', 'June': 'Jun', 'July': 'Jul', 'August': 'Aug',
                      'September': 'Sep', 'October': 'Oct', 'November': 'Nov', 'December': 'Dec' };
@@ -3437,12 +3496,12 @@ function analyzeSaleTracking(monthName) {
     var parts = monthName ? monthName.split(',') : [];
     var monthAbbr = parts[0] ? monthMap2[parts[0].trim()] : '';
     var year = parts[1] ? parts[1].trim() : '';
-    var targetMonthStr = year + '-' + monthAbbr; // e.g., "2026-Jan"
+    var targetMonthStr = year + '-' + monthAbbr; // e.g., "2026-Feb"
     
-    // Also compute previous month
+    // Previous month
+    var monthAbbrArr = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     var monthNamesFull = ['January', 'February', 'March', 'April', 'May', 'June',
                          'July', 'August', 'September', 'October', 'November', 'December'];
-    var monthAbbrArr = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     var curMonIdx = monthNamesFull.indexOf(parts[0] ? parts[0].trim() : '');
     var prevMonthStr = '';
     if (curMonIdx >= 0) {
@@ -3453,44 +3512,23 @@ function analyzeSaleTracking(monthName) {
         }
     }
     
-    console.log('Target month string:', targetMonthStr, 'Prev month string:', prevMonthStr);
+    console.log('Looking for month:', targetMonthStr, '| Prev:', prevMonthStr);
+    console.log('Using month col idx:', monthColIdx, '| Status col idx:', statusColIdx);
     
-    // Find the right column names (they may have different names due to sheet structure)
-    var premiumMonthCol = '';
-    var statusCol = '';
-    
-    headers.forEach(function(h) {
-        var hLower = h.toLowerCase().trim();
-        // เดือนเช็คเบี้ย = premium check month
-        if (h.indexOf('เดือนเช็คเบี้ย') !== -1 && h.indexOf('week') === -1) {
-            premiumMonthCol = h;
-        }
-        // สรุปสถานะกรมธรรม์ = policy status summary  
-        if (h.indexOf('สรุปสถานะกรมธรรม์') !== -1 || h.indexOf('สรุปสถานะ') !== -1) {
-            statusCol = h;
-        }
-    });
-    
-    console.log('Premium month col:', premiumMonthCol, 'Status col:', statusCol);
-    
-    if (!premiumMonthCol) {
-        // Try alternative: use เดือนแจ้งงาน or another month column
-        headers.forEach(function(h) {
-            if (!premiumMonthCol && h.indexOf('เดือนแจ้งงาน') !== -1 && h.indexOf('ครั้งแรก') === -1 && h.indexOf('ล่าสุด') === -1) {
-                premiumMonthCol = h;
-            }
-        });
+    // Log sample values for debugging
+    for (var dbg = 1; dbg < Math.min(fleetSaleTrackingRaw.length, 5); dbg++) {
+        var dbgRow = fleetSaleTrackingRaw[dbg] || [];
+        console.log('Row', dbg, '- month col:', String(dbgRow[monthColIdx] || '').trim(),
+                    '| status col:', statusColIdx >= 0 ? String(dbgRow[statusColIdx] || '').trim() : 'N/A');
     }
     
-    if (!premiumMonthCol) {
-        console.warn('Could not find premium month column');
-        return result;
-    }
-    
-    // Count leads and closed cases
-    fleetSaleTrackingData.forEach(function(row) {
-        var rowMonth = String(row[premiumMonthCol] || '').trim();
-        var rowStatus = String(row[statusCol] || '').trim();
+    // Step 3: Count leads and conversions
+    for (var i = 1; i < fleetSaleTrackingRaw.length; i++) {
+        var row = fleetSaleTrackingRaw[i];
+        if (!row) continue;
+        
+        var rowMonth = String(row[monthColIdx] || '').trim();
+        var rowStatus = statusColIdx >= 0 ? String(row[statusColIdx] || '').trim() : '';
         
         if (rowMonth === targetMonthStr) {
             result.currentLeads++;
@@ -3501,10 +3539,16 @@ function analyzeSaleTracking(monthName) {
         
         if (prevMonthStr && rowMonth === prevMonthStr) {
             result.prevLeads++;
+            if (rowStatus === 'Complete' || rowStatus.indexOf('Complete') !== -1) {
+                result.prevClosedCases++;
+            }
         }
-    });
+    }
     
-    console.log('Sale tracking results:', result);
+    console.log('=== SALE TRACKING RESULTS ===');
+    console.log('Current month (' + targetMonthStr + '): leads=' + result.currentLeads + ', closed=' + result.closedCases);
+    console.log('Previous month (' + prevMonthStr + '): leads=' + result.prevLeads + ', closed=' + result.prevClosedCases);
+    
     return result;
 }
 
