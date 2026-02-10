@@ -1,0 +1,198 @@
+goal_name,objective_name,kr_name,kr_topic_name,kr_title_name,kr_owner_name,ultimate_target_number,unit_name,monthly_baseline_month: Month,Sum of result_number
+G-1,Obj-0,KR-0,Growth,[Sustainable Growth] Drive long term sustainable GWP growth with optimized margins and agent segment productivity,,,GWP in monthly,"December, 2025",-0.00000012
+G-1,Obj-0,KR-0,Growth,[Sustainable Growth] Drive long term sustainable GWP growth with optimized margins and agent segment productivity,,,GWP in monthly,"January, 2026","303,064,781.66"
+G-1,Obj-0,KR-0,Growth,[Sustainable Growth] Drive long term sustainable GWP growth with optimized margins and agent segment productivity,,,GWP in monthly,"February, 2026","93,429,963.37"
+G-1,Obj-0,KR-0,Growth,[Sustainable Growth] Drive long term sustainable GWP growth with optimized margins and agent segment productivity,,,GWP in monthly,"August, 2026",600
+G-1,Obj-0,KR-0,Growth,[Sustainable Growth] Drive long term sustainable GWP growth with optimized margins and agent segment productivity,,,GWP in year-to-month,"December, 2025","646,862.21"
+G-1,Obj-0,KR-0,Growth,[Sustainable Growth] Drive long term sustainable GWP growth with optimized margins and agent segment productivity,,,GWP in year-to-month,"January, 2026","303,711,643.87"
+G-1,Obj-0,KR-0,Growth,[Sustainable Growth] Drive long term sustainable GWP growth with optimized margins and agent segment productivity,,,GWP in year-to-month,"February, 2026","397,141,607.24"
+G-1,Obj-0,KR-0,Growth,[Sustainable Growth] Drive long term sustainable GWP growth with optimized margins and agent segment productivity,,,GWP in year-to-month,"August, 2026","397,142,207.24"
+G-1,Obj-1,KR-1,Growth,"[Agency GWP Growth] Drive sustainable growth within Team Agent business by building foundation of agent's growth ecosystem and journey Agency GWP Target 3,400,000,000 THB",,,GWP in monthly,"December, 2025","239,402,890.88"
+G-1,Obj-1,KR-1,Growth,"[Agency GWP Growth] Drive sustainable growth within Team Agent business by building foundation of agent's growth ecosystem and journey Agency GWP Target 3,400,000,000 THB",,,GWP in monthly,"January, 2026","195,190,565.52"
+G-1,Obj-1,KR-1,Growth,"[Agency GWP Growth] Drive sustainable growth within Team Agent business by building foundation of agent's growth ecosystem and journey Agency GWP Target 3,400,000,000 THB",,,GWP in monthly,"February, 2026","63,060,555.26"
+G-1,Obj-1,KR-1,Growth,"[Agency GWP Growth] Drive sustainable growth within Team Agent business by building foundation of agent's growth ecosystem and journey Agency GWP Target 3,400,000,000 THB",,,GWP in monthly,"August, 2026",600
+G-1,Obj-1,KR-1,Growth,"[Agency GWP Growth] Drive sustainable growth within Team Agent business by building foundation of agent's growth ecosystem and journey Agency GWP Target 3,400,000,000 THB",,,GWP in year-to-month,"December, 2025","1,898,893,664.71"
+G-1,Obj-1,KR-1,Growth,"[Agency GWP Growth] Drive sustainable growth within Team Agent business by building foundation of agent's growth ecosystem and journey Agency GWP Target 3,400,000,000 THB",,,GWP in year-to-month,"January, 2026","2,094,084,230.24"
+G-1,Obj-1,KR-1,Growth,"[Agency GWP Growth] Drive sustainable growth within Team Agent business by building foundation of agent's growth ecosystem and journey Agency GWP Target 3,400,000,000 THB",,,GWP in year-to-month,"February, 2026","2,157,144,785.5"
+G-1,Obj-1,KR-1,Growth,"[Agency GWP Growth] Drive sustainable growth within Team Agent business by building foundation of agent's growth ecosystem and journey Agency GWP Target 3,400,000,000 THB",,,GWP in year-to-month,"August, 2026","2,157,145,385.5"
+G-1,Obj-1,KR-1.1,Growth,"[Focus Team] Support 11 top-tier team to deliver 1,400 million THB GWP",,,GWP in monthly,"December, 2025","156,013,662.93"
+G-1,Obj-1,KR-1.1,Growth,"[Focus Team] Support 11 top-tier team to deliver 1,400 million THB GWP",,,GWP in monthly,"January, 2026","129,459,540.97"
+G-1,Obj-1,KR-1.1,Growth,"[Focus Team] Support 11 top-tier team to deliver 1,400 million THB GWP",,,GWP in monthly,"February, 2026","42,782,608.98"
+G-1,Obj-1,KR-1.1,Growth,"[Focus Team] Support 11 top-tier team to deliver 1,400 million THB GWP",,,GWP in year-to-month,"December, 2025","1,972,240,830.06"
+G-1,Obj-1,KR-1.1,Growth,"[Focus Team] Support 11 top-tier team to deliver 1,400 million THB GWP",,,GWP in year-to-month,"January, 2026","2,101,700,371.03"
+G-1,Obj-1,KR-1.1,Growth,"[Focus Team] Support 11 top-tier team to deliver 1,400 million THB GWP",,,GWP in year-to-month,"February, 2026","2,144,482,980.01"
+G-1,Obj-1,KR-1.1.1,Growth,[Focus team grade] 90% of team achieved grade A,,,Percentage of Grade A in monthly,"December, 2025",0
+G-1,Obj-1,KR-1.1.1,Growth,[Focus team grade] 90% of team achieved grade A,,,Percentage of Grade A in monthly,"January, 2026",0.91
+G-1,Obj-1,KR-1.1.1,Growth,[Focus team grade] 90% of team achieved grade A,,,Percentage of Grade A in monthly,"February, 2026",0.018
+G-1,Obj-1,KR-1.1.1,Growth,[Focus team grade] 90% of team achieved grade A,,,Percentage of Grade A in yearly average,"December, 2025",0
+G-1,Obj-1,KR-1.1.1,Growth,[Focus team grade] 90% of team achieved grade A,,,Percentage of Grade A in yearly average,"January, 2026",0.036
+G-1,Obj-1,KR-1.1.1,Growth,[Focus team grade] 90% of team achieved grade A,,,Percentage of Grade A in yearly average,"February, 2026",0.036
+G-1,Obj-1,KR-1.2,Growth,[Mid-tier Team] Inbubate 3 mid-tier teams to deliver 80 million THB GWP,,,GWP in monthly,"December, 2025","8,373,286.1"
+G-1,Obj-1,KR-1.2,Growth,[Mid-tier Team] Inbubate 3 mid-tier teams to deliver 80 million THB GWP,,,GWP in monthly,"January, 2026","6,292,080.46"
+G-1,Obj-1,KR-1.2,Growth,[Mid-tier Team] Inbubate 3 mid-tier teams to deliver 80 million THB GWP,,,GWP in monthly,"February, 2026","1,944,759.67"
+G-1,Obj-1,KR-1.2,Growth,[Mid-tier Team] Inbubate 3 mid-tier teams to deliver 80 million THB GWP,,,GWP in year-to-month,"December, 2025","89,243,565.89"
+G-1,Obj-1,KR-1.2,Growth,[Mid-tier Team] Inbubate 3 mid-tier teams to deliver 80 million THB GWP,,,GWP in year-to-month,"January, 2026","95,535,646.36"
+G-1,Obj-1,KR-1.2,Growth,[Mid-tier Team] Inbubate 3 mid-tier teams to deliver 80 million THB GWP,,,GWP in year-to-month,"February, 2026","97,480,406.02"
+G-1,Obj-1,KR-1.2.1,Growth,[Existing 3 mid-tier team] Incubate 3 existing mid tier team's GWP to be next focus team to deliver 80 million GWP,,,GWP in monthly,"December, 2025","8,375,969.09"
+G-1,Obj-1,KR-1.2.1,Growth,[Existing 3 mid-tier team] Incubate 3 existing mid tier team's GWP to be next focus team to deliver 80 million GWP,,,GWP in monthly,"January, 2026","6,292,080.46"
+G-1,Obj-1,KR-1.2.1,Growth,[Existing 3 mid-tier team] Incubate 3 existing mid tier team's GWP to be next focus team to deliver 80 million GWP,,,GWP in monthly,"February, 2026","1,945,359.67"
+G-1,Obj-1,KR-1.2.1,Growth,[Existing 3 mid-tier team] Incubate 3 existing mid tier team's GWP to be next focus team to deliver 80 million GWP,,,GWP in year-to-month,"December, 2025","93,694,271.52"
+G-1,Obj-1,KR-1.2.1,Growth,[Existing 3 mid-tier team] Incubate 3 existing mid tier team's GWP to be next focus team to deliver 80 million GWP,,,GWP in year-to-month,"January, 2026","99,986,351.98"
+G-1,Obj-1,KR-1.2.1,Growth,[Existing 3 mid-tier team] Incubate 3 existing mid tier team's GWP to be next focus team to deliver 80 million GWP,,,GWP in year-to-month,"February, 2026","101,931,711.65"
+G-1,Obj-1,KR-1.3,Growth,[Cohort retention] Retain agent cohorts with broad-based growth initiatives 635 million THB,,,GWP in monthly,"December, 2025","341,754,863.16"
+G-1,Obj-1,KR-1.3,Growth,[Cohort retention] Retain agent cohorts with broad-based growth initiatives 635 million THB,,,GWP in monthly,"January, 2026","280,603,401.34"
+G-1,Obj-1,KR-1.3,Growth,[Cohort retention] Retain agent cohorts with broad-based growth initiatives 635 million THB,,,GWP in monthly,"February, 2026","83,971,406.94"
+G-1,Obj-1,KR-1.3,Growth,[Cohort retention] Retain agent cohorts with broad-based growth initiatives 635 million THB,,,GWP in year-to-month,"December, 2025","2,861,562,375.83"
+G-1,Obj-1,KR-1.3,Growth,[Cohort retention] Retain agent cohorts with broad-based growth initiatives 635 million THB,,,GWP in year-to-month,"January, 2026","3,142,165,777.17"
+G-1,Obj-1,KR-1.3,Growth,[Cohort retention] Retain agent cohorts with broad-based growth initiatives 635 million THB,,,GWP in year-to-month,"February, 2026","3,226,137,184.11"
+G-1,Obj-1,KR-1.3.1,Growth,"[Academy] Activate 8,760 new agents in 2026 with First transacting GWP 166.3 million THB",,,GWP in year-to-month,"December, 2025","106,101,897.32"
+G-1,Obj-1,KR-1.3.1,Growth,"[Academy] Activate 8,760 new agents in 2026 with First transacting GWP 166.3 million THB",,,GWP in year-to-month,"January, 2026","113,473,174.98"
+G-1,Obj-1,KR-1.3.1,Growth,"[Academy] Activate 8,760 new agents in 2026 with First transacting GWP 166.3 million THB",,,GWP in year-to-month,"February, 2026","115,349,000.8"
+G-1,Obj-1,KR-1.3.1,Growth,"[Activation] Activate 8,760 new agents in 2026 with First transacting GWP 166.3 million THB",,,Activate agent in monthly,"December, 2025",748
+G-1,Obj-1,KR-1.3.1,Growth,"[Activation] Activate 8,760 new agents in 2026 with First transacting GWP 166.3 million THB",,,Activate agent in monthly,"January, 2026",630
+G-1,Obj-1,KR-1.3.1,Growth,"[Activation] Activate 8,760 new agents in 2026 with First transacting GWP 166.3 million THB",,,Activate agent in monthly,"February, 2026",213
+G-1,Obj-1,KR-1.3.1,Growth,"[Activation] Activate 8,760 new agents in 2026 with First transacting GWP 166.3 million THB",,,Activate agent yearly average,"December, 2025","8,769"
+G-1,Obj-1,KR-1.3.1,Growth,"[Activation] Activate 8,760 new agents in 2026 with First transacting GWP 166.3 million THB",,,Activate agent yearly average,"January, 2026","9,399"
+G-1,Obj-1,KR-1.3.1,Growth,"[Activation] Activate 8,760 new agents in 2026 with First transacting GWP 166.3 million THB",,,Activate agent yearly average,"February, 2026","9,612"
+G-1,Obj-1,KR-1.3.1,Growth,"[Activation] Activate 8,760 new agents in 2026 with First transacting GWP 166.3 million THB",,,GWP in monthly,"December, 2025","10,260,084.19"
+G-1,Obj-1,KR-1.3.1,Growth,"[Activation] Activate 8,760 new agents in 2026 with First transacting GWP 166.3 million THB",,,GWP in monthly,"January, 2026","7,371,277.66"
+G-1,Obj-1,KR-1.3.1,Growth,"[Activation] Activate 8,760 new agents in 2026 with First transacting GWP 166.3 million THB",,,GWP in monthly,"February, 2026","1,875,825.82"
+G-1,Obj-1,KR-1.3.2,Growth,[Agent Productivity] Drive the high billing sales to ,,,GWP in year-to-month,"December, 2025","615,491,046.12"
+G-1,Obj-1,KR-1.3.2,Growth,[Agent Productivity] Drive the high billing sales to ,,,GWP in year-to-month,"January, 2026","682,754,290.18"
+G-1,Obj-1,KR-1.3.2,Growth,[Agent Productivity] Drive the high billing sales to ,,,GWP in year-to-month,"February, 2026","705,687,060.28"
+G-1,Obj-1,KR-1.4,Growth,[New Acquisition] Recruit new agents as a new pyramid to deliver 90 million THB GWP,,,GWP in year-to-month,"December, 2025","1,621,441,225.07"
+G-1,Obj-1,KR-1.4,Growth,[New Acquisition] Recruit new agents as a new pyramid to deliver 90 million THB GWP,,,GWP in year-to-month,"January, 2026","1,752,498,969.13"
+G-1,Obj-1,KR-1.4,Growth,[New Acquisition] Recruit new agents as a new pyramid to deliver 90 million THB GWP,,,GWP in year-to-month,"February, 2026","1,793,424,329.37"
+G-1,Obj-1,KR-1.4.1,Growth,[AE Hunter] Deliver 624 million THB GWP from first transacting and early retention agents,,,GWP in year-to-month,"December, 2025","36,492,077.3"
+G-1,Obj-1,KR-1.4.1,Growth,[AE Hunter] Deliver 624 million THB GWP from first transacting and early retention agents,,,GWP in year-to-month,"January, 2026","38,284,244.12"
+G-1,Obj-1,KR-1.4.1,Growth,[AE Hunter] Deliver 624 million THB GWP from first transacting and early retention agents,,,GWP in year-to-month,"February, 2026","38,539,754.05"
+G-1,Obj-1,KR-1.4.1,Growth,[AE New Agent Hunter] Deliver 33 million THB GWP,,,GWP in monthly,"December, 2025","4,398,301.09"
+G-1,Obj-1,KR-1.4.1,Growth,[AE New Agent Hunter] Deliver 33 million THB GWP,,,GWP in monthly,"January, 2026","1,792,166.82"
+G-1,Obj-1,KR-1.4.1,Growth,[AE New Agent Hunter] Deliver 33 million THB GWP,,,GWP in monthly,"February, 2026","255,509.93"
+G-1,Obj-1,KR-1.4.3,Growth,[Direct Sign-up Online] Deliver 15 million THB GWP,,,GWP in monthly,"December, 2025","200,582,482.96"
+G-1,Obj-1,KR-1.4.3,Growth,[Direct Sign-up Online] Deliver 15 million THB GWP,,,GWP in monthly,"January, 2026","165,147,712.02"
+G-1,Obj-1,KR-1.4.3,Growth,[Direct Sign-up Online] Deliver 15 million THB GWP,,,GWP in monthly,"February, 2026","53,250,198.04"
+G-1,Obj-1,KR-1.4.3,Growth,[Direct Sign-up Online] Deliver 15 million THB GWP,,,GWP in monthly,"August, 2026",600
+G-1,Obj-1,KR-1.5,Growth,[IG growth] BM to retain IG to deliver 999 million THB GWP,,,GWP in monthly,"December, 2025","132,255,159.54"
+G-1,Obj-1,KR-1.5,Growth,[IG growth] BM to retain IG to deliver 999 million THB GWP,,,GWP in monthly,"January, 2026","107,885,851.38"
+G-1,Obj-1,KR-1.5,Growth,[IG growth] BM to retain IG to deliver 999 million THB GWP,,,GWP in monthly,"February, 2026","30,369,408.11"
+G-1,Obj-1,KR-1.5,Growth,[IG growth] BM to retain IG to deliver 999 million THB GWP,,,GWP in year-to-month,"December, 2025","1,997,107,121.81"
+G-1,Obj-1,KR-1.5,Growth,[IG growth] BM to retain IG to deliver 999 million THB GWP,,,GWP in year-to-month,"January, 2026","2,104,992,973.19"
+G-1,Obj-1,KR-1.5,Growth,[IG growth] BM to retain IG to deliver 999 million THB GWP,,,GWP in year-to-month,"February, 2026","2,135,362,381.3"
+G-1,Obj-2,KR-2,Growth,"Corporate GWP Growth Grow the strong EB team to deliver 450,000,000 THB GWP",,,GWP in year-to-month,"December, 2025","187,191,996.03"
+G-1,Obj-2,KR-2,Growth,"[Corporate GWP Growth] Corporate GWP Growth Grow the strong EB team to deliver 450,000,000 THB GWP",,,GWP in monthly,"December, 2025","1,664,991.82"
+G-1,Obj-2,KR-2.1,Growth,[EB OPS] 70% of total GWP in 2025 generate from exsting clients & partnership distribution at total 120 million THB,,,GWP in monthly,"December, 2025","1,664,991.82"
+G-1,Obj-2,KR-2.1,Growth,[EB OPS] 70% of total GWP in 2025 generate from exsting clients & partnership distribution at total 120 million THB,,,GWP in year-to-month,"December, 2025",0
+G-1,Obj-2,KR-2.2,Growth,[Team A- Insurance background] Deliver 230 Million THB of New sale,,,GWP in monthly,"December, 2025","1,585,511"
+G-1,Obj-2,KR-2.2,Growth,[Team A- Insurance background] Deliver 230 Million THB of New sale,,,GWP in year-to-month,"December, 2025","103,113,209.27"
+G-1,Obj-2,KR-2.3,Growth,[Team B- HR solutions] Deliver 55 million THB of New sale,,,GWP in monthly,"December, 2025","-1,358.19"
+G-1,Obj-2,KR-2.3,Growth,[Team B- HR solutions] Deliver 55 million THB of New sale,,,GWP in year-to-month,"December, 2025","28,977,766.5"
+G-1,Obj-3,KR-3.1,Efficiency,[VMI Take Rate] Increase the blended VMI take rate (Commission + OV + Campaign) to be 25.7%,,25.7,Percentage in monthly,"December, 2025",0.24
+G-1,Obj-3,KR-3.1,Efficiency,[VMI Take Rate] Increase the blended VMI take rate (Commission + OV + Campaign) to be 25.7%,,25.7,Percentage in monthly,"January, 2026",0.24
+G-1,Obj-3,KR-3.1,Efficiency,[VMI Take Rate] Increase the blended VMI take rate (Commission + OV + Campaign) to be 25.7%,,25.7,Percentage in monthly,"February, 2026",0.24
+G-1,Obj-3,KR-3.1,Efficiency,[VMI Take Rate] Increase the blended VMI take rate (Commission + OV + Campaign) to be 25.7%,,25.7,Percentage in yearly average,"December, 2025",0.24
+G-1,Obj-3,KR-3.1,Efficiency,[VMI Take Rate] Increase the blended VMI take rate (Commission + OV + Campaign) to be 25.7%,,25.7,Percentage in yearly average,"January, 2026",0.24
+G-1,Obj-3,KR-3.1,Efficiency,[VMI Take Rate] Increase the blended VMI take rate (Commission + OV + Campaign) to be 25.7%,,25.7,Percentage in yearly average,"February, 2026",0.24
+G-2,Obj-4,KR-4.1,Efficiency,[Presale Productivity] VMI GWP (NSS + PSS) per presale operator from xx to yy while achieving effective service quality.,thitinart.l@fairdee.co.th,,Monthly THB/headcount,"December, 2025","764,681.5"
+G-2,Obj-4,KR-4.1,Efficiency,[Presale Productivity] VMI GWP (NSS + PSS) per presale operator from xx to yy while achieving effective service quality.,thitinart.l@fairdee.co.th,,Monthly THB/headcount,"January, 2026","619,200.52"
+G-2,Obj-4,KR-4.1,Efficiency,[Presale Productivity] VMI GWP (NSS + PSS) per presale operator from xx to yy while achieving effective service quality.,thitinart.l@fairdee.co.th,,Monthly THB/headcount,"February, 2026","254,424.06"
+G-2,Obj-4,KR-4.1.1,Efficiency,[Non Self-serve Conversion] Increase the monthly new sales conversion rate (quote shared by Admin -> to sale ratio) from xx% in 2025 to yy% in 2026,thitinart.l@fairdee.co.th,,% Monthly,"December, 2025",1.26
+G-2,Obj-4,KR-4.1.1,Efficiency,[Non Self-serve Conversion] Increase the monthly new sales conversion rate (quote shared by Admin -> to sale ratio) from xx% in 2025 to yy% in 2026,thitinart.l@fairdee.co.th,,% Monthly,"January, 2026",1.27
+G-2,Obj-4,KR-4.1.1,Efficiency,[Non Self-serve Conversion] Increase the monthly new sales conversion rate (quote shared by Admin -> to sale ratio) from xx% in 2025 to yy% in 2026,thitinart.l@fairdee.co.th,,% Monthly,"February, 2026",1.2
+G-2,Obj-4,KR-4.1.1,Efficiency,[Non Self-serve Conversion] Increase the monthly new sales conversion rate (quote shared by Admin -> to sale ratio) from xx% in 2025 to yy% in 2026,thitinart.l@fairdee.co.th,,% Yearly average,"December, 2025",1.71
+G-2,Obj-4,KR-4.1.1,Efficiency,[Non Self-serve Conversion] Increase the monthly new sales conversion rate (quote shared by Admin -> to sale ratio) from xx% in 2025 to yy% in 2026,thitinart.l@fairdee.co.th,,% Yearly average,"January, 2026",1.7
+G-2,Obj-4,KR-4.1.1,Efficiency,[Non Self-serve Conversion] Increase the monthly new sales conversion rate (quote shared by Admin -> to sale ratio) from xx% in 2025 to yy% in 2026,thitinart.l@fairdee.co.th,,% Yearly average,"February, 2026",1.69
+G-2,Obj-4,KR-4.2,Efficiency,[Postsale Productivity] Motor VMI NoP (SS + PSS + NSS) per postsale operator from xx to yy,thitinart.l@fairdee.co.th,,Monthly NoP/headcount,"December, 2025",25.93
+G-2,Obj-4,KR-4.2,Efficiency,[Postsale Productivity] Motor VMI NoP (SS + PSS + NSS) per postsale operator from xx to yy,thitinart.l@fairdee.co.th,,Monthly NoP/headcount,"January, 2026",21.66
+G-2,Obj-4,KR-4.2,Efficiency,[Postsale Productivity] Motor VMI NoP (SS + PSS + NSS) per postsale operator from xx to yy,thitinart.l@fairdee.co.th,,Monthly NoP/headcount,"February, 2026",7.38
+G-2,Obj-4,KR-4.2.1,Efficiency,[Data Entry Team Productivity] Increase NoP sold per data entry operator from xx per month in 2025 to yy per month in 2026,thitinart.l@fairdee.co.th,,Monthly NoP/headcount,"December, 2025",53.72
+G-2,Obj-4,KR-4.2.1,Efficiency,[Data Entry Team Productivity] Increase NoP sold per data entry operator from xx per month in 2025 to yy per month in 2026,thitinart.l@fairdee.co.th,,Monthly NoP/headcount,"January, 2026",44.86
+G-2,Obj-4,KR-4.2.1,Efficiency,[Data Entry Team Productivity] Increase NoP sold per data entry operator from xx per month in 2025 to yy per month in 2026,thitinart.l@fairdee.co.th,,Monthly NoP/headcount,"February, 2026",15.29
+G-2,Obj-4,KR-4.2.2,Efficiency,[Admin Team Productivity] Increase NoP sold per Admin operator from xx per month in 2025 to yy per month in 2026 (Policy upload & Policy scan & Endorsement/Cancellation & Email management),thitinart.l@fairdee.co.th,,Monthly NoP/headcount,"December, 2025",94
+G-2,Obj-4,KR-4.2.2,Efficiency,[Admin Team Productivity] Increase NoP sold per Admin operator from xx per month in 2025 to yy per month in 2026 (Policy upload & Policy scan & Endorsement/Cancellation & Email management),thitinart.l@fairdee.co.th,,Monthly NoP/headcount,"January, 2026",78.5
+G-2,Obj-4,KR-4.2.2,Efficiency,[Admin Team Productivity] Increase NoP sold per Admin operator from xx per month in 2025 to yy per month in 2026 (Policy upload & Policy scan & Endorsement/Cancellation & Email management),thitinart.l@fairdee.co.th,,Monthly NoP/headcount,"February, 2026",26.76
+G-2,Obj-4,KR-4.2.3,Productivity,[Renewal Team Productivity] Increase renewal notices uploaded per renewal operator from xx per month in 2025 to yy per month in 2026,thitinart.l@fairdee.co.th,,Monthly NoP/headcount,"December, 2025","15,826"
+G-2,Obj-4,KR-4.2.3,Productivity,[Renewal Team Productivity] Increase renewal notices uploaded per renewal operator from xx per month in 2025 to yy per month in 2026,thitinart.l@fairdee.co.th,,Monthly NoP/headcount,"January, 2026","12,130"
+G-2,Obj-4,KR-4.2.3,Productivity,[Renewal Team Productivity] Increase renewal notices uploaded per renewal operator from xx per month in 2025 to yy per month in 2026,thitinart.l@fairdee.co.th,,Monthly NoP/headcount,"February, 2026","11,412"
+G-2,Obj-4,KR-4.2.3,Productivity,[Renewal Team Productivity] Increase renewal notices uploaded per renewal operator from xx per month in 2025 to yy per month in 2026,thitinart.l@fairdee.co.th,,Monthly NoP/headcount,"March, 2026","12,298"
+G-2,Obj-4,KR-4.2.3,Productivity,[Renewal Team Productivity] Increase renewal notices uploaded per renewal operator from xx per month in 2025 to yy per month in 2026,thitinart.l@fairdee.co.th,,Monthly NoP/headcount,"April, 2026","7,229"
+G-2,Obj-4,KR-4.2.3,Productivity,[Renewal Team Productivity] Increase renewal notices uploaded per renewal operator from xx per month in 2025 to yy per month in 2026,thitinart.l@fairdee.co.th,,Monthly NoP/headcount,"May, 2026","1,805"
+G-2,Obj-4,KR-4.2.3,Productivity,[Renewal Team Productivity] Increase renewal notices uploaded per renewal operator from xx per month in 2025 to yy per month in 2026,thitinart.l@fairdee.co.th,,Monthly NoP/headcount,"June, 2026",14
+G-2,Obj-4,KR-4.2.3,Productivity,[Renewal Team Productivity] Increase renewal notices uploaded per renewal operator from xx per month in 2025 to yy per month in 2026,thitinart.l@fairdee.co.th,,Monthly NoP/headcount,"July, 2026",6
+G-2,Obj-4,KR-4.2.3,Productivity,[Renewal Team Productivity] Increase renewal notices uploaded per renewal operator from xx per month in 2025 to yy per month in 2026,thitinart.l@fairdee.co.th,,Monthly NoP/headcount,"August, 2026",2
+G-2,Obj-4,KR-4.2.3,Productivity,[Renewal Team Productivity] Increase renewal notices uploaded per renewal operator from xx per month in 2025 to yy per month in 2026,thitinart.l@fairdee.co.th,,Monthly NoP/headcount,"September, 2026",12
+G-2,Obj-4,KR-4.2.3,Productivity,[Renewal Team Productivity] Increase renewal notices uploaded per renewal operator from xx per month in 2025 to yy per month in 2026,thitinart.l@fairdee.co.th,,Monthly NoP/headcount,"October, 2026",1
+G-2,Obj-4,KR-4.2.3,Productivity,[Renewal Team Productivity] Increase renewal notices uploaded per renewal operator from xx per month in 2025 to yy per month in 2026,thitinart.l@fairdee.co.th,,Monthly NoP/headcount,"November, 2026",6
+G-2,Obj-4,KR-4.2.3,Productivity,[Renewal Team Productivity] Increase renewal notices uploaded per renewal operator from xx per month in 2025 to yy per month in 2026,thitinart.l@fairdee.co.th,,Monthly NoP/headcount,"December, 2026",1
+G-2,Obj-4,KR-4.2.4,Efficiency,[Delivery Team Productivity] Increase NoP processed per operator from xx per month in 2025 to yy per month in 2026,thitinart.l@fairdee.co.th,,Monthly NoP/headcount,"December, 2025",107.43
+G-2,Obj-4,KR-4.2.4,Efficiency,[Delivery Team Productivity] Increase NoP processed per operator from xx per month in 2025 to yy per month in 2026,thitinart.l@fairdee.co.th,,Monthly NoP/headcount,"January, 2026",89.72
+G-2,Obj-4,KR-4.2.4,Efficiency,[Delivery Team Productivity] Increase NoP processed per operator from xx per month in 2025 to yy per month in 2026,thitinart.l@fairdee.co.th,,Monthly NoP/headcount,"February, 2026",30.58
+G-3,Obj-5,KR-5,Experience,Improve Agent NPS & Satisfaction and Prevent Churn NPS score to ____ Prevent Churn to ____,,,"Rating out of 5, in monthly","December, 2025",4.69
+G-3,Obj-5,KR-5,Experience,Improve Agent NPS & Satisfaction and Prevent Churn NPS score to ____ Prevent Churn to ____,,,"Rating out of 5, in monthly","January, 2026",4.64
+G-3,Obj-5,KR-5,Experience,Improve Agent NPS & Satisfaction and Prevent Churn NPS score to ____ Prevent Churn to ____,,,"Rating out of 5, in monthly","February, 2026",4.66
+G-3,Obj-5,KR-5.1.1,Service Quality,[Custom Quote SLA] Ensure custom quotation is provided within SLA (ETA target on agent app) at 90%,,,% in monthly,"December, 2025",0.83
+G-3,Obj-5,KR-5.1.1,Service Quality,[Custom Quote SLA] Ensure custom quotation is provided within SLA (ETA target on agent app) at 90%,,,% in monthly,"January, 2026",0.71
+G-3,Obj-5,KR-5.1.1,Service Quality,[Custom Quote SLA] Ensure custom quotation is provided within SLA (ETA target on agent app) at 90%,,,% in monthly,"February, 2026",0.72
+G-3,Obj-5,KR-5.1.2,Service Quality,[COA Quote SLA] Ensure COA quotation is provided within SLA (ETA target on agent app) at 90%,,,% in monthly,"December, 2025",0.66
+G-3,Obj-5,KR-5.1.2,Service Quality,[COA Quote SLA] Ensure COA quotation is provided within SLA (ETA target on agent app) at 90%,,,% in monthly,"January, 2026",0.66
+G-3,Obj-5,KR-5.1.2,Service Quality,[COA Quote SLA] Ensure COA quotation is provided within SLA (ETA target on agent app) at 90%,,,% in monthly,"February, 2026",0.61
+G-3,Obj-5,KR-5.1.3,Service Quality,[Sale reporting SLA] Ensure paid sales are reported to insurer within SLA,,,% in monthly,"December, 2025",0.88
+G-3,Obj-5,KR-5.1.3,Service Quality,[Sale reporting SLA] Ensure paid sales are reported to insurer within SLA,,,% in monthly,"January, 2026",0.83
+G-3,Obj-5,KR-5.1.3,Service Quality,[Sale reporting SLA] Ensure paid sales are reported to insurer within SLA,,,% in monthly,"February, 2026",0.93
+G-3,Obj-5,KR-5.1.4,Service Quality,"[Policy Upload SLA] Ensure policy is uploaded within SLA after sale is reported to insurer (ETA target on agent app) at 80% (Type-1, Non type-1 non API, Non type-1 API)",,,% in monthly [Non Type-1 API],"December, 2025",0.89
+G-3,Obj-5,KR-5.1.4,Service Quality,"[Policy Upload SLA] Ensure policy is uploaded within SLA after sale is reported to insurer (ETA target on agent app) at 80% (Type-1, Non type-1 non API, Non type-1 API)",,,% in monthly [Non Type-1 API],"January, 2026",0.84
+G-3,Obj-5,KR-5.1.4,Service Quality,"[Policy Upload SLA] Ensure policy is uploaded within SLA after sale is reported to insurer (ETA target on agent app) at 80% (Type-1, Non type-1 non API, Non type-1 API)",,,% in monthly [Non Type-1 API],"February, 2026",0.89
+G-3,Obj-5,KR-5.1.4,Service Quality,"[Policy Upload SLA] Ensure policy is uploaded within SLA after sale is reported to insurer (ETA target on agent app) at 80% (Type-1, Non type-1 non API, Non type-1 API)",,,% in monthly [Non Type-1 non API],"December, 2025",0.73
+G-3,Obj-5,KR-5.1.4,Service Quality,"[Policy Upload SLA] Ensure policy is uploaded within SLA after sale is reported to insurer (ETA target on agent app) at 80% (Type-1, Non type-1 non API, Non type-1 API)",,,% in monthly [Non Type-1 non API],"January, 2026",0.66
+G-3,Obj-5,KR-5.1.4,Service Quality,"[Policy Upload SLA] Ensure policy is uploaded within SLA after sale is reported to insurer (ETA target on agent app) at 80% (Type-1, Non type-1 non API, Non type-1 API)",,,% in monthly [Non Type-1 non API],"February, 2026",0.62
+G-3,Obj-5,KR-5.1.4,Service Quality,"[Policy Upload SLA] Ensure policy is uploaded within SLA after sale is reported to insurer (ETA target on agent app) at 80% (Type-1, Non type-1 non API, Non type-1 API)",,,% in monthly [Non Type-1 non API],"March, 2026",0.55
+G-3,Obj-5,KR-5.1.4,Service Quality,"[Policy Upload SLA] Ensure policy is uploaded within SLA after sale is reported to insurer (ETA target on agent app) at 80% (Type-1, Non type-1 non API, Non type-1 API)",,,% in monthly [Type-1],"December, 2025",0.6
+G-3,Obj-5,KR-5.1.4,Service Quality,"[Policy Upload SLA] Ensure policy is uploaded within SLA after sale is reported to insurer (ETA target on agent app) at 80% (Type-1, Non type-1 non API, Non type-1 API)",,,% in monthly [Type-1],"January, 2026",0.5
+G-3,Obj-5,KR-5.1.4,Service Quality,"[Policy Upload SLA] Ensure policy is uploaded within SLA after sale is reported to insurer (ETA target on agent app) at 80% (Type-1, Non type-1 non API, Non type-1 API)",,,% in monthly [Type-1],"February, 2026",0.47
+G-3,Obj-5,KR-5.1.4,Service Quality,"[Policy Upload SLA] Ensure policy is uploaded within SLA after sale is reported to insurer (ETA target on agent app) at 80% (Type-1, Non type-1 non API, Non type-1 API)",,,% in monthly [Type-1],"March, 2026",0.06
+G-3,Obj-5,KR-5.1.4,Service Quality,"[Policy Upload SLA] Ensure policy is uploaded within SLA after sale is reported to insurer (ETA target on agent app) at 80% (Type-1, Non type-1 non API, Non type-1 API)",,,% in monthly [Type-1],"April, 2026",
+G-3,Obj-5,KR-5.1.4,Service Quality,"[Policy Upload SLA] Ensure policy is uploaded within SLA after sale is reported to insurer (ETA target on agent app) at 80% (Type-1, Non type-1 non API, Non type-1 API)",,,% in monthly [Type-1],"May, 2026",
+G-3,Obj-5,KR-5.2.1,Service Quality,"[Agent rating] Maintain satisfaction score from Line OA with the Presale team's service rating yearly average from 4.6 in 2025 to above 4.7 out of 5 in 2026, minimum positive rating (4-5) at 93%",,,"Rating out of 5, in monthly","December, 2025",4.58
+G-3,Obj-5,KR-5.2.1,Service Quality,"[Agent rating] Maintain satisfaction score from Line OA with the Presale team's service rating yearly average from 4.6 in 2025 to above 4.7 out of 5 in 2026, minimum positive rating (4-5) at 93%",,,"Rating out of 5, in monthly","January, 2026",4.58
+G-3,Obj-5,KR-5.2.1,Service Quality,"[Agent rating] Maintain satisfaction score from Line OA with the Presale team's service rating yearly average from 4.6 in 2025 to above 4.7 out of 5 in 2026, minimum positive rating (4-5) at 93%",,,"Rating out of 5, in monthly","February, 2026",4.59
+G-3,Obj-5,KR-5.2.1,Service Quality,"[Agent rating] Maintain satisfaction score from Line OA with the Presale teams service rating yearly average from 4.6 in 2025 to above 4.7 out of 5 in 2026, minimum positive rating (4-5) at 93%",,,% of Positive Rating (4-5) in monthly,"December, 2025",0.79
+G-3,Obj-5,KR-5.2.1,Service Quality,"[Agent rating] Maintain satisfaction score from Line OA with the Presale teams service rating yearly average from 4.6 in 2025 to above 4.7 out of 5 in 2026, minimum positive rating (4-5) at 93%",,,% of Positive Rating (4-5) in monthly,"January, 2026",0.77
+G-3,Obj-5,KR-5.2.1,Service Quality,"[Agent rating] Maintain satisfaction score from Line OA with the Presale teams service rating yearly average from 4.6 in 2025 to above 4.7 out of 5 in 2026, minimum positive rating (4-5) at 93%",,,% of Positive Rating (4-5) in monthly,"February, 2026",0.77
+G-3,Obj-5,KR-5.2.2,Service Quality,Reduce % sale reporting with rework,,,Percentage in monthly,"December, 2025",0.33
+G-3,Obj-5,KR-5.2.2,Service Quality,Reduce % sale reporting with rework,,,Percentage in monthly,"January, 2026",0.33
+G-3,Obj-5,KR-5.2.2,Service Quality,Reduce % sale reporting with rework,,,Percentage in monthly,"February, 2026",0.21
+G-3,Obj-5,KR-5.3.1,Efficency,[System Quote] Decrease portion of manual sales from 40% to 33% of total sale,,,Percentage in monthly,"December, 2025",0.44
+G-3,Obj-5,KR-5.3.1,Efficency,[System Quote] Decrease portion of manual sales from 40% to 33% of total sale,,,Percentage in monthly,"January, 2026",0.42
+G-3,Obj-5,KR-5.3.1,Efficency,[System Quote] Decrease portion of manual sales from 40% to 33% of total sale,,,Percentage in monthly,"February, 2026",0.43
+G-3,Obj-5,KR-5.3.1,Efficency,[System Quote] Decrease portion of manual sales from 40% to 33% of total sale,,,Percentage in yearly average,"December, 2025",0.46
+G-3,Obj-5,KR-5.3.1,Efficency,[System Quote] Decrease portion of manual sales from 40% to 33% of total sale,,,Percentage in yearly average,"January, 2026",0.46
+G-3,Obj-5,KR-5.3.1,Efficency,[System Quote] Decrease portion of manual sales from 40% to 33% of total sale,,,Percentage in yearly average,"February, 2026",0.46
+G-3,Obj-5,KR-5.3.1,Efficency,[System Quote] Increase X% portion of system store of total sales,,,Percentage in monthly,"December, 2025",0.46
+G-3,Obj-5,KR-5.3.1,Efficency,[System Quote] Increase X% portion of system store of total sales,,,Percentage in monthly,"January, 2026",0.46
+G-3,Obj-5,KR-5.3.1,Efficency,[System Quote] Increase X% portion of system store of total sales,,,Percentage in monthly,"February, 2026",0.46
+G-3,Obj-5,KR-5.3.2,Efficency,[Partial Selfserve] Decrease partial self-serve from total number of policy to 14%,,,Percentage in monthly,"December, 2025",0.1
+G-3,Obj-5,KR-5.3.2,Efficency,[Partial Selfserve] Decrease partial self-serve from total number of policy to 14%,,,Percentage in monthly,"January, 2026",0.11
+G-3,Obj-5,KR-5.3.2,Efficency,[Partial Selfserve] Decrease partial self-serve from total number of policy to 14%,,,Percentage in monthly,"February, 2026",0.1
+G-3,Obj-5,KR-5.3.2,Efficency,[Partial Selfserve] Decrease partial self-serve from total number of policy to 14%,,,Percentage in yearly average,"December, 2025",0.12
+G-3,Obj-5,KR-5.3.2,Efficency,[Partial Selfserve] Decrease partial self-serve from total number of policy to 14%,,,Percentage in yearly average,"January, 2026",0.12
+G-3,Obj-5,KR-5.3.2,Efficency,[Partial Selfserve] Decrease partial self-serve from total number of policy to 14%,,,Percentage in yearly average,"February, 2026",0.12
+G-3,Obj-5,KR-5.3.2,Efficency,[Partial Selfserve] Decrease partial self-serve from total number of policy to X%,,,Percentage in monthly,"December, 2025",0.12
+G-3,Obj-5,KR-5.3.2,Efficency,[Partial Selfserve] Decrease partial self-serve from total number of policy to X%,,,Percentage in monthly,"January, 2026",0.12
+G-3,Obj-5,KR-5.3.2,Efficency,[Partial Selfserve] Decrease partial self-serve from total number of policy to X%,,,Percentage in monthly,"February, 2026",0.12
+G-3,Obj-5,KR-5.4.1,Efficency,[Refund SLA] Ensure refund is paid within SLA at X%,,,Percentage in monthly,"December, 2025",3
+G-3,Obj-5,KR-5.4.1,Efficency,[Refund SLA] Ensure refund is paid within SLA at X%,,,Percentage in monthly,"January, 2026",3
+G-3,Obj-5,KR-5.5.1,Growth,[Resurrection Improvement] Improvement of Resurrected Agent by 5%,,,Percentage in yearly average,"December, 2025",0.047
+G-3,Obj-5,KR-5.5.1,Growth,[Resurrection Improvement] Improvement of Resurrected Agent by 5%,,,Percentage in yearly average,"January, 2026",0.047
+G-3,Obj-5,KR-5.5.1,Growth,[Resurrection Improvement] Improvement of Resurrected Agent by 5%,,,Percentage in yearly average,"February, 2026",0.045
+G-3,Obj-5,KR-5.5.1,Growth,[Resurrection Improvement] Improvement of Resurrected Agent by X%,,,Percentage in monthly,"December, 2025",0.056
+G-3,Obj-5,KR-5.5.1,Growth,[Resurrection Improvement] Improvement of Resurrected Agent by X%,,,Percentage in monthly,"January, 2026",0.047
+G-3,Obj-5,KR-5.5.1,Growth,[Resurrection Improvement] Improvement of Resurrected Agent by X%,,,Percentage in monthly,"February, 2026",0.015
+G-3,Obj-5,KR-5.5.2,Growth,[Churn Improvement] Agent Churn Improvemeny by 3%,,,Percentage in yearly average,"December, 2025",0.057
+G-3,Obj-5,KR-5.5.2,Growth,[Churn Improvement] Agent Churn Improvemeny by 3%,,,Percentage in yearly average,"January, 2026",0.058
+G-3,Obj-5,KR-5.5.2,Growth,[Churn Improvement] Agent Churn Improvemeny by 3%,,,Percentage in yearly average,"February, 2026",0.059
+G-3,Obj-5,KR-5.5.2,Growth,[Churn Improvement] Agent Churn Improvemeny by X%,,,Percentage in monthly,"December, 2025",0.068
+G-3,Obj-5,KR-5.5.2,Growth,[Churn Improvement] Agent Churn Improvemeny by X%,,,Percentage in monthly,"January, 2026",0.069
+G-3,Obj-5,KR-5.5.2,Growth,[Churn Improvement] Agent Churn Improvemeny by X%,,,Percentage in monthly,"February, 2026",0.072
+G-3,Obj-5,KR-5.5.3,Growth,[New Transacting and Early Retention Improvement] Improvement of New Transacting and Early Retention by X gwp,,,GWP in monthly,"December, 2025","-12,211,305.89"
+G-3,Obj-5,KR-5.5.3,Growth,[New Transacting and Early Retention Improvement] Improvement of New Transacting and Early Retention by X gwp,,,GWP in monthly,"January, 2026","-8,072,354.47"
+G-3,Obj-5,KR-5.5.3,Growth,[New Transacting and Early Retention Improvement] Improvement of New Transacting and Early Retention by X gwp,,,GWP in monthly,"February, 2026","-16,373,119.99"

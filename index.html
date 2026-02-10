@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OKR Dashboard - Monthly Metrics</title>
+    
+    <!--
+    ========================================
+    DATA FILTERING NOTICE
+    ========================================
+    This dashboard automatically filters uploaded CSV data to use ONLY monthly values.
+    
+    Rows with the following in the 'unit_name' column are automatically excluded:
+    - "year-to-month"
+    - "yearly average"  
+    - "ytd"
+    - "cumulative"
+    
+    This ensures the dashboard displays month-by-month performance rather than 
+    cumulative year-to-date figures.
+    ========================================
+    -->
+    
+    <!-- Preconnect for Performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- CSV Parser -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- External CSS -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <style>
+        /* Additional styles for target upload */
+        .upload-zone.secondary {
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            border: 2px dashed #667eea;
+        }
+        
+        .upload-zone.secondary:hover {
+            background: linear-gradient(135deg, #667eea25 0%, #764ba225 100%);
+            border-color: #764ba2;
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        /* Hide all file input elements */
+        input[type="file"] {
+            display: none !important;
+            visibility: hidden !important;
+            width: 0 !important;
+            height: 0 !important;
+            opacity: 0 !important;
+            position: absolute !important;
+            pointer-events: none !important;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+        
+        /* Monthly Progress Styles */
+        .monthly-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .monthly-kr-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+        
+        .monthly-kr-card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-2px);
+        }
+        
+        .monthly-kr-header {
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border);
+        }
+        
+        .monthly-kr-name {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .monthly-kr-title {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        
+        .monthly-progress-bar {
+            margin: 1rem 0;
+        }
+        
+        .monthly-progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .monthly-progress-label-month {
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        
+        .monthly-progress-label-value {
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: 700;
+        }
+        
+        .monthly-progress-label-value.over-target {
+            color: var(--success);
+        }
+        
+        .monthly-progress-label-value.under-target {
+            color: var(--accent);
+        }
+        
+        .monthly-bar-container {
+            background: var(--bg);
+            border-radius: 8px;
+            height: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .monthly-bar-fill {
+            height: 100%;
+            border-radius: 8px;
+            transition: width 0.6s ease;
+            position: relative;
+        }
+        
+        .monthly-bar-fill.excellent {
+            background: linear-gradient(90deg, var(--success), #00f5c4);
+        }
+        
+        .monthly-bar-fill.good {
+            background: linear-gradient(90deg, #F59E0B, #D97706);  /* Yellow/Orange for 90-99% */
+        }
+        
+        .monthly-bar-fill.fair {
+            background: linear-gradient(90deg, #fbbf24, #f59e0b);
+        }
+        
+        .monthly-bar-fill.poor {
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+        }
+        
+        .monthly-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .monthly-stat-box {
+            text-align: center;
+            padding: 0.75rem;
+            background: var(--bg);
+            border-radius: 8px;
+        }
+        
+        .monthly-stat-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
+        }
+        
+        .monthly-stat-value {
+            font-size: 1.125rem;
+            font-weight: 700;
+            font-family: 'IBM Plex Mono', monospace;
+            color: var(--primary);
+        }
+        
+        .chart-container {
+            margin-top: 1.5rem;
+            height: 200px;
+            position: relative;
+        }
+        
+        .no-monthly-data {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            font-style: italic;
+            background: var(--bg);
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Upload Section -->
+        <div id="uploadSection" class="upload-section">
+            <h1 class="upload-title">OKR Dashboard</h1>
+            <p class="upload-subtitle">Upload your CSV files to visualize monthly metrics</p>
+            
+            <!-- Data File Upload -->
+            <div class="upload-zone" id="uploadZone">
+                <div class="upload-icon">📊</div>
+                <div class="upload-text">Drop your data CSV file here or click to browse</div>
+                <div class="upload-hint">Supports .csv files with monthly data</div>
+                <input type="file" id="fileInput" accept=".csv">
+            </div>
+            
+            <div style="margin-top: 1.5rem; text-align: center;">
+                <button class="btn-upload" onclick="document.getElementById('fileInput').click()">
+                    Choose Data File
+                </button>
+                <div id="dataFileStatus" class="upload-status"></div>
+            </div>
+            
+            <!-- Monthly Targets Upload -->
+            <div style="margin-top: 3rem;">
+                <h3 style="text-align: center; color: var(--primary); margin-bottom: 1rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                    <span style="font-size: 1.2rem;">📅</span> Monthly Targets (Optional)
+                </h3>
+                
+                <div style="border: 2px dashed var(--border); border-radius: 12px; padding: 2rem; background: #FAFBFC;">
+                    <div class="upload-zone" id="targetsUploadZone" style="border: none; background: transparent; padding: 2rem 1rem;">
+                        <div class="upload-icon" style="background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);">🎯</div>
+                        <div class="upload-text">Drop your monthly targets CSV here</div>
+                        <div class="upload-hint">Format: kr_name, month, monthly_target</div>
+                        <input type="file" id="targetsFileInput" accept=".csv">
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <button class="btn-upload" onclick="document.getElementById('targetsFileInput').click()">
+                            Choose Monthly Targets File
+                        </button>
+                        <div id="targetsFileStatus" class="upload-status"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Hunter Analysis Upload -->
+            <div style="margin-top: 3rem;">
+                <h3 style="text-align: center; color: var(--primary); margin-bottom: 1rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                    <span style="font-size: 1.2rem;">🎯</span> Hunter Analysis (Optional)
+                </h3>
+                
+                <div style="border: 2px dashed var(--border); border-radius: 12px; padding: 2rem; background: #FAFBFC;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                        <div>
+                            <div class="upload-zone" id="firstTransactingUploadZone" style="border: none; background: transparent; padding: 2rem 1rem;">
+                                <div class="upload-icon" style="background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%); font-size: 2rem;">📈</div>
+                                <div class="upload-text" style="font-size: 1rem;">First Transacting CSV</div>
+                                <div class="upload-hint">Format: agent_region, metric_month, Sum of monthly_premium</div>
+                                <input type="file" id="firstTransactingInput" accept=".csv">
+                            </div>
+                            <div style="text-align: center;">
+                                <button class="btn-upload" onclick="document.getElementById('firstTransactingInput').click()">
+                                    Choose File
+                                </button>
+                                <div id="firstTransactingStatus" class="upload-status"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="upload-zone" id="earlyRetentionUploadZone" style="border: none; background: transparent; padding: 2rem 1rem;">
+                                <div class="upload-icon" style="background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%); font-size: 2rem;">📊</div>
+                                <div class="upload-text" style="font-size: 1rem;">Early Retention CSV</div>
+                                <div class="upload-hint">Format: metric_month, agent_region, Sum of monthly_premium</div>
+                                <input type="file" id="earlyRetentionInput" accept=".csv">
+                            </div>
+                            <div style="text-align: center;">
+                                <button class="btn-upload" onclick="document.getElementById('earlyRetentionInput').click()">
+                                    Choose File
+                                </button>
+                                <div id="earlyRetentionStatus" class="upload-status"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Team Performance Upload -->
+            <div style="margin-top: 3rem;">
+                <h3 style="text-align: center; color: var(--primary); margin-bottom: 1rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                    <span style="font-size: 1.2rem;">📊</span> Team Performance Data (Optional)
+                </h3>
+                
+                <div style="border: 2px dashed var(--border); border-radius: 12px; padding: 2rem; background: #FAFBFC;">
+                    <div class="upload-zone" id="teamPerfUploadZoneMain" style="border: none; background: transparent; padding: 2rem 1rem;">
+                        <div class="upload-icon" style="background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%); font-size: 2rem;">📊</div>
+                        <div class="upload-text" style="font-size: 1rem;">Team Performance CSV</div>
+                        <div class="upload-hint">Format: team_name, team_anchor_code, agent_province, month, gwp, active_agent, sales</div>
+                        <input type="file" id="teamPerfFileInputMain" accept=".csv">
+                    </div>
+                    <div style="text-align: center;">
+                        <button class="btn-upload" onclick="document.getElementById('teamPerfFileInputMain').click()">
+                            Choose File
+                        </button>
+                        <div id="teamPerfFileStatusMain" class="upload-status"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- View Dashboard Button -->
+            <div id="viewDashboardSection" style="margin-top: 3rem; text-align: center; display: none;">
+                <button class="btn-view-dashboard" onclick="showDashboard()">
+                    View Dashboard →
+                </button>
+                <p style="margin-top: 0.75rem; color: var(--text-muted); font-size: 0.875rem;">
+                    You can upload more files or proceed to view your dashboard
+                </p>
+            </div>
+
+        </div>
+
+        <!-- Dashboard Section -->
+        <div class="dashboard" id="dashboard">
+            <!-- Header with Stats -->
+            <div class="header">
+                <h1>OKR Performance Dashboard</h1>
+                <div class="subtitle">Track progress across all goals and key results</div>
+                <div class="stats-bar">
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalOKRs">0</div>
+                        <div class="stat-label">Total OKRs</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="avgProgress">0%</div>
+                        <div class="stat-label">Avg Progress</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="onTrack">0</div>
+                        <div class="stat-label">On Track</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Filters -->
+            <div class="filter-section">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label class="filter-label">📅 View Month</label>
+                        <select class="filter-select month-select" id="monthFilter" onchange="applyFilters()">
+                            <option value="">Latest Month</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Goal</label>
+                        <select class="filter-select" id="goalFilter" onchange="applyFilters()">
+                            <option value="">All Goals</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Objective</label>
+                        <select class="filter-select" id="objectiveFilter" onchange="applyFilters()">
+                            <option value="">All Objectives</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Topic</label>
+                        <select class="filter-select" id="topicFilter" onchange="applyFilters()">
+                            <option value="">All Topics</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Owner</label>
+                        <select class="filter-select" id="ownerFilter" onchange="applyFilters()">
+                            <option value="">All Owners</option>
+                        </select>
+                    </div>
+                    <button class="btn-reset" onclick="resetFilters()">Reset Filters</button>
+                </div>
+            </div>
+            
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab(this, 'cardsView')">Card View</button>
+                <button class="tab" onclick="switchTab(this, 'tableView')">Table View</button>
+                <button class="tab" onclick="switchTab(this, 'topMovers')">Top Movers</button>
+                <button class="tab" onclick="switchTab(this, 'monthlyProgress')">Monthly Progress</button>
+                <button class="tab" onclick="switchTab(this, 'hunterAnalysis')">Hunter Analysis</button>
+                <button class="tab" onclick="switchTab(this, 'actionItems')">Action Items</button>
+                <button class="tab" onclick="switchTab(this, 'teamPerformance')">Team Performance</button>
+                <button class="tab" onclick="switchTab(this, 'fleetAnalysis')">Fleet Analysis</button>
+            </div>
+            
+            <!-- Goal Highlights (shown on main views) -->
+            <div class="goal-highlights-section" id="goalHighlights">
+                <h2 style="margin: 0 0 1.5rem 0; color: var(--primary); font-size: 1.5rem; font-weight: 800;">📊 Goal Performance Highlights</h2>
+                <div id="goalHighlightsContainer"></div>
+            </div>
+            
+            
+            <!-- Cards View -->
+            <div class="tab-content active" id="cardsView">
+                <div class="okr-grid" id="okrGrid"></div>
+            </div>
+            
+            <!-- Table View -->
+            <div class="tab-content" id="tableView">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="col-kr">Key Result</th>
+                                <th class="col-topic">Topic</th>
+                                <th class="col-owner">Owner</th>
+                                <th class="col-current">Current</th>
+                                <th class="col-target">Target</th>
+                                <th class="col-change">Change</th>
+                                <th class="col-progress">Progress</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Top Movers View -->
+            <div class="tab-content" id="topMovers">
+                <div class="top-movers-page">
+                    <div class="top-movers-header">
+                        <h2>📈 KR Performance Trends</h2>
+                        <p>Track the biggest month-over-month changes in your Key Results</p>
+                    </div>
+                    <div class="top-movers-section">
+                        <div class="mover-card growth">
+                            <h2 class="mover-title">
+                                <span class="mover-icon">📈</span>
+                                Top 5 KR Growth
+                            </h2>
+                            <div id="topGrowth"></div>
+                        </div>
+                        
+                        <div class="mover-card drop">
+                            <h2 class="mover-title">
+                                <span class="mover-icon">📉</span>
+                                Top 5 KR Drop
+                            </h2>
+                            <div id="topDrop"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Monthly Progress View -->
+            <div class="tab-content" id="monthlyProgress">
+                <div id="monthlyProgressContainer">
+                    <div class="no-monthly-data">
+                        Upload monthly targets CSV to see monthly progress tracking
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Hunter Analysis View -->
+            <div class="tab-content" id="hunterAnalysis">
+                <div id="hunterAnalysisContainer">
+                    <div class="no-monthly-data">
+                        Upload Hunter Analysis CSV files to see activation and retention trends
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Team Performance View -->
+            <div class="tab-content" id="teamPerformance">
+                <div id="teamPerformanceContainer">
+                    <!-- Upload zone shown when no data loaded -->
+                    <div id="teamPerfUploadSection">
+                        <div style="border: 2px dashed var(--border); border-radius: 12px; padding: 3rem; background: #FAFBFC; text-align: center;">
+                            <div class="upload-icon" style="background: linear-gradient(135deg, #FF6B35 0%, #E85A2B 100%); margin: 0 auto 1.5rem; font-size: 2.5rem;">📊</div>
+                            <h3 style="color: var(--primary); margin-bottom: 0.5rem; font-weight: 700;">Upload Team Performance Data</h3>
+                            <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">Upload a CSV file with columns: team_name, team_anchor_code, agent_province, month, gwp, active_agent, sales</p>
+                            <div class="upload-zone" id="teamPerfUploadZone" style="border: none; background: transparent; padding: 2rem 1rem;">
+                                <div class="upload-text" style="font-size: 1rem;">Drop your team performance CSV here or click to browse</div>
+                                <div class="upload-hint">Supports .csv files</div>
+                                <input type="file" id="teamPerfFileInput" accept=".csv">
+                            </div>
+                            <button class="btn-upload" onclick="document.getElementById('teamPerfFileInput').click()">
+                                Choose Team Performance File
+                            </button>
+                            <div id="teamPerfFileStatus" class="upload-status"></div>
+                        </div>
+                    </div>
+                    <!-- Dynamic content rendered here after upload -->
+                    <div id="teamPerfDynamicContent" style="display: none;"></div>
+                </div>
+            </div>
+            <div class="tab-content" id="actionItems">
+                <div class="action-items-container" id="actionItemsContainer"></div>
+            </div>
+            
+            <!-- Fleet Analysis View -->
+            <div class="tab-content" id="fleetAnalysis">
+                <div id="fleetAnalysisContainer">
+                    <!-- Config section -->
+                    <div id="fleetConfigSection" style="background: var(--card-bg); border-radius: 12px; padding: 2rem; box-shadow: var(--shadow-md); border: 1px solid var(--border); margin-bottom: 2rem;">
+                        <h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 1rem; color: var(--primary);">🔗 Google Sheet Connection</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Connect to a Google Sheet to pull Fleet GWP data. The sheet must be shared as "Anyone with the link can view".</p>
+                        
+                        <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; margin-bottom: 1.5rem;">
+                            <div style="flex: 1; min-width: 300px;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.875rem; color: var(--text-primary);">Google Sheet URL</label>
+                                <input type="text" id="fleetSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..." 
+                                    value="https://docs.google.com/spreadsheets/d/1BcCiO2TiHhJfWDj62RJ_8U1bmAjIpqxgSpTJjkWsTTg/edit?usp=sharing"
+                                    style="width: 100%; padding: 0.75rem 1rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; font-family: 'Manrope', sans-serif; background: var(--bg); color: var(--text-primary); transition: all 0.2s ease;">
+                            </div>
+                            <div style="min-width: 120px;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.875rem; color: var(--text-primary);">Sheet/Tab Name</label>
+                                <input type="text" id="fleetSheetName" placeholder="summary" value="summary"
+                                    style="width: 100%; padding: 0.75rem 1rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; font-family: 'Manrope', sans-serif; background: var(--bg); color: var(--text-primary);">
+                            </div>
+                            <button onclick="fetchFleetData()" style="background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; font-weight: 600; cursor: pointer; font-family: 'Manrope', sans-serif; transition: all 0.3s ease; white-space: nowrap;">
+                                🔄 Fetch Data
+                            </button>
+                        </div>
+                        
+                        <div style="background: var(--bg); border-radius: 8px; padding: 1rem; font-size: 0.85rem; color: var(--text-muted);">
+                            <strong>ℹ️ Setup:</strong> Make sure your Google Sheet is shared publicly ("Anyone with the link can view"). 
+                            Data is read from the <strong>summary</strong> tab — Column A = Month, Column B = Target, Column C = Net Premium (GWP). Includes 2025 historical + 2026 data.
+                        </div>
+                        
+                        <div id="fleetFetchStatus" class="upload-status" style="margin-top: 1rem;"></div>
+                    </div>
+                    
+                    <!-- Dynamic fleet content -->
+                    <div id="fleetDynamicContent"></div>
+                </div>
+            </div>
+            
+            <!-- Reset Button -->
+            <div style="text-align: center; margin-top: 2rem;">
+                <button class="btn-reset" onclick="resetDashboard()">Upload New Files</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- External JavaScript -->
+    <script src="script.js"></script>
+</body>
+</html>
