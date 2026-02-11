@@ -22,6 +22,97 @@
     <link rel="stylesheet" href="styles.css">
     
     <style>
+        /* Auth Gate - blocks page until login verified */
+        .auth-loading-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, var(--primary, #0F172A) 0%, var(--primary-light, #1E293B) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            transition: opacity 0.4s ease;
+        }
+        .auth-loading-overlay.fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .auth-loading-content {
+            text-align: center;
+            color: white;
+        }
+        .auth-loading-spinner {
+            width: 48px; height: 48px;
+            border: 4px solid rgba(255,255,255,0.2);
+            border-top-color: #FF6B35;
+            border-radius: 50%;
+            animation: authSpin 0.8s linear infinite;
+            margin: 0 auto 1.5rem;
+        }
+        @keyframes authSpin { to { transform: rotate(360deg); } }
+        .auth-loading-text {
+            font-family: 'Manrope', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            opacity: 0.9;
+        }
+
+        /* User bar at top of page */
+        .user-bar {
+            background: var(--card-bg, #fff);
+            border-bottom: 1px solid var(--border, #E5E7EB);
+            padding: 0.625rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 1rem;
+            font-family: 'Manrope', sans-serif;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .user-bar-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary, #64748B);
+            font-size: 0.875rem;
+        }
+        .user-bar-avatar {
+            width: 32px; height: 32px;
+            background: linear-gradient(135deg, #FF6B35 0%, #E85A2B 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 0.8rem;
+        }
+        .user-bar-name {
+            font-weight: 600;
+            color: var(--text-primary, #1E293B);
+        }
+        .user-bar-signout {
+            background: none;
+            border: 1px solid var(--border, #E5E7EB);
+            padding: 0.375rem 0.875rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary, #64748B);
+            cursor: pointer;
+            font-family: 'Manrope', sans-serif;
+            transition: all 0.2s ease;
+        }
+        .user-bar-signout:hover {
+            background: #FEE2E2;
+            border-color: #FECACA;
+            color: #DC2626;
+        }
+    </style>
+    <style>
         /* Additional styles for target upload */
         .upload-zone.secondary {
             background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
@@ -222,6 +313,23 @@
     </style>
 </head>
 <body>
+    <!-- Auth Loading Overlay - shown until Firebase confirms login -->
+    <div id="authLoadingOverlay" class="auth-loading-overlay">
+        <div class="auth-loading-content">
+            <div class="auth-loading-spinner"></div>
+            <div class="auth-loading-text">Verifying access...</div>
+        </div>
+    </div>
+
+    <!-- User Bar - shown after login confirmed -->
+    <div id="userBar" class="user-bar" style="display: none;">
+        <div class="user-bar-info">
+            <div class="user-bar-avatar" id="userAvatar">?</div>
+            <span class="user-bar-name" id="userName">User</span>
+        </div>
+        <button class="user-bar-signout" id="signOutBtn" onclick="handleSignOut()">Sign Out</button>
+    </div>
+
     <div class="container">
         <!-- Upload Section -->
         <div id="uploadSection" class="upload-section">
@@ -561,6 +669,55 @@
             </div>
         </div>
     </div>
+
+    <!-- Firebase SDK (COMPAT) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <!-- Auth Gate: must login before using dashboard -->
+    <script>
+        (function() {
+            var overlay = document.getElementById('authLoadingOverlay');
+            var userBar = document.getElementById('userBar');
+            var userName = document.getElementById('userName');
+            var userAvatar = document.getElementById('userAvatar');
+
+            auth.onAuthStateChanged(function(user) {
+                if (!user) {
+                    // Not logged in — redirect to login
+                    window.location.href = 'login.html';
+                } else {
+                    // Logged in — show dashboard
+                    var displayName = user.displayName || user.email || 'User';
+                    var initials = displayName.split(' ').map(function(n) { return n[0]; }).join('').toUpperCase().slice(0, 2);
+
+                    userName.textContent = displayName;
+                    userAvatar.textContent = initials;
+
+                    // Fade out overlay
+                    overlay.classList.add('fade-out');
+                    setTimeout(function() {
+                        overlay.style.display = 'none';
+                    }, 400);
+
+                    // Show user bar
+                    userBar.style.display = 'flex';
+                }
+            });
+        })();
+
+        function handleSignOut() {
+            if (window.authManager) {
+                authManager.signOut();
+            } else {
+                auth.signOut().then(function() {
+                    window.location.href = 'login.html';
+                });
+            }
+        }
+    </script>
 
     <!-- External JavaScript -->
     <script src="script.js"></script>
