@@ -1156,6 +1156,7 @@ function renderGoalHighlights() {
                     <div style="background: white; padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
                         <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">🏆 Best Performer</div>
                         <div style="font-weight: 600; color: var(--primary); font-size: 0.9rem;">${bestKR.kr_name}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.15rem; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${getShortTitle(bestKR.kr_title_name || '')}</div>
                         <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.75rem;">
                             <div>
                                 <div style="color: var(--text-muted); margin-bottom: 0.25rem;">CURRENT</div>
@@ -1175,6 +1176,7 @@ function renderGoalHighlights() {
                         <div style="background: white; padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
                             <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">⚠️ Needs Focus</div>
                             <div style="font-weight: 600; color: var(--primary); font-size: 0.9rem;">${worstKR.kr_name}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.15rem; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${getShortTitle(worstKR.kr_title_name || '')}</div>
                             <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.75rem;">
                                 <div>
                                     <div style="color: var(--text-muted); margin-bottom: 0.25rem;">CURRENT</div>
@@ -1195,6 +1197,7 @@ function renderGoalHighlights() {
                         <div style="background: white; padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
                             <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">📈 Biggest Growth</div>
                             <div style="font-weight: 600; color: var(--primary); font-size: 0.9rem;">${biggestGrowth.kr_name}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.15rem; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${getShortTitle(biggestGrowth.kr_title_name || '')}</div>
                             <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.75rem;">
                                 <div>
                                     <div style="color: var(--text-muted); margin-bottom: 0.25rem;">CURRENT</div>
@@ -1610,6 +1613,378 @@ function renderDataTable() {
     });
 }
 
+// Export Table View to PDF with Goal Highlights and progress bars
+function exportTableToPDF() {
+    var btn = document.querySelector('.btn-export-pdf');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Generating PDF...';
+    }
+    
+    try {
+        var { jsPDF } = window.jspdf;
+        var doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        
+        var pageWidth = doc.internal.pageSize.getWidth();
+        var pageHeight = doc.internal.pageSize.getHeight();
+        var now = new Date();
+        var dateStr = now.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()] + ' ' + now.getFullYear();
+        var monthFilter = document.getElementById('monthFilter');
+        var selectedMonth = monthFilter ? (monthFilter.options[monthFilter.selectedIndex]?.text || 'Latest') : 'Latest';
+        
+        // =============================================
+        // Helper: draw header on each new page section
+        // =============================================
+        function drawPageHeader(title) {
+            doc.setFillColor(15, 23, 42);
+            doc.rect(0, 0, pageWidth, 25, 'F');
+            doc.setFillColor(79, 70, 229);
+            doc.rect(0, 25, pageWidth, 1.2, 'F');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(14);
+            doc.setTextColor(255, 255, 255);
+            doc.text(title, 14, 11);
+            doc.setFontSize(8);
+            doc.setTextColor(180, 195, 220);
+            doc.text('Generated: ' + dateStr + '  |  Month: ' + selectedMonth + '  |  KRs: ' + filteredData.length, 14, 19);
+        }
+        
+        // =============================================
+        // PAGE 1+: Goal Performance Highlights
+        // =============================================
+        drawPageHeader('OKR Dashboard - Goal Performance Highlights');
+        
+        // Build goal data (same logic as renderGoalHighlights)
+        var goalData = {};
+        filteredData.forEach(function(row) {
+            var goalName = row.goal_name || 'Uncategorized';
+            if (!goalData[goalName]) {
+                goalData[goalName] = { goalName: goalName, krs: [], goalTitle: getShortTitle(row.kr_title_name || '') };
+            }
+            var current = getLatestValue(row);
+            var previous = getPreviousValue(row);
+            var target = getTarget(row);
+            var progress = target > 0 && current !== null ? (current / target) * 100 : 0;
+            var change = calculateChange(current, previous);
+            goalData[goalName].krs.push({
+                kr_name: row.kr_name, kr_title_name: row.kr_title_name,
+                unit_name: row.unit_name, current: current, previous: previous,
+                target: target, progress: progress, change: change
+            });
+        });
+        
+        var sortedGoals = Object.keys(goalData).sort();
+        var cursorY = 32;
+        
+        sortedGoals.forEach(function(goalName, gIdx) {
+            var goal = goalData[goalName];
+            var krsWithTargets = goal.krs.filter(function(kr) { return kr.target > 0; });
+            if (krsWithTargets.length === 0) return;
+            
+            var totalKRs = krsWithTargets.length;
+            var achievedKRs = krsWithTargets.filter(function(kr) { return kr.progress >= 100; }).length;
+            var slightlyUnderKRs = krsWithTargets.filter(function(kr) { return kr.progress >= 90 && kr.progress < 100; }).length;
+            var underKRs = krsWithTargets.filter(function(kr) { return kr.progress < 90; }).length;
+            var avgProgress = krsWithTargets.reduce(function(s, kr) { return s + kr.progress; }, 0) / totalKRs;
+            var successRate = (achievedKRs / totalKRs) * 100;
+            
+            var sorted = krsWithTargets.slice().sort(function(a, b) { return b.progress - a.progress; });
+            var bestKR = sorted[0];
+            var worstKR = sorted[sorted.length - 1];
+            var krsWithChange = krsWithTargets.filter(function(kr) { return kr.change !== null && !isNaN(kr.change) && isFinite(kr.change); });
+            var biggestGrowth = krsWithChange.length > 0 ? krsWithChange.reduce(function(max, kr) { return kr.change > max.change ? kr : max; }, krsWithChange[0]) : null;
+            
+            // Status colors
+            var statusText, statusR, statusG, statusB, bgR, bgG, bgB;
+            if (successRate >= 100) { statusText = 'Achieved'; statusR = 16; statusG = 185; statusB = 129; bgR = 240; bgG = 253; bgB = 244; }
+            else if (successRate >= 90) { statusText = 'Slightly Under'; statusR = 245; statusG = 158; statusB = 11; bgR = 255; bgG = 251; bgB = 235; }
+            else { statusText = 'Under Target'; statusR = 239; statusG = 68; statusB = 68; bgR = 254; bgG = 242; bgB = 242; }
+            
+            // Check if we need a new page (each goal card ~48mm)
+            var cardHeight = 48;
+            if (cursorY + cardHeight > pageHeight - 15) {
+                doc.addPage();
+                drawPageHeader('OKR Dashboard - Goal Performance Highlights (cont.)');
+                cursorY = 32;
+            }
+            
+            var cardX = 14;
+            var cardW = pageWidth - 28;
+            
+            // Card background
+            doc.setFillColor(bgR, bgG, bgB);
+            doc.roundedRect(cardX, cursorY, cardW, cardHeight, 2, 2, 'F');
+            
+            // Left accent bar
+            doc.setFillColor(statusR, statusG, statusB);
+            doc.rect(cardX, cursorY, 1.5, cardHeight, 'F');
+            
+            // Goal number badge
+            doc.setFillColor(statusR, statusG, statusB);
+            doc.circle(cardX + 8, cursorY + 6, 4, 'F');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            doc.setTextColor(255, 255, 255);
+            doc.text(String(gIdx + 1), cardX + 8, cursorY + 7.5, { align: 'center' });
+            
+            // Goal name + status badge
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            doc.setTextColor(15, 23, 42);
+            var goalLabel = goalName + (goal.goalTitle ? ' - ' + goal.goalTitle : '');
+            if (goalLabel.length > 70) goalLabel = goalLabel.substring(0, 70) + '...';
+            doc.text(goalLabel, cardX + 16, cursorY + 7.5);
+            
+            // Status badge
+            var labelW = doc.getTextWidth(goalLabel);
+            var badgeX = cardX + 16 + labelW + 3;
+            doc.setFontSize(7);
+            var badgeW = doc.getTextWidth(statusText) + 5;
+            doc.setFillColor(statusR, statusG, statusB);
+            doc.roundedRect(badgeX, cursorY + 3, badgeW, 6, 2, 2, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.text(statusText, badgeX + badgeW / 2, cursorY + 7, { align: 'center' });
+            
+            // Summary line
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7.5);
+            doc.setTextColor(71, 85, 105);
+            var summaryLine = achievedKRs + ' of ' + totalKRs + ' KRs (' + successRate.toFixed(1) + '%) achieved. Avg progress: ' + avgProgress.toFixed(1) + '%.';
+            if (slightlyUnderKRs > 0) summaryLine += ' ' + slightlyUnderKRs + ' slightly under (90-99%).';
+            if (underKRs > 0) summaryLine += ' ' + underKRs + ' need attention (<90%).';
+            doc.text(summaryLine, cardX + 16, cursorY + 14);
+            
+            // Three mini cards
+            var miniY = cursorY + 18;
+            var miniW = (cardW - 22) / 3;
+            var miniH = 26;
+            var miniCards = [];
+            
+            miniCards.push({
+                label: 'BEST PERFORMER', kr: bestKR.kr_name,
+                title: getShortTitle(bestKR.kr_title_name || ''),
+                current: bestKR.current, target: bestKR.target, unit: bestKR.unit_name || '',
+                value: bestKR.progress.toFixed(1) + '% achieved', vR: 22, vG: 163, vB: 74
+            });
+            if (worstKR.progress < 90) {
+                miniCards.push({
+                    label: 'NEEDS FOCUS', kr: worstKR.kr_name,
+                    title: getShortTitle(worstKR.kr_title_name || ''),
+                    current: worstKR.current, target: worstKR.target, unit: worstKR.unit_name || '',
+                    value: worstKR.progress.toFixed(1) + '% achieved', vR: 239, vG: 68, vB: 68
+                });
+            }
+            if (biggestGrowth && biggestGrowth.change > 0) {
+                miniCards.push({
+                    label: 'BIGGEST GROWTH', kr: biggestGrowth.kr_name,
+                    title: getShortTitle(biggestGrowth.kr_title_name || ''),
+                    current: biggestGrowth.current, target: biggestGrowth.target, unit: biggestGrowth.unit_name || '',
+                    value: '+' + biggestGrowth.change.toFixed(1) + '% change', vR: 22, vG: 163, vB: 74
+                });
+            }
+            
+            miniCards.forEach(function(mc, mcIdx) {
+                var mx = cardX + 6 + mcIdx * (miniW + 3);
+                doc.setFillColor(255, 255, 255);
+                doc.roundedRect(mx, miniY, miniW, miniH, 1.5, 1.5, 'F');
+                doc.setDrawColor(226, 232, 240);
+                doc.roundedRect(mx, miniY, miniW, miniH, 1.5, 1.5, 'S');
+                
+                doc.setFont('helvetica', 'normal'); doc.setFontSize(5.5); doc.setTextColor(148, 163, 184);
+                doc.text(mc.label, mx + 3, miniY + 4);
+                
+                doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(15, 23, 42);
+                doc.text(mc.kr.length > 20 ? mc.kr.substring(0, 20) + '...' : mc.kr, mx + 3, miniY + 8.5);
+                
+                if (mc.title) {
+                    doc.setFont('helvetica', 'italic'); doc.setFontSize(6); doc.setTextColor(100, 116, 139);
+                    doc.text(mc.title.length > 30 ? mc.title.substring(0, 30) + '...' : mc.title, mx + 3, miniY + 12);
+                }
+                
+                doc.setFont('courier', 'bold'); doc.setFontSize(9); doc.setTextColor(15, 23, 42);
+                doc.text(formatNumber(mc.current), mx + 3, miniY + 17.5);
+                doc.text(formatNumber(mc.target), mx + miniW - 3, miniY + 17.5, { align: 'right' });
+                
+                doc.setFont('helvetica', 'normal'); doc.setFontSize(4.5); doc.setTextColor(148, 163, 184);
+                doc.text('CURRENT', mx + 3, miniY + 21);
+                doc.text('TARGET', mx + miniW - 3, miniY + 21, { align: 'right' });
+                
+                doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(mc.vR, mc.vG, mc.vB);
+                doc.text(mc.value, mx + 3, miniY + 24.5);
+            });
+            
+            cursorY += cardHeight + 4;
+        });
+        
+        // =============================================
+        // NEW PAGE: Table with progress bars
+        // =============================================
+        doc.addPage();
+        drawPageHeader('OKR Dashboard - Table View');
+        
+        var tableRows = [];
+        var progressMap = {};
+        var rowIdx = 0;
+        var hierarchy = {};
+        
+        filteredData.forEach(function(row) {
+            var gn = row.goal_name || 'Uncategorized Goal';
+            var on = row.objective_name || 'Uncategorized Objective';
+            if (!hierarchy[gn]) hierarchy[gn] = {};
+            if (!hierarchy[gn][on]) hierarchy[gn][on] = { krs: [] };
+            hierarchy[gn][on].krs.push(row);
+        });
+        
+        Object.keys(hierarchy).forEach(function(gn) {
+            tableRows.push({ type: 'goal', data: [{ content: '[GOAL] ' + gn, colSpan: 7, styles: { fontStyle: 'bold', fillColor: [30, 41, 59], textColor: [255, 255, 255], fontSize: 8.5 } }] });
+            rowIdx++;
+            
+            Object.keys(hierarchy[gn]).forEach(function(on) {
+                tableRows.push({ type: 'obj', data: [{ content: '  [OBJ] ' + on, colSpan: 7, styles: { fontStyle: 'bold', fillColor: [241, 245, 249], textColor: [51, 65, 85], fontSize: 8 } }] });
+                rowIdx++;
+                
+                var organized = organizeKRHierarchy(hierarchy[gn][on].krs);
+                function addKR(nodes, indent) {
+                    nodes.forEach(function(item) {
+                        var r = item.kr;
+                        var cur = getLatestValue(r);
+                        var prev = getPreviousValue(r);
+                        var tgt = getTarget(r);
+                        var chg = calculateChange(cur, prev);
+                        var prog = tgt > 0 && cur !== null ? ((cur / tgt) * 100) : 0;
+                        
+                        var chgStr = 'N/A';
+                        if (chg !== null && !isNaN(chg) && isFinite(chg)) chgStr = (chg >= 0 ? '+' : '') + chg.toFixed(1) + '%';
+                        
+                        var pfx = indent > 0 ? '  > ' : '';
+                        var krT = getShortTitle(r.kr_title_name || '');
+                        var krL = pfx + (r.kr_name || '');
+                        if (krT) krL += '\n' + (indent > 0 ? '     ' : '') + krT;
+                        
+                        progressMap[rowIdx] = { progress: prog, hasTarget: tgt > 0 };
+                        
+                        // Store current/target data for custom rendering
+                        var curDisplay = cur !== null ? formatNumber(cur) : 'N/A';
+                        var tgtDisplay = tgt > 0 ? formatNumber(tgt) : 'N/A';
+                        var curUnit = cur !== null ? (r.unit_name || '') : '';
+                        var tgtUnit = tgt > 0 ? (r.unit_name || '') : '';
+                        
+                        tableRows.push({ type: 'kr', data: [
+                            krL, r.kr_topic_name || '', r.kr_owner_name || 'Unassigned',
+                            '', '', // empty - will draw custom
+                            chgStr, ''
+                        ], _cur: curDisplay, _curUnit: curUnit, _tgt: tgtDisplay, _tgtUnit: tgtUnit, _rowIdx: rowIdx });
+                        rowIdx++;
+                        if (item.children && item.children.length > 0) addKR(item.children, indent + 1);
+                    });
+                }
+                addKR(organized, 0);
+            });
+        });
+        
+        // Build value map for custom current/target rendering
+        var valueMap = {};
+        tableRows.forEach(function(r) {
+            if (r._rowIdx !== undefined) {
+                valueMap[r._rowIdx] = { cur: r._cur, curUnit: r._curUnit, tgt: r._tgt, tgtUnit: r._tgtUnit };
+            }
+        });
+        
+        doc.autoTable({
+            startY: 30,
+            head: [['Key Result', 'Topic', 'Owner', 'Current', 'Target', 'Change', 'Progress']],
+            body: tableRows.map(function(r) { return r.data; }),
+            theme: 'grid',
+            styles: { font: 'helvetica', fontSize: 7.5, cellPadding: { top: 3, bottom: 3, left: 2, right: 2 }, lineColor: [226, 232, 240], lineWidth: 0.2, overflow: 'linebreak' },
+            headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8, halign: 'center' },
+            columnStyles: {
+                0: { cellWidth: 72 }, 1: { cellWidth: 28, halign: 'center' }, 2: { cellWidth: 28 },
+                3: { cellWidth: 28, halign: 'right' }, 4: { cellWidth: 28, halign: 'right' },
+                5: { cellWidth: 22, halign: 'center' }, 6: { cellWidth: 34, halign: 'center' }
+            },
+            didParseCell: function(data) {
+                if (data.section === 'body' && data.column.index === 5) {
+                    var t = data.cell.text.join('');
+                    if (t.indexOf('+') === 0) data.cell.styles.textColor = [22, 163, 74];
+                    else if (t.indexOf('-') === 0) data.cell.styles.textColor = [220, 38, 38];
+                }
+            },
+            didDrawCell: function(data) {
+                // Custom render for Current (col 3) and Target (col 4)
+                if (data.section === 'body' && (data.column.index === 3 || data.column.index === 4)) {
+                    var vData = valueMap[data.row.index];
+                    if (vData) {
+                        var cx = data.cell.x, cy = data.cell.y, cw = data.cell.width, ch = data.cell.height;
+                        var isTarget = data.column.index === 4;
+                        var numStr = isTarget ? vData.tgt : vData.cur;
+                        var unitStr = isTarget ? vData.tgtUnit : vData.curUnit;
+                        
+                        // Big bold number
+                        doc.setFont('courier', 'bold');
+                        doc.setFontSize(9.5);
+                        doc.setTextColor(15, 23, 42);
+                        doc.text(numStr, cx + cw - 3, cy + ch / 2 - (unitStr ? 1 : 1), { align: 'right' });
+                        
+                        // Small muted unit below
+                        if (unitStr) {
+                            doc.setFont('helvetica', 'normal');
+                            doc.setFontSize(5.5);
+                            doc.setTextColor(148, 163, 184);
+                            doc.text(unitStr, cx + cw - 3, cy + ch / 2 + 3.5, { align: 'right' });
+                        }
+                    }
+                }
+                // Progress bar (col 6)
+                if (data.section === 'body' && data.column.index === 6) {
+                    var pData = progressMap[data.row.index];
+                    if (pData && pData.hasTarget) {
+                        var cx = data.cell.x, cy = data.cell.y, cw = data.cell.width, ch = data.cell.height;
+                        var bx = cx + 2, bw = cw - 4, bh = 3, by = cy + (ch / 2) - 5;
+                        var p = pData.progress, fw = Math.min(p / 100, 1) * bw;
+                        
+                        doc.setFillColor(226, 232, 240);
+                        doc.roundedRect(bx, by, bw, bh, 1, 1, 'F');
+                        
+                        if (p >= 100) doc.setFillColor(22, 163, 74);
+                        else if (p >= 90) doc.setFillColor(245, 158, 11);
+                        else doc.setFillColor(239, 68, 68);
+                        if (fw > 0) doc.roundedRect(bx, by, Math.max(fw, 1.5), bh, 1, 1, 'F');
+                        
+                        if (p >= 100) { doc.setTextColor(22, 163, 74); doc.setFont('helvetica', 'bold'); }
+                        else if (p >= 90) { doc.setTextColor(245, 158, 11); doc.setFont('helvetica', 'bold'); }
+                        else { doc.setTextColor(239, 68, 68); doc.setFont('helvetica', 'normal'); }
+                        doc.setFontSize(7);
+                        doc.text(p.toFixed(1) + '%', cx + cw / 2, by + bh + 5, { align: 'center' });
+                    } else if (pData && !pData.hasTarget) {
+                        doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(148, 163, 184);
+                        doc.text('N/A', data.cell.x + data.cell.width / 2, data.cell.y + data.cell.height / 2 + 1, { align: 'center' });
+                    }
+                }
+            },
+            margin: { left: 14, right: 14 }
+        });
+        
+        // Page numbers
+        var tp = doc.internal.getNumberOfPages();
+        for (var i = 1; i <= tp; i++) {
+            doc.setPage(i);
+            doc.setFontSize(7); doc.setTextColor(148, 163, 184);
+            doc.text('OKR Dashboard  |  Page ' + i + ' of ' + tp, pageWidth / 2, pageHeight - 6, { align: 'center' });
+        }
+        
+        doc.save('OKR_Report_' + now.toISOString().slice(0, 10) + '.pdf');
+        
+    } catch (err) {
+        console.error('PDF export error:', err);
+        alert('Error generating PDF: ' + err.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<span style="margin-right: 0.4rem;">📄</span> Export to PDF';
+        }
+    }
+}
+
 // Reset dashboard
 function resetDashboard() {
     document.getElementById('dashboard').style.display = 'none';
@@ -1745,86 +2120,13 @@ function renderHunterAnalysis() {
         return;
     }
     
-    if (firstTransactingData.length === 0 || earlyRetentionData.length === 0) {
-        // Show upload UI — need BOTH files before analyzing
-        var ftUploaded = firstTransactingData.length > 0;
-        var erUploaded = earlyRetentionData.length > 0;
-        
+    if (firstTransactingData.length === 0 && earlyRetentionData.length === 0) {
         container.innerHTML = `
-            <div style="border: 2px dashed var(--border); border-radius: 12px; padding: 3rem; background: #FAFBFC; text-align: center;">
-                <div class="upload-icon" style="background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); margin: 0 auto 1.5rem; font-size: 2.5rem;">🎯</div>
-                <h3 style="color: var(--primary); margin-bottom: 0.5rem; font-weight: 700;">Hunter Analysis</h3>
-                <p style="color: var(--text-secondary); margin-bottom: 2rem; font-size: 0.9rem;">Upload <strong>both</strong> First Transacting and Early Retention CSV files to see activation and retention trends.</p>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; max-width: 700px; margin: 0 auto 2rem;">
-                    <div style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 2px solid ${ftUploaded ? '#22C55E' : '#E5E7EB'};">
-                        <div style="font-size: 2rem; margin-bottom: 0.75rem;">${ftUploaded ? '✅' : '📈'}</div>
-                        <div style="font-weight: 600; color: var(--primary); margin-bottom: 0.5rem;">First Transacting CSV</div>
-                        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">Format: agent_region, metric_month, Sum of monthly_premium</div>
-                        ${ftUploaded 
-                            ? '<div style="color: #22C55E; font-weight: 600; font-size: 0.9rem;">✓ ' + firstTransactingData.length + ' rows loaded</div>' 
-                            : '<input type="file" id="hunterInTabFT" accept=".csv" style="display:none !important;"><button class="btn-upload" onclick="document.getElementById(\'hunterInTabFT\').click()" style="width: 100%;">Choose File</button><div id="hunterInTabFTStatus" class="upload-status"></div>'}
-                    </div>
-                    <div style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 2px solid ${erUploaded ? '#22C55E' : '#E5E7EB'};">
-                        <div style="font-size: 2rem; margin-bottom: 0.75rem;">${erUploaded ? '✅' : '📊'}</div>
-                        <div style="font-weight: 600; color: var(--primary); margin-bottom: 0.5rem;">Early Retention CSV</div>
-                        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">Format: metric_month, agent_region, Sum of monthly_premium</div>
-                        ${erUploaded 
-                            ? '<div style="color: #22C55E; font-weight: 600; font-size: 0.9rem;">✓ ' + earlyRetentionData.length + ' rows loaded</div>' 
-                            : '<input type="file" id="hunterInTabER" accept=".csv" style="display:none !important;"><button class="btn-upload" onclick="document.getElementById(\'hunterInTabER\').click()" style="width: 100%;">Choose File</button><div id="hunterInTabERStatus" class="upload-status"></div>'}
-                    </div>
-                </div>
-                ${(ftUploaded && erUploaded) ? '' : '<p style="color: var(--text-muted); font-size: 0.85rem;">' + (ftUploaded ? '✅ First Transacting loaded' : '⏳ Waiting for First Transacting') + ' &nbsp;•&nbsp; ' + (erUploaded ? '✅ Early Retention loaded' : '⏳ Waiting for Early Retention') + '</p>'}
+            <div class="no-monthly-data">
+                <h3 style="margin-bottom: 1rem;">🎯 Hunter Analysis</h3>
+                <p>Upload First Transacting and Early Retention CSV files to see activation and retention trends.</p>
             </div>
         `;
-        
-        // Wire up First Transacting in-tab input
-        var ftInput = document.getElementById('hunterInTabFT');
-        if (ftInput) {
-            ftInput.addEventListener('change', function(e) {
-                var file = e.target.files[0];
-                if (file) {
-                    showUploadStatus('hunterInTabFTStatus', 'loading', 'Processing...');
-                    Papa.parse(file, {
-                        header: true,
-                        skipEmptyLines: true,
-                        transformHeader: function(header) { return header.trim(); },
-                        complete: function(results) {
-                            firstTransactingData = results.data;
-                            // Re-render the upload UI (will show checkmark for this file)
-                            renderHunterAnalysis();
-                        },
-                        error: function(error) {
-                            showUploadStatus('hunterInTabFTStatus', 'error', '✗ Error: ' + error.message);
-                        }
-                    });
-                }
-            });
-        }
-        
-        // Wire up Early Retention in-tab input
-        var erInput = document.getElementById('hunterInTabER');
-        if (erInput) {
-            erInput.addEventListener('change', function(e) {
-                var file = e.target.files[0];
-                if (file) {
-                    showUploadStatus('hunterInTabERStatus', 'loading', 'Processing...');
-                    Papa.parse(file, {
-                        header: true,
-                        skipEmptyLines: true,
-                        transformHeader: function(header) { return header.trim(); },
-                        complete: function(results) {
-                            earlyRetentionData = results.data;
-                            // Re-render the upload UI (will show checkmark, or if both loaded, show analysis)
-                            renderHunterAnalysis();
-                        },
-                        error: function(error) {
-                            showUploadStatus('hunterInTabERStatus', 'error', '✗ Error: ' + error.message);
-                        }
-                    });
-                }
-            });
-        }
-        
         return;
     }
     

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OKR Dashboard</title>
+    <title>OKR Dashboard - Monthly Metrics</title>
     
     <!-- Preconnect for Performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,6 +17,10 @@
     
     <!-- Chart.js for visualizations -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- jsPDF for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     
     <!-- External CSS -->
     <link rel="stylesheet" href="styles.css">
@@ -310,6 +314,35 @@
             background: var(--bg);
             border-radius: 8px;
         }
+        
+        /* PDF Export Button */
+        .btn-export-pdf {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.6rem 1.25rem;
+            background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            font-family: 'Manrope', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.25);
+        }
+        .btn-export-pdf:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
+        }
+        .btn-export-pdf:active {
+            transform: translateY(0);
+        }
+        .btn-export-pdf:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
     </style>
 </head>
 <body>
@@ -534,6 +567,11 @@
             
             <!-- Table View -->
             <div class="tab-content" id="tableView">
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+                    <button class="btn-export-pdf" onclick="exportTableToPDF()">
+                        <span style="margin-right: 0.4rem;">📄</span> Export to PDF
+                    </button>
+                </div>
                 <div class="table-container">
                     <table>
                         <thead>
