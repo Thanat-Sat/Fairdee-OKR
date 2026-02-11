@@ -1747,11 +1747,82 @@ function renderHunterAnalysis() {
     
     if (firstTransactingData.length === 0 && earlyRetentionData.length === 0) {
         container.innerHTML = `
-            <div class="no-monthly-data">
-                <h3 style="margin-bottom: 1rem;">🎯 Hunter Analysis</h3>
-                <p>Upload First Transacting and Early Retention CSV files to see activation and retention trends.</p>
+            <div style="border: 2px dashed var(--border); border-radius: 12px; padding: 3rem; background: #FAFBFC; text-align: center;">
+                <div class="upload-icon" style="background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); margin: 0 auto 1.5rem; font-size: 2.5rem;">🎯</div>
+                <h3 style="color: var(--primary); margin-bottom: 0.5rem; font-weight: 700;">Hunter Analysis</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem; font-size: 0.9rem;">Upload First Transacting and Early Retention CSV files to see activation and retention trends.</p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; max-width: 700px; margin: 0 auto;">
+                    <div style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #E5E7EB;">
+                        <div style="font-size: 2rem; margin-bottom: 0.75rem;">📈</div>
+                        <div style="font-weight: 600; color: var(--primary); margin-bottom: 0.5rem;">First Transacting CSV</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">Format: agent_region, metric_month, Sum of monthly_premium</div>
+                        <input type="file" id="hunterInTabFirstTransacting" accept=".csv" style="display:none !important;">
+                        <button class="btn-upload" onclick="document.getElementById('hunterInTabFirstTransacting').click()" style="width: 100%;">
+                            Choose File
+                        </button>
+                        <div id="hunterInTabFirstTransactingStatus" class="upload-status"></div>
+                    </div>
+                    <div style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #E5E7EB;">
+                        <div style="font-size: 2rem; margin-bottom: 0.75rem;">📊</div>
+                        <div style="font-weight: 600; color: var(--primary); margin-bottom: 0.5rem;">Early Retention CSV</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">Format: metric_month, agent_region, Sum of monthly_premium</div>
+                        <input type="file" id="hunterInTabEarlyRetention" accept=".csv" style="display:none !important;">
+                        <button class="btn-upload" onclick="document.getElementById('hunterInTabEarlyRetention').click()" style="width: 100%;">
+                            Choose File
+                        </button>
+                        <div id="hunterInTabEarlyRetentionStatus" class="upload-status"></div>
+                    </div>
+                </div>
             </div>
         `;
+        
+        // Wire up in-tab file inputs
+        var ftInput = document.getElementById('hunterInTabFirstTransacting');
+        if (ftInput) {
+            ftInput.addEventListener('change', function(e) {
+                var file = e.target.files[0];
+                if (file) {
+                    showUploadStatus('hunterInTabFirstTransactingStatus', 'loading', 'Processing...');
+                    Papa.parse(file, {
+                        header: true,
+                        skipEmptyLines: true,
+                        transformHeader: function(header) { return header.trim(); },
+                        complete: function(results) {
+                            firstTransactingData = results.data;
+                            showUploadStatus('hunterInTabFirstTransactingStatus', 'success', '✓ Loaded ' + firstTransactingData.length + ' rows from ' + file.name);
+                            renderHunterAnalysis();
+                        },
+                        error: function(error) {
+                            showUploadStatus('hunterInTabFirstTransactingStatus', 'error', '✗ Error: ' + error.message);
+                        }
+                    });
+                }
+            });
+        }
+        
+        var erInput = document.getElementById('hunterInTabEarlyRetention');
+        if (erInput) {
+            erInput.addEventListener('change', function(e) {
+                var file = e.target.files[0];
+                if (file) {
+                    showUploadStatus('hunterInTabEarlyRetentionStatus', 'loading', 'Processing...');
+                    Papa.parse(file, {
+                        header: true,
+                        skipEmptyLines: true,
+                        transformHeader: function(header) { return header.trim(); },
+                        complete: function(results) {
+                            earlyRetentionData = results.data;
+                            showUploadStatus('hunterInTabEarlyRetentionStatus', 'success', '✓ Loaded ' + earlyRetentionData.length + ' rows from ' + file.name);
+                            renderHunterAnalysis();
+                        },
+                        error: function(error) {
+                            showUploadStatus('hunterInTabEarlyRetentionStatus', 'error', '✗ Error: ' + error.message);
+                        }
+                    });
+                }
+            });
+        }
+        
         return;
     }
     

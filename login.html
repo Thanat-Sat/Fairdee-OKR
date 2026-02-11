@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Fairdee OKR Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .auth-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            padding: 2rem;
+        }
+
+        /* Override body styles from styles.css */
+        body {
+            padding: 0 !important;
+            margin: 0 !important;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%) !important;
+        }
+
+        .auth-box {
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: var(--shadow-lg);
+            padding: 3rem;
+            max-width: 450px;
+            width: 100%;
+            animation: scaleIn 0.5s ease-out;
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .auth-logo {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+            border-radius: 12px;
+            margin: 0 auto 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+            font-weight: 800;
+        }
+
+        .auth-title {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .auth-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: 'Manrope', sans-serif;
+            transition: all 0.2s ease;
+            background: var(--bg);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+        }
+
+        .form-button {
+            width: 100%;
+            padding: 1rem;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: 'Manrope', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-md);
+        }
+
+        .form-button:hover {
+            background: var(--accent-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .form-button:active {
+            transform: translateY(0);
+        }
+
+        .form-button:disabled {
+            background: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .auth-toggle {
+            text-align: center;
+            margin-top: 1.5rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .auth-toggle-link {
+            color: var(--accent);
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .auth-toggle-link:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            background: #FEE;
+            color: #C33;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            border: 1px solid #FCC;
+        }
+
+        .success-message {
+            background: #EFE;
+            color: #393;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            border: 1px solid #CFC;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-box">
+            <div class="auth-header">
+                <div class="auth-logo">S</div>
+                <h1 class="auth-title" id="authTitle">Sign In</h1>
+                <p class="auth-subtitle" id="authSubtitle">Access Fairdee OKR Dashboard</p>
+            </div>
+
+            <div id="errorMessage" class="error-message hidden"></div>
+            <div id="successMessage" class="success-message hidden"></div>
+
+            <!-- Sign In Form -->
+            <form id="signInForm">
+                <div class="form-group">
+                    <label class="form-label" for="signInEmail">Email Address</label>
+                    <input 
+                        type="email" 
+                        id="signInEmail" 
+                        class="form-input" 
+                        placeholder="your.email@company.com"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="signInPassword">Password</label>
+                    <input 
+                        type="password" 
+                        id="signInPassword" 
+                        class="form-input" 
+                        placeholder="Enter your password"
+                        required
+                    >
+                </div>
+
+                <button type="submit" class="form-button" id="signInButton">
+                    Sign In
+                </button>
+            </form>
+
+            <!-- Sign Up Form (Hidden by default) -->
+            <form id="signUpForm" class="hidden">
+                <div class="form-group">
+                    <label class="form-label" for="signUpName">Full Name</label>
+                    <input 
+                        type="text" 
+                        id="signUpName" 
+                        class="form-input" 
+                        placeholder="John Doe"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="signUpEmail">Email Address</label>
+                    <input 
+                        type="email" 
+                        id="signUpEmail" 
+                        class="form-input" 
+                        placeholder="your.email@company.com"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="signUpPassword">Password</label>
+                    <input 
+                        type="password" 
+                        id="signUpPassword" 
+                        class="form-input" 
+                        placeholder="At least 6 characters"
+                        required
+                        minlength="6"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="signUpPasswordConfirm">Confirm Password</label>
+                    <input 
+                        type="password" 
+                        id="signUpPasswordConfirm" 
+                        class="form-input" 
+                        placeholder="Re-enter your password"
+                        required
+                    >
+                </div>
+
+                <button type="submit" class="form-button" id="signUpButton">
+                    Create Account
+                </button>
+            </form>
+
+            <div class="auth-toggle">
+                <span id="toggleText">Don't have an account?</span>
+                <a class="auth-toggle-link" id="toggleLink">Sign Up</a>
+            </div>
+        </div>
+    </div>
+
+    
+    <!-- Firebase SDK (COMPAT – REQUIRED) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <!-- Your Firebase config MUST be after SDK -->
+    <script src="firebase-config.js"></script>
+
+    
+    <!-- Auth Logic -->
+    <script src="auth.js"></script>
+</body>
+</html>
