@@ -254,8 +254,14 @@ function getTarget(row) {
     
     // Fallback to CSV data if available
     if (row.ultimate_target_number) {
-        const target = parseFloat(row.ultimate_target_number.toString().replace(/,/g, ""));
+        let target = parseFloat(row.ultimate_target_number.toString().replace(/,/g, ""));
         if (!isNaN(target)) {
+            // If the KR unit is percentage-based and target is in decimal form, multiply by 100
+            const krUnitName = (row.unit_name || '').toString().toLowerCase();
+            const isPercentKR = krUnitName.includes('%') || krUnitName.includes('percent');
+            if (isPercentKR && Math.abs(target) <= 1) {
+                target = target * 100;
+            }
             return target;
         }
     }
@@ -416,8 +422,15 @@ function processFile(file) {
                 
                 // Store monthly value
                 if (monthStr && valueStr) {
-                    const value = parseFloat(valueStr.replace(/,/g, ''));
+                    let value = parseFloat(valueStr.replace(/,/g, ''));
                     if (!isNaN(value)) {
+                        // If the KR unit is percentage-based and value is in decimal form (e.g. 0.71 = 71%),
+                        // multiply by 100 to convert to proper percentage
+                        const krUnitName = (row.unit_name || '').toString().toLowerCase();
+                        const isPercentKR = krUnitName.includes('%') || krUnitName.includes('percent');
+                        if (isPercentKR && Math.abs(value) <= 1) {
+                            value = value * 100;
+                        }
                         groupedData.get(krKey).monthlyData.set(monthStr.trim(), value);
                     }
                 }
