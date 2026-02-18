@@ -46,7 +46,7 @@ const EMBEDDED_TARGETS = {
     "KR-5.5.2": 3
 };
 
-console.log('✅ Embedded targets loaded:', Object.keys(EMBEDDED_TARGETS).length, 'targets');
+console.log('âœ… Embedded targets loaded:', Object.keys(EMBEDDED_TARGETS).length, 'targets');
 
 // ========================================
 // HUNTER ANALYSIS EMBEDDED TARGETS
@@ -83,7 +83,7 @@ const EARLY_RETENTION_TARGETS = [
     65793035    // December 2026
 ];
 
-console.log('✅ Hunter Analysis targets loaded: First Transacting (12 months), Early Retention (12 months)');
+console.log('âœ… Hunter Analysis targets loaded: First Transacting (12 months), Early Retention (12 months)');
 
 // ========================================
 // MONTHLY TARGETS STORAGE
@@ -216,13 +216,21 @@ targetsUploadZone.addEventListener('drop', function(e) {
     }
 });
 
-// Parse date from "Month, Year" string
+// Parse date from "Month, Year" or "YYYY-MM-DD" string
 function parseMonthString(monthStr) {
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
                        'July', 'August', 'September', 'October', 'November', 'December'];
     
     if (!monthStr) return null;
     const trimmed = monthStr.trim();
+    
+    // Handle ISO format: "2026-01-01" or "2026-01"
+    const isoMatch = trimmed.match(/^(\d{4})-(\d{2})(?:-\d{2})?$/);
+    if (isoMatch) {
+        return new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, 1);
+    }
+    
+    // Handle "Month, Year" format
     const commaIndex = trimmed.indexOf(',');
     if (commaIndex === -1) return null;
     
@@ -269,11 +277,48 @@ function getTarget(row) {
     return 0;
 }
 
+// Normalize any month string to a canonical format "YYYY-MM" for matching
+function normalizeMonth(monthStr) {
+    if (!monthStr) return null;
+    const trimmed = monthStr.trim();
+    
+    // Handle "2026-01-01" or "2026-01" format
+    const isoMatch = trimmed.match(/^(\d{4})-(\d{2})(?:-\d{2})?$/);
+    if (isoMatch) {
+        return `${isoMatch[1]}-${isoMatch[2]}`;
+    }
+    
+    // Handle "January, 2026" or "January 2026" format
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                        'July', 'August', 'September', 'October', 'November', 'December'];
+    for (let i = 0; i < monthNames.length; i++) {
+        if (trimmed.toLowerCase().startsWith(monthNames[i].toLowerCase())) {
+            const yearMatch = trimmed.match(/(\d{4})/);
+            if (yearMatch) {
+                return `${yearMatch[1]}-${String(i + 1).padStart(2, '0')}`;
+            }
+        }
+    }
+    
+    return trimmed; // fallback: return as-is
+}
+
 // Get monthly target for a specific KR and month
 function getMonthlyTarget(krName, month) {
     if (!monthlyTargets.has(krName)) return null;
     const krMonthlyTargets = monthlyTargets.get(krName);
-    return krMonthlyTargets.get(month) || null;
+    
+    // Direct match first
+    if (krMonthlyTargets.has(month)) return krMonthlyTargets.get(month);
+    
+    // Normalize and try matching
+    const normalizedInput = normalizeMonth(month);
+    for (const [key, value] of krMonthlyTargets.entries()) {
+        if (normalizeMonth(key) === normalizedInput) {
+            return value;
+        }
+    }
+    return null;
 }
 
 // Process monthly targets CSV file
@@ -314,10 +359,10 @@ function processMonthlyTargetsFile(file) {
                 monthlyTargets.get(krName).set(month.trim(), targetValue);
             });
             
-            console.log('âœ… Monthly targets loaded for', monthlyTargets.size, 'KRs');
+            console.log('Ã¢Å“â€¦ Monthly targets loaded for', monthlyTargets.size, 'KRs');
             
             // Show success status
-            showUploadStatus('targetsFileStatus', 'success', `✓ Loaded targets for ${monthlyTargets.size} KRs from ${file.name}`);
+            showUploadStatus('targetsFileStatus', 'success', `âœ“ Loaded targets for ${monthlyTargets.size} KRs from ${file.name}`);
             document.getElementById('targetsUploadZone').classList.add('uploaded');
             
             // Re-render if data is already loaded
@@ -326,7 +371,7 @@ function processMonthlyTargetsFile(file) {
             }
         },
         error: function(error) {
-            showUploadStatus('targetsFileStatus', 'error', `✗ Error: ${error.message}`);
+            showUploadStatus('targetsFileStatus', 'error', `âœ— Error: ${error.message}`);
         }
     });
 }
@@ -436,7 +481,7 @@ function processFile(file) {
                 }
             });
             
-            console.log('✓ Filtered out year-to-month/YTD/yearly average/cumulative rows:', filteredRowCount);
+            console.log('âœ“ Filtered out year-to-month/YTD/yearly average/cumulative rows:', filteredRowCount);
             console.log('Processing monthly data rows:', results.data.length - filteredRowCount);
             
             // Convert to array and sort months chronologically
@@ -462,12 +507,12 @@ function processFile(file) {
             renderAll();
             
             // Show success status instead of auto-navigating
-            showUploadStatus('dataFileStatus', 'success', `✓ Loaded ${csvData.length} KRs from ${file.name}`);
+            showUploadStatus('dataFileStatus', 'success', `âœ“ Loaded ${csvData.length} KRs from ${file.name}`);
             document.getElementById('uploadZone').classList.add('uploaded');
             document.getElementById('viewDashboardSection').style.display = 'block';
         },
         error: function(error) {
-            showUploadStatus('dataFileStatus', 'error', `✗ Error: ${error.message}`);
+            showUploadStatus('dataFileStatus', 'error', `âœ— Error: ${error.message}`);
         }
     });
 }
@@ -482,7 +527,15 @@ function populateFilters() {
     [...allMonths].reverse().forEach(month => {
         const opt = document.createElement('option');
         opt.value = month;
-        opt.textContent = month;
+        // Format ISO dates (e.g. "2026-01-01") nicely for display
+        const parsed = parseMonthString(month);
+        if (parsed && /^\d{4}-\d{2}/.test(month.trim())) {
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                               'July', 'August', 'September', 'October', 'November', 'December'];
+            opt.textContent = `${monthNames[parsed.getMonth()]}, ${parsed.getFullYear()}`;
+        } else {
+            opt.textContent = month;
+        }
         monthFilter.appendChild(opt);
     });
     
@@ -796,7 +849,7 @@ function renderMonthlyProgress() {
     if (monthlyTargets.size === 0) {
         container.innerHTML = `
             <div class="no-monthly-data">
-                <h3 style="margin-bottom: 1rem;">📅 Monthly Progress Tracking</h3>
+                <h3 style="margin-bottom: 1rem;">ðŸ“… Monthly Progress Tracking</h3>
                 <p>Upload a monthly targets CSV file to see detailed monthly progress tracking.</p>
                 <p style="margin-top: 0.5rem; font-size: 0.9rem;">
                     The CSV should have columns: <code>kr_name</code>, <code>month</code>, <code>monthly_target</code>
@@ -876,13 +929,13 @@ function createMonthlyProgressCard(row) {
             // Determine status badge and class - MUST MATCH
             if (progressPercent >= 100) {
                 progressClass = 'excellent';  // Green bar
-                statusBadge = '<span class="status-badge achieved">✓ Achieved Target</span>';
+                statusBadge = '<span class="status-badge achieved">âœ“ Achieved Target</span>';
             } else if (progressPercent >= 90) {
                 progressClass = 'good';  // Yellow bar (changed from 'good' to match yellow)
-                statusBadge = '<span class="status-badge slightly-under">⚠ Slightly Under Target</span>';
+                statusBadge = '<span class="status-badge slightly-under">âš  Slightly Under Target</span>';
             } else {
                 progressClass = 'poor';  // Red bar
-                statusBadge = '<span class="status-badge under">✗ Under Target</span>';
+                statusBadge = '<span class="status-badge under">âœ— Under Target</span>';
             }
             
             displayText = `${progressPercent.toFixed(1)}% (${formatNumber(actualValue)} / ${formatNumber(monthlyTarget)})`;
@@ -993,12 +1046,12 @@ function renderTopMovers() {
                 <div class="mover-kr-name">${item.kr_name || 'N/A'}</div>
                 <div class="mover-kr-title">${item.kr_title_name || 'No description'}</div>
                 <div class="mover-stats">
-                    <div class="mover-change positive">↑ ${item.change.toFixed(1)}%</div>
+                    <div class="mover-change positive">â†‘ ${item.change.toFixed(1)}%</div>
                     <div class="mover-details">
                         <div><strong>Current:</strong> ${formatNumber(item.current)}</div>
                         <div><strong>Previous:</strong> ${formatNumber(item.previous)}</div>
                         <div style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.8rem;">
-                            ${item.goal_name} → ${item.objective_name}
+                            ${item.goal_name} â†’ ${item.objective_name}
                         </div>
                     </div>
                 </div>
@@ -1021,12 +1074,12 @@ function renderTopMovers() {
                 <div class="mover-kr-name">${item.kr_name || 'N/A'}</div>
                 <div class="mover-kr-title">${item.kr_title_name || 'No description'}</div>
                 <div class="mover-stats">
-                    <div class="mover-change negative">↓ ${Math.abs(item.change).toFixed(1)}%</div>
+                    <div class="mover-change negative">â†“ ${Math.abs(item.change).toFixed(1)}%</div>
                     <div class="mover-details">
                         <div><strong>Current:</strong> ${formatNumber(item.current)}</div>
                         <div><strong>Previous:</strong> ${formatNumber(item.previous)}</div>
                         <div style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.8rem;">
-                            ${item.goal_name} → ${item.objective_name}
+                            ${item.goal_name} â†’ ${item.objective_name}
                         </div>
                     </div>
                 </div>
@@ -1154,7 +1207,7 @@ function renderGoalHighlights() {
                 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
                     <div style="background: white; padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
-                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">🏆 Best Performer</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">ðŸ† Best Performer</div>
                         <div style="font-weight: 600; color: var(--primary); font-size: 0.9rem;">${bestKR.kr_name}</div>
                         <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.15rem; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${getShortTitle(bestKR.kr_title_name || '')}</div>
                         <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.75rem;">
@@ -1174,7 +1227,7 @@ function renderGoalHighlights() {
                     
                     ${worstKR.progress < 90 ? `
                         <div style="background: white; padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
-                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">⚠️ Needs Focus</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">âš ï¸ Needs Focus</div>
                             <div style="font-weight: 600; color: var(--primary); font-size: 0.9rem;">${worstKR.kr_name}</div>
                             <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.15rem; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${getShortTitle(worstKR.kr_title_name || '')}</div>
                             <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.75rem;">
@@ -1195,7 +1248,7 @@ function renderGoalHighlights() {
                     
                     ${biggestGrowth && biggestGrowth.change > 0 ? `
                         <div style="background: white; padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
-                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">📈 Biggest Growth</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">ðŸ“ˆ Biggest Growth</div>
                             <div style="font-weight: 600; color: var(--primary); font-size: 0.9rem;">${biggestGrowth.kr_name}</div>
                             <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.15rem; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${getShortTitle(biggestGrowth.kr_title_name || '')}</div>
                             <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.75rem;">
@@ -1299,15 +1352,15 @@ function renderActionItems() {
                 <div class="action-description">${item.description}</div>
                 <div class="action-meta">
                     <div class="action-meta-item">
-                        <span class="action-meta-label">👤 Owner:</span>
+                        <span class="action-meta-label">ðŸ‘¤ Owner:</span>
                         <span class="action-meta-value">${item.owner}</span>
                     </div>
                     <div class="action-meta-item">
-                        <span class="action-meta-label">⏱ï¸ Timeline:</span>
+                        <span class="action-meta-label">â±Ã¯Â¸Â Timeline:</span>
                         <span class="action-meta-value">${item.timeline}</span>
                     </div>
                     <div class="action-meta-item">
-                        <span class="action-meta-label">📊 Impact:</span>
+                        <span class="action-meta-label">ðŸ“Š Impact:</span>
                         <span class="action-meta-value">${item.impact}</span>
                     </div>
                 </div>
@@ -1409,7 +1462,7 @@ function renderOKRCards() {
                     card.innerHTML = `
                         <div class="kr-header">
                             <div class="kr-name">${row.kr_name || 'N/A'}${krShortTitle ? ` <span style="color: var(--accent); font-weight: 700;">[${krShortTitle}]</span>` : ''}</div>
-                            ${row.kr_owner_name ? `<div class="kr-owner">👤 ${row.kr_owner_name}</div>` : ''}
+                            ${row.kr_owner_name ? `<div class="kr-owner">ðŸ‘¤ ${row.kr_owner_name}</div>` : ''}
                         </div>
                         <div class="kr-metrics">
                             <div class="kr-metric">
@@ -1466,7 +1519,7 @@ function renderOKRCards() {
                                 childCard.innerHTML = `
                                     <div class="kr-header">
                                         <div class="kr-name">${childRow.kr_name || 'N/A'}${childKrTitle ? ` <span style="color: var(--accent); font-weight: 700;">[${childKrTitle}]</span>` : ''}</div>
-                                        ${childRow.kr_owner_name ? `<div class="kr-owner">👤 ${childRow.kr_owner_name}</div>` : ''}
+                                        ${childRow.kr_owner_name ? `<div class="kr-owner">ðŸ‘¤ ${childRow.kr_owner_name}</div>` : ''}
                                     </div>
                                     <div class="kr-metrics">
                                         <div class="kr-metric">
@@ -1537,7 +1590,7 @@ function renderDataTable() {
         const goalTitle = firstKR ? getShortTitle(firstKR.kr_title_name) : '';
         const goalRow = document.createElement('tr');
         goalRow.className = 'goal-row';
-        goalRow.innerHTML = `<td colspan="7"><strong>📌 ${goalName}</strong>${goalTitle ? ` <span class="goal-title-text">- ${goalTitle}</span>` : ''}</td>`;
+        goalRow.innerHTML = `<td colspan="7"><strong>ðŸ“Œ ${goalName}</strong>${goalTitle ? ` <span class="goal-title-text">- ${goalTitle}</span>` : ''}</td>`;
         tbody.appendChild(goalRow);
         
         Object.keys(hierarchy[goalName]).forEach(objName => {
@@ -1545,7 +1598,7 @@ function renderDataTable() {
             const objTitle = extractTitle(objData.krs[0]?.kr_title_name || '');
             const objRow = document.createElement('tr');
             objRow.className = 'objective-row';
-            objRow.innerHTML = `<td colspan="7"><strong>🎯 ${objName}</strong>${objTitle ? ` <span class="obj-title-text">- ${objTitle}</span>` : ''}</td>`;
+            objRow.innerHTML = `<td colspan="7"><strong>ðŸŽ¯ ${objName}</strong>${objTitle ? ` <span class="obj-title-text">- ${objTitle}</span>` : ''}</td>`;
             tbody.appendChild(objRow);
             
             const organizedKRs = organizeKRHierarchy(objData.krs);
@@ -1562,13 +1615,13 @@ function renderDataTable() {
                     let changeDisplay = 'N/A';
                     if (change !== null && !isNaN(change) && isFinite(change)) {
                         changeTrendClass = change >= 0 ? 'trend-positive' : 'trend-negative';
-                        changeDisplay = `${change >= 0 ? '↑' : '↓'} ${Math.abs(change).toFixed(1)}%`;
+                        changeDisplay = `${change >= 0 ? 'â†‘' : 'â†“'} ${Math.abs(change).toFixed(1)}%`;
                     }
                     const krTitle = getShortTitle(row.kr_title_name || '');
                     const indentPadding = 1.5 + (indent * 1.5);
                     const tr = document.createElement('tr');
                     tr.className = 'kr-row';
-                    const indentIndicator = indent > 0 ? '<span class="indent-indicator">└</span>' : '';
+                    const indentIndicator = indent > 0 ? '<span class="indent-indicator">â””</span>' : '';
                     tr.innerHTML = `
                         <td class="col-kr" style="padding-left: ${indentPadding}rem;">
                             <div class="kr-cell">
@@ -1593,10 +1646,10 @@ function renderDataTable() {
                                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                                         <span class="progress-text ${progress >= 100 ? 'complete' : progress >= 90 ? 'high' : 'low'}">${progress.toFixed(1)}%</span>
                                         ${progress >= 100 ? 
-                                            '<span class="table-status-badge achieved" title="Achieved Target">✓</span>' : 
+                                            '<span class="table-status-badge achieved" title="Achieved Target">âœ“</span>' : 
                                          progress >= 90 ? 
-                                            '<span class="table-status-badge slightly-under" title="Slightly Under Target">⚠</span>' : 
-                                            '<span class="table-status-badge under" title="Under Target">✗</span>'}
+                                            '<span class="table-status-badge slightly-under" title="Slightly Under Target">âš </span>' : 
+                                            '<span class="table-status-badge under" title="Under Target">âœ—</span>'}
                                     </div>
                                 </div>
                             ` : '<span class="na-text">N/A</span>'}
@@ -1980,7 +2033,7 @@ function exportTableToPDF() {
     } finally {
         if (btn) {
             btn.disabled = false;
-            btn.innerHTML = '<span style="margin-right: 0.4rem;">📄</span> Export to PDF';
+            btn.innerHTML = '<span style="margin-right: 0.4rem;">ðŸ“„</span> Export to PDF';
         }
     }
 }
@@ -2062,10 +2115,10 @@ function processFirstTransactingFile(file) {
             console.log('Total rows:', results.data.length);
             
             firstTransactingData = results.data;
-            console.log('âœ… First Transacting data loaded:', firstTransactingData.length, 'rows');
+            console.log('Ã¢Å“â€¦ First Transacting data loaded:', firstTransactingData.length, 'rows');
             
             // Show success status
-            showUploadStatus('firstTransactingStatus', 'success', `✓ Loaded ${firstTransactingData.length} rows from ${file.name}`);
+            showUploadStatus('firstTransactingStatus', 'success', `âœ“ Loaded ${firstTransactingData.length} rows from ${file.name}`);
             document.getElementById('firstTransactingUploadZone').classList.add('uploaded');
             
             // Only render if dashboard is already visible
@@ -2074,7 +2127,7 @@ function processFirstTransactingFile(file) {
             }
         },
         error: function(error) {
-            showUploadStatus('firstTransactingStatus', 'error', `✗ Error: ${error.message}`);
+            showUploadStatus('firstTransactingStatus', 'error', `âœ— Error: ${error.message}`);
         }
     });
 }
@@ -2093,10 +2146,10 @@ function processEarlyRetentionFile(file) {
             console.log('Total rows:', results.data.length);
             
             earlyRetentionData = results.data;
-            console.log('âœ… Early Retention data loaded:', earlyRetentionData.length, 'rows');
+            console.log('Ã¢Å“â€¦ Early Retention data loaded:', earlyRetentionData.length, 'rows');
             
             // Show success status
-            showUploadStatus('earlyRetentionStatus', 'success', `✓ Loaded ${earlyRetentionData.length} rows from ${file.name}`);
+            showUploadStatus('earlyRetentionStatus', 'success', `âœ“ Loaded ${earlyRetentionData.length} rows from ${file.name}`);
             document.getElementById('earlyRetentionUploadZone').classList.add('uploaded');
             
             // Only render if dashboard is already visible
@@ -2105,7 +2158,7 @@ function processEarlyRetentionFile(file) {
             }
         },
         error: function(error) {
-            showUploadStatus('earlyRetentionStatus', 'error', `✗ Error: ${error.message}`);
+            showUploadStatus('earlyRetentionStatus', 'error', `âœ— Error: ${error.message}`);
         }
     });
 }
@@ -2123,7 +2176,7 @@ function renderHunterAnalysis() {
     if (firstTransactingData.length === 0 && earlyRetentionData.length === 0) {
         container.innerHTML = `
             <div class="no-monthly-data">
-                <h3 style="margin-bottom: 1rem;">🎯 Hunter Analysis</h3>
+                <h3 style="margin-bottom: 1rem;">ðŸŽ¯ Hunter Analysis</h3>
                 <p>Upload First Transacting and Early Retention CSV files to see activation and retention trends.</p>
             </div>
         `;
@@ -2564,20 +2617,20 @@ let teamPerfChartInstances = {}; // Track chart instances for cleanup
 
 // Agent code to name mapping
 const agentNameMap = {
-    'FM-19134': 'ประวิทย์',
-    'FM-19645': 'โมไนย',
+    'FM-19134': 'à¸›à¸£à¸°à¸§à¸´à¸—à¸¢à¹Œ',
+    'FM-19645': 'à¹‚à¸¡à¹„à¸™à¸¢',
     'FM-19729': 'Jack',
-    'FM-21511': 'ตาล',
-    'FM-21975': 'ถาวร',
-    'FM-23273': 'เมธิชัย',
-    'FM-23277': 'ปัน',
-    'FM-23437': 'คนอง',
-    'FM-24406': 'จงรักษ์',
-    'FM-24885': 'โอ๋',
-    'FM-42800': 'บ๊วย',
-    'FM-20898': 'บิ๊ก',
-    'FM-21461': 'ธนพร',
-    'FM-23332': 'ดิน'
+    'FM-21511': 'à¸•à¸²à¸¥',
+    'FM-21975': 'à¸–à¸²à¸§à¸£',
+    'FM-23273': 'à¹€à¸¡à¸˜à¸´à¸Šà¸±à¸¢',
+    'FM-23277': 'à¸›à¸±à¸™',
+    'FM-23437': 'à¸„à¸™à¸­à¸‡',
+    'FM-24406': 'à¸ˆà¸‡à¸£à¸±à¸à¸©à¹Œ',
+    'FM-24885': 'à¹‚à¸­à¹‹',
+    'FM-42800': 'à¸šà¹Šà¸§à¸¢',
+    'FM-20898': 'à¸šà¸´à¹Šà¸',
+    'FM-21461': 'à¸˜à¸™à¸žà¸£',
+    'FM-23332': 'à¸”à¸´à¸™'
 };
 
 // File input handlers for Team Performance
@@ -2682,7 +2735,7 @@ function processTeamPerfFile(file, statusElementId) {
                 console.log('Sample row:', teamPerfRawData[0]);
             }
             
-            var msg = '✔ Loaded ' + teamPerfRawData.length + ' rows from ' + file.name;
+            var msg = 'âœ” Loaded ' + teamPerfRawData.length + ' rows from ' + file.name;
             showUploadStatus(statusElementId, 'success', msg);
             showUploadStatus(otherStatusId, 'success', msg);
             
@@ -2694,7 +2747,7 @@ function processTeamPerfFile(file, statusElementId) {
             renderTeamPerformanceDynamic();
         },
         error: function(error) {
-            var msg = '✗ Error: ' + error.message;
+            var msg = 'âœ— Error: ' + error.message;
             showUploadStatus(statusElementId, 'error', msg);
             showUploadStatus(otherStatusId, 'error', msg);
         }
@@ -2877,7 +2930,7 @@ function renderTeamPerformanceDynamic() {
     // Re-upload button + month selector
     html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">';
     html += '<div style="display: flex; align-items: center; gap: 1rem;">';
-    html += '<label style="font-weight: 600; font-size: 0.875rem; color: var(--text-primary);">📅 View Month:</label>';
+    html += '<label style="font-weight: 600; font-size: 0.875rem; color: var(--text-primary);">ðŸ“… View Month:</label>';
     html += '<select id="teamPerfMonthSelect" onchange="onTeamPerfMonthChange()" class="filter-select month-select" style="width: auto; min-width: 180px;">';
     sortedTeamMonths.forEach(function(m) {
         var sel = m === selectedYYYYMM ? ' selected' : '';
@@ -2885,7 +2938,7 @@ function renderTeamPerformanceDynamic() {
     });
     html += '</select>';
     html += '</div>';
-    html += '<button class="btn-reset" onclick="resetTeamPerfData()" style="font-size: 0.85rem; padding: 0.5rem 1rem;">📁 Upload New Team Data</button>';
+    html += '<button class="btn-reset" onclick="resetTeamPerfData()" style="font-size: 0.85rem; padding: 0.5rem 1rem;">ðŸ“ Upload New Team Data</button>';
     html += '</div>';
     
     // Metrics cards
@@ -2897,7 +2950,7 @@ function renderTeamPerformanceDynamic() {
     html += '<div class="metric-subtitle">' + displayMonth;
     if (focusChange !== 0) {
         var changeClass = focusChange >= 0 ? 'positive' : '';
-        var arrow = focusChange >= 0 ? '↑' : '↓';
+        var arrow = focusChange >= 0 ? 'â†‘' : 'â†“';
         html += ' <span class="metric-change ' + changeClass + '">' + arrow + ' ' + Math.abs(focusChange).toFixed(1) + '% MoM</span>';
     }
     html += '</div></div>';
@@ -2908,7 +2961,7 @@ function renderTeamPerformanceDynamic() {
     html += '<div class="metric-subtitle">' + displayMonth;
     if (midtierChange !== 0) {
         var mChangeClass = midtierChange >= 0 ? 'positive' : '';
-        var mArrow = midtierChange >= 0 ? '↑' : '↓';
+        var mArrow = midtierChange >= 0 ? 'â†‘' : 'â†“';
         html += ' <span class="metric-change ' + mChangeClass + '">' + mArrow + ' ' + Math.abs(midtierChange).toFixed(1) + '% MoM</span>';
     }
     html += '</div></div>';
@@ -2959,7 +3012,7 @@ function renderTeamPerformanceDynamic() {
     
     // Key Highlights
     html += '<div class="insights-section" style="background: var(--card-bg); border-radius: 12px; padding: 2rem; box-shadow: var(--shadow-md); border: 1px solid var(--border); margin-bottom: 2rem;">';
-    html += '<h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 1.5rem; color: var(--primary);">📊 Key Highlights - ' + displayMonth + '</h2>';
+    html += '<h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 1.5rem; color: var(--primary);">ðŸ“Š Key Highlights - ' + displayMonth + '</h2>';
     
     // Top performer focus
     if (focusArr.length > 0) {
@@ -3244,7 +3297,7 @@ function resetTeamPerfData() {
 // Initialize file handlers on DOM ready
 setupTeamPerfFileHandlers();
 
-console.log('✅ Dynamic Team Performance module loaded');
+console.log('âœ… Dynamic Team Performance module loaded');
 
 // ========================================
 // FLEET ANALYSIS - GOOGLE SHEETS INTEGRATION
@@ -3272,17 +3325,17 @@ function fetchFleetData() {
     var statusEl = document.getElementById('fleetFetchStatus');
     
     if (!urlInput || !urlInput.value.trim()) {
-        showUploadStatus('fleetFetchStatus', 'error', '✗ Please enter a Google Sheet URL');
+        showUploadStatus('fleetFetchStatus', 'error', 'âœ— Please enter a Google Sheet URL');
         return;
     }
     
     var parsed = parseSheetUrl(urlInput.value.trim());
     if (!parsed.spreadsheetId) {
-        showUploadStatus('fleetFetchStatus', 'error', '✗ Invalid Google Sheet URL');
+        showUploadStatus('fleetFetchStatus', 'error', 'âœ— Invalid Google Sheet URL');
         return;
     }
     
-    showUploadStatus('fleetFetchStatus', 'loading', '🔄 Fetching data from Google Sheets...');
+    showUploadStatus('fleetFetchStatus', 'loading', 'ðŸ”„ Fetching data from Google Sheets...');
     
     var sheetName = (sheetNameInput && sheetNameInput.value.trim()) || 'summary';
     
@@ -3344,13 +3397,13 @@ function fetchFleetData() {
                 }
             },
             error: function(error) {
-                showUploadStatus('fleetFetchStatus', 'error', '✗ CSV parse error: ' + error.message);
+                showUploadStatus('fleetFetchStatus', 'error', 'âœ— CSV parse error: ' + error.message);
             }
         });
     })
     .catch(function(error) {
         console.error('Fetch error:', error);
-        showUploadStatus('fleetFetchStatus', 'error', '✗ ' + error.message);
+        showUploadStatus('fleetFetchStatus', 'error', 'âœ— ' + error.message);
     });
 }
 
@@ -3442,7 +3495,7 @@ function processFleetSheetData(rows) {
     console.log('Fleet policies:', policies);
     
     if (months.length === 0) {
-        showUploadStatus('fleetFetchStatus', 'error', '✗ No month data found. Check sheet format (Column A should have "YYYY-Mon" like "2026-Jan").');
+        showUploadStatus('fleetFetchStatus', 'error', 'âœ— No month data found. Check sheet format (Column A should have "YYYY-Mon" like "2026-Jan").');
         return;
     }
     
@@ -3463,7 +3516,7 @@ function processFleetSheetData(rows) {
         year: parseInt(mainYear) || 2026
     };
     
-    showUploadStatus('fleetFetchStatus', 'success', '✔ Data loaded: ' + months.length + ' months of Fleet GWP data (includes historical)');
+    showUploadStatus('fleetFetchStatus', 'success', 'âœ” Data loaded: ' + months.length + ' months of Fleet GWP data (includes historical)');
     
     renderFleetAnalysis();
 }
@@ -3553,7 +3606,7 @@ function renderFleetAnalysis() {
     // Header
     html += '<div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); color: white; padding: 2rem; border-radius: 12px; margin-bottom: 2rem;">';
     html += '<h1 style="margin: 0; font-size: 2rem; font-weight: 800;">Fleet GWP</h1>';
-    html += '<p style="margin: 0.5rem 0 0 0; opacity: 0.9;">Data pulled from Google Sheets — ' + (fleetData.year || '') + '</p>';
+    html += '<p style="margin: 0.5rem 0 0 0; opacity: 0.9;">Data pulled from Google Sheets â€” ' + (fleetData.year || '') + '</p>';
     html += '</div>';
     
     // Metric cards
@@ -3565,7 +3618,7 @@ function renderFleetAnalysis() {
     html += '<div class="metric-subtitle">Target: ' + fmt(currentTarget);
     if (momGrowth !== 0) {
         var momColor = momGrowth >= 0 ? '#10B981' : '#EF4444';
-        var momArrow = momGrowth >= 0 ? '↑' : '↓';
+        var momArrow = momGrowth >= 0 ? 'â†‘' : 'â†“';
         html += ' <span class="metric-change" style="background: ' + (momGrowth >= 0 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)') + '; color: ' + momColor + ';">' + momArrow + ' ' + Math.abs(momGrowth).toFixed(1) + '% MoM</span>';
     }
     html += '</div></div>';
@@ -3587,7 +3640,7 @@ function renderFleetAnalysis() {
     html += '<div class="metric-label">MoM Growth</div>';
     var momClass = momGrowth >= 0 ? '#10B981' : '#EF4444';
     html += '<div class="metric-value" style="color: ' + momClass + ';">' + (momGrowth >= 0 ? '+' : '') + momGrowth.toFixed(1) + '%</div>';
-    html += '<div class="metric-subtitle">' + (prevActual > 0 ? fmt(prevActual) + ' → ' + fmt(currentActual) : 'No previous data') + '</div>';
+    html += '<div class="metric-subtitle">' + (prevActual > 0 ? fmt(prevActual) + ' â†’ ' + fmt(currentActual) : 'No previous data') + '</div>';
     html += '</div>';
     
     // Policies card (if data available)
@@ -3601,7 +3654,7 @@ function renderFleetAnalysis() {
         if (prevPol > 0) {
             var polChange = ((policies[currentMonthIdx] - prevPol) / prevPol * 100);
             var polColor = polChange >= 0 ? '#10B981' : '#EF4444';
-            var polArrow = polChange >= 0 ? '↑' : '↓';
+            var polArrow = polChange >= 0 ? 'â†‘' : 'â†“';
             html += '<div class="metric-subtitle">Prev: ' + prevPol.toLocaleString() + ' <span class="metric-change" style="background: ' + (polChange >= 0 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)') + '; color: ' + polColor + ';">' + polArrow + ' ' + Math.abs(polChange).toFixed(1) + '%</span></div>';
         }
         html += '</div>';
@@ -3620,7 +3673,7 @@ function renderFleetAnalysis() {
     
     // Chart
     html += '<div class="chart-card" style="margin-bottom: 2rem;">';
-    html += '<h3 class="chart-title">Fleet GWP — Target vs Actual</h3>';
+    html += '<h3 class="chart-title">Fleet GWP â€” Target vs Actual</h3>';
     html += '<div style="position: relative; height: 400px;"><canvas id="fleetGwpChart"></canvas></div>';
     html += '</div>';
     
@@ -3648,41 +3701,41 @@ function renderFleetAnalysis() {
         }
         if (isFuture) {
             rowStyle = 'opacity: 0.4;';
-            statusBadge = '<span style="color: var(--text-muted);">—</span>';
+            statusBadge = '<span style="color: var(--text-muted);">â€”</span>';
         } else if (a > 0) {
             if (pct >= 100) {
-                statusBadge = '<span class="table-status-badge achieved" title="Achieved">✔</span>';
+                statusBadge = '<span class="table-status-badge achieved" title="Achieved">âœ”</span>';
             } else if (pct >= 90) {
-                statusBadge = '<span class="table-status-badge slightly-under" title="Near Target">⚠</span>';
+                statusBadge = '<span class="table-status-badge slightly-under" title="Near Target">âš </span>';
             } else {
-                statusBadge = '<span class="table-status-badge under" title="Under Target">✗</span>';
+                statusBadge = '<span class="table-status-badge under" title="Under Target">âœ—</span>';
             }
         } else {
-            statusBadge = '<span style="color: var(--text-muted);">—</span>';
+            statusBadge = '<span style="color: var(--text-muted);">â€”</span>';
         }
         
         var momDisplay = '';
         if (idx > 0 && a > 0 && prevA > 0) {
             var momCol = mom >= 0 ? '#10B981' : '#EF4444';
-            var momArr = mom >= 0 ? '↑' : '↓';
+            var momArr = mom >= 0 ? 'â†‘' : 'â†“';
             momDisplay = '<span style="color: ' + momCol + '; font-weight: 600;">' + momArr + ' ' + Math.abs(mom).toFixed(1) + '%</span>';
         } else {
-            momDisplay = '<span style="color: var(--text-muted);">—</span>';
+            momDisplay = '<span style="color: var(--text-muted);">â€”</span>';
         }
         
         var monthLabel = month.split(',')[0];
         var monthLabel = month;
         if (isCurrent) monthLabel = '<span style="background: #FEF08A; padding: 0.15rem 0.5rem; border-radius: 4px;">' + month + '</span>';
         
-        var polCell = (policies.length > idx && policies[idx] > 0) ? policies[idx].toLocaleString() : '—';
-        var aovCell = (aovs.length > idx && aovs[idx] > 0) ? Math.round(aovs[idx]).toLocaleString() : '—';
+        var polCell = (policies.length > idx && policies[idx] > 0) ? policies[idx].toLocaleString() : 'â€”';
+        var aovCell = (aovs.length > idx && aovs[idx] > 0) ? Math.round(aovs[idx]).toLocaleString() : 'â€”';
         
         html += '<tr style="' + rowStyle + '">';
         html += '<td>' + monthLabel + '</td>';
         html += '<td style="font-family: \'IBM Plex Mono\', monospace;">' + fmt(t) + '</td>';
-        html += '<td style="font-family: \'IBM Plex Mono\', monospace; font-weight: 600; color: #2563EB;">' + (a > 0 ? fmt(a) : '<span style="color: var(--text-muted);">—</span>') + '</td>';
-        html += '<td style="font-family: \'IBM Plex Mono\', monospace; color: ' + (v >= 0 ? '#10B981' : '#EF4444') + ';">' + (a > 0 ? (v >= 0 ? '+' : '') + fmt(v) : '—') + '</td>';
-        html += '<td style="font-family: \'IBM Plex Mono\', monospace;">' + (a > 0 ? pct.toFixed(1) + '%' : '—') + '</td>';
+        html += '<td style="font-family: \'IBM Plex Mono\', monospace; font-weight: 600; color: #2563EB;">' + (a > 0 ? fmt(a) : '<span style="color: var(--text-muted);">â€”</span>') + '</td>';
+        html += '<td style="font-family: \'IBM Plex Mono\', monospace; color: ' + (v >= 0 ? '#10B981' : '#EF4444') + ';">' + (a > 0 ? (v >= 0 ? '+' : '') + fmt(v) : 'â€”') + '</td>';
+        html += '<td style="font-family: \'IBM Plex Mono\', monospace;">' + (a > 0 ? pct.toFixed(1) + '%' : 'â€”') + '</td>';
         html += '<td style="font-family: \'IBM Plex Mono\', monospace;">' + polCell + '</td>';
         html += '<td style="font-family: \'IBM Plex Mono\', monospace;">' + aovCell + '</td>';
         html += '<td>' + momDisplay + '</td>';
@@ -3813,8 +3866,8 @@ function analyzeSaleTracking(monthName) {
     
     console.log('=== ANALYZING SALE TRACKING for month:', monthName, '===');
     
-    // Find the column that contains check-premium month (เดือนเช็คเบี้ย)
-    // From the sheet: column headers include เดือนเช็คเบี้ย and สรุปสถานะกรมธรรม์
+    // Find the column that contains check-premium month (à¹€à¸”à¸·à¸­à¸™à¹€à¸Šà¹‡à¸„à¹€à¸šà¸µà¹‰à¸¢)
+    // From the sheet: column headers include à¹€à¸”à¸·à¸­à¸™à¹€à¸Šà¹‡à¸„à¹€à¸šà¸µà¹‰à¸¢ and à¸ªà¸£à¸¸à¸›à¸ªà¸–à¸²à¸™à¸°à¸à¸£à¸¡à¸˜à¸£à¸£à¸¡à¹Œ
     var headers = Object.keys(fleetSaleTrackingData[0] || {});
     console.log('Sale-tracking headers:', headers);
     
@@ -3850,12 +3903,12 @@ function analyzeSaleTracking(monthName) {
     
     headers.forEach(function(h) {
         var hLower = h.toLowerCase().trim();
-        // เดือนเช็คเบี้ย = premium check month
-        if (h.indexOf('เดือนเช็คเบี้ย') !== -1 && h.indexOf('week') === -1) {
+        // à¹€à¸”à¸·à¸­à¸™à¹€à¸Šà¹‡à¸„à¹€à¸šà¸µà¹‰à¸¢ = premium check month
+        if (h.indexOf('à¹€à¸”à¸·à¸­à¸™à¹€à¸Šà¹‡à¸„à¹€à¸šà¸µà¹‰à¸¢') !== -1 && h.indexOf('week') === -1) {
             premiumMonthCol = h;
         }
-        // สรุปสถานะกรมธรรม์ = policy status summary  
-        if (h.indexOf('สรุปสถานะกรมธรรม์') !== -1 || h.indexOf('สรุปสถานะ') !== -1) {
+        // à¸ªà¸£à¸¸à¸›à¸ªà¸–à¸²à¸™à¸°à¸à¸£à¸¡à¸˜à¸£à¸£à¸¡à¹Œ = policy status summary  
+        if (h.indexOf('à¸ªà¸£à¸¸à¸›à¸ªà¸–à¸²à¸™à¸°à¸à¸£à¸¡à¸˜à¸£à¸£à¸¡à¹Œ') !== -1 || h.indexOf('à¸ªà¸£à¸¸à¸›à¸ªà¸–à¸²à¸™à¸°') !== -1) {
             statusCol = h;
         }
     });
@@ -3863,9 +3916,9 @@ function analyzeSaleTracking(monthName) {
     console.log('Premium month col:', premiumMonthCol, 'Status col:', statusCol);
     
     if (!premiumMonthCol) {
-        // Try alternative: use เดือนแจ้งงาน or another month column
+        // Try alternative: use à¹€à¸”à¸·à¸­à¸™à¹à¸ˆà¹‰à¸‡à¸‡à¸²à¸™ or another month column
         headers.forEach(function(h) {
-            if (!premiumMonthCol && h.indexOf('เดือนแจ้งงาน') !== -1 && h.indexOf('ครั้งแรก') === -1 && h.indexOf('ล่าสุด') === -1) {
+            if (!premiumMonthCol && h.indexOf('à¹€à¸”à¸·à¸­à¸™à¹à¸ˆà¹‰à¸‡à¸‡à¸²à¸™') !== -1 && h.indexOf('à¸„à¸£à¸±à¹‰à¸‡à¹à¸£à¸') === -1 && h.indexOf('à¸¥à¹ˆà¸²à¸ªà¸¸à¸”') === -1) {
                 premiumMonthCol = h;
             }
         });
@@ -4008,7 +4061,7 @@ function renderFleetChart(months, targets, actuals, currentMonthIdx, scaleFactor
                         font: { family: "'Manrope', sans-serif", size: 11 },
                         callback: function(value, index) {
                             var label = labels[index];
-                            if (index === currentMonthIdx) return '▶ ' + label;
+                            if (index === currentMonthIdx) return 'â–¶ ' + label;
                             return label;
                         }
                     }
@@ -4064,4 +4117,4 @@ function renderFleetChart(months, targets, actuals, currentMonthIdx, scaleFactor
     });
 }
 
-console.log('✅ Fleet Analysis module loaded');
+console.log('âœ… Fleet Analysis module loaded');
