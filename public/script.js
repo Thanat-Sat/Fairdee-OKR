@@ -339,7 +339,7 @@ function processMonthlyTargetsFile(file) {
             results.data.forEach(row => {
                 const krName = row.kr_name || row.KR || row.kr;
                 const month = row.month || row.Month;
-                const target = row.monthly_target || row.target || row.Monthly_Target;
+                const target = row.monthly_target || row.target || row.Monthly_Target || row['Monthly Target'];
                 
                 if (!krName || !month || !target) {
                     console.warn('Skipping row with missing data:', row);
@@ -376,6 +376,30 @@ function processMonthlyTargetsFile(file) {
     });
 }
 
+// ========================================
+// COLUMN NAME RESOLVER
+// Supports both old snake_case and new Title Case CSV formats
+// ========================================
+function resolveColumns(headers) {
+    const find = (...candidates) => headers.find(h => candidates.some(c => h.trim().toLowerCase() === c.toLowerCase())) || null;
+
+    return {
+        kr_name:               find('kr_name', 'KR', 'kr'),
+        goal_name:             find('goal_name', 'Goal'),
+        objective_name:        find('objective_name', 'Objective'),
+        kr_topic_name:         find('kr_topic_name', 'Topic'),
+        kr_title_name:         find('kr_title_name', 'Title'),
+        kr_owner_name:         find('kr_owner_name', 'Owner'),
+        ultimate_target_number:find('ultimate_target_number', 'Yearly Target', 'yearly_target'),
+        unit_name:             find('unit_name', 'Unit'),
+        result_number:         find('result_number', 'Result'),
+        monthly_target:        find('monthly_target', 'Monthly Target', 'Monthly_Target'),
+        month:                 headers.find(h => h.toLowerCase().includes('month') && h.toLowerCase().includes('baseline'))
+                            || headers.find(h => h.toLowerCase() === 'month')
+                            || headers.find(h => h.toLowerCase().includes('month')),
+    };
+}
+
 // Process CSV file - NEW FORMAT (long format with months as rows)
 function processFile(file) {
     Papa.parse(file, {
@@ -391,14 +415,13 @@ function processFile(file) {
             // Find the month column name (flexible matching)
             const headers = results.meta.fields || Object.keys(results.data[0] || {});
             console.log('Headers:', headers);
-            
-            const monthColumnName = headers.find(h => 
-                h.toLowerCase().includes('month') && h.toLowerCase().includes('baseline')
-            ) || headers.find(h => 
-                h.toLowerCase().includes('month')
-            );
-            
-            const valueColumnName = headers.find(h => 
+
+            // Resolve column names — supports both snake_case and Title Case
+            const cols = resolveColumns(headers);
+            console.log('Resolved columns:', cols);
+
+            const monthColumnName = cols.month;
+            const valueColumnName = cols.result_number || headers.find(h =>
                 h.toLowerCase().includes('result_number') || h.toLowerCase().includes('sum of')
             ) || 'Sum of result_number';
             
@@ -416,13 +439,12 @@ function processFile(file) {
             let filteredRowCount = 0; // Track how many year-to-month/YTD/yearly average rows were filtered out
             
             results.data.forEach(row => {
-                const krName = row.kr_name;
+                const krName = row[cols.kr_name] || row.kr_name;
                 if (!krName || !krName.trim()) return;
                 
                 // FILTER: Skip year-to-month / YTD / cumulative rows
-                // Check unit_name and other common column names that might indicate row type
-                const unitName = row.unit_name || '';
-                const rowType = row.type || row.result_type || row.measurement_type || row.kr_title_name || '';
+                const unitName = row[cols.unit_name] || row.unit_name || '';
+                const rowType = row.type || row.result_type || row.measurement_type || row[cols.kr_title_name] || row.kr_title_name || '';
                 const unitNameStr = unitName.toString().toLowerCase();
                 const rowTypeStr = rowType.toString().toLowerCase();
                 
@@ -447,31 +469,40 @@ function processFile(file) {
                 if (monthStr) {
                     monthSet.add(monthStr.trim());
                 }
+
+                // Resolve field values using both new and old column names
+                const goalName      = row[cols.goal_name]      || row.goal_name      || '';
+                const objName       = row[cols.objective_name] || row.objective_name || '';
+                const topicName     = row[cols.kr_topic_name]  || row.kr_topic_name  || '';
+                const titleName     = row[cols.kr_title_name]  || row.kr_title_name  || '';
+                const ownerName     = row[cols.kr_owner_name]  || row.kr_owner_name  || '';
+                const yearlyTarget  = row[cols.ultimate_target_number] || row.ultimate_target_number || '';
+                const unitNameVal   = row[cols.unit_name]      || row.unit_name      || '';
                 
                 // Create unique key for each KR
-                const krKey = `${row.goal_name}|${row.objective_name}|${krName}`;
+                const krKey = `${goalName}|${objName}|${krName}`;
                 
                 if (!groupedData.has(krKey)) {
                     groupedData.set(krKey, {
-                        goal_name: row.goal_name,
-                        objective_name: row.objective_name,
+                        goal_name: goalName,
+                        objective_name: objName,
                         kr_name: krName,
-                        kr_topic_name: row.kr_topic_name,
-                        kr_title_name: row.kr_title_name,
-                        kr_owner_name: row.kr_owner_name,
-                        ultimate_target_number: row.ultimate_target_number,
-                        unit_name: row.unit_name,
+                        kr_topic_name: topicName,
+                        kr_title_name: titleName,
+                        kr_owner_name: ownerName,
+                        ultimate_target_number: yearlyTarget,
+                        unit_name: unitNameVal,
                         monthlyData: new Map()
                     });
                 }
                 
                 // Store monthly value
                 if (monthStr && valueStr) {
-                    let value = parseFloat(valueStr.replace(/,/g, ''));
+                    let value = parseFloat(valueStr.toString().replace(/,/g, ''));
                     if (!isNaN(value)) {
                         // If the KR unit is percentage-based and value is in decimal form (e.g. 0.71 = 71%),
                         // multiply by 100 to convert to proper percentage
-                        const krUnitName = (row.unit_name || '').toString().toLowerCase();
+                        const krUnitName = unitNameVal.toString().toLowerCase();
                         const isPercentKR = krUnitName.includes('%') || krUnitName.includes('percent');
                         if (isPercentKR && Math.abs(value) <= 1) {
                             value = value * 100;
