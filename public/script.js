@@ -46,7 +46,7 @@ const EMBEDDED_TARGETS = {
     "KR-5.5.2": 3
 };
 
-console.log('âœ… Embedded targets loaded:', Object.keys(EMBEDDED_TARGETS).length, 'targets');
+console.log('✅ Embedded targets loaded:', Object.keys(EMBEDDED_TARGETS).length, 'targets');
 
 // ========================================
 // HUNTER ANALYSIS EMBEDDED TARGETS
@@ -83,7 +83,7 @@ const EARLY_RETENTION_TARGETS = [
     65793035    // December 2026
 ];
 
-console.log('âœ… Hunter Analysis targets loaded: First Transacting (12 months), Early Retention (12 months)');
+console.log('✅ Hunter Analysis targets loaded: First Transacting (12 months), Early Retention (12 months)');
 
 // ========================================
 // MONTHLY TARGETS STORAGE
@@ -359,10 +359,10 @@ function processMonthlyTargetsFile(file) {
                 monthlyTargets.get(krName).set(month.trim(), targetValue);
             });
             
-            console.log('Ã¢Å“â€¦ Monthly targets loaded for', monthlyTargets.size, 'KRs');
+            console.log('✅ Monthly targets loaded for', monthlyTargets.size, 'KRs');
             
             // Show success status
-            showUploadStatus('targetsFileStatus', 'success', `âœ“ Loaded targets for ${monthlyTargets.size} KRs from ${file.name}`);
+            showUploadStatus('targetsFileStatus', 'success', `✓ Loaded targets for ${monthlyTargets.size} KRs from ${file.name}`);
             document.getElementById('targetsUploadZone').classList.add('uploaded');
             
             // Re-render if data is already loaded
@@ -371,7 +371,7 @@ function processMonthlyTargetsFile(file) {
             }
         },
         error: function(error) {
-            showUploadStatus('targetsFileStatus', 'error', `âœ— Error: ${error.message}`);
+            showUploadStatus('targetsFileStatus', 'error', `✗ Error: ${error.message}`);
         }
     });
 }
@@ -512,7 +512,7 @@ function processFile(file) {
                 }
             });
             
-            console.log('âœ“ Filtered out year-to-month/YTD/yearly average/cumulative rows:', filteredRowCount);
+            console.log('✓ Filtered out year-to-month/YTD/yearly average/cumulative rows:', filteredRowCount);
             console.log('Processing monthly data rows:', results.data.length - filteredRowCount);
             
             // Convert to array and sort months chronologically
@@ -538,12 +538,12 @@ function processFile(file) {
             renderAll();
             
             // Show success status instead of auto-navigating
-            showUploadStatus('dataFileStatus', 'success', `âœ“ Loaded ${csvData.length} KRs from ${file.name}`);
+            showUploadStatus('dataFileStatus', 'success', `✓ Loaded ${csvData.length} KRs from ${file.name}`);
             document.getElementById('uploadZone').classList.add('uploaded');
             document.getElementById('viewDashboardSection').style.display = 'block';
         },
         error: function(error) {
-            showUploadStatus('dataFileStatus', 'error', `âœ— Error: ${error.message}`);
+            showUploadStatus('dataFileStatus', 'error', `✗ Error: ${error.message}`);
         }
     });
 }
@@ -960,13 +960,13 @@ function createMonthlyProgressCard(row) {
             // Determine status badge and class - MUST MATCH
             if (progressPercent >= 100) {
                 progressClass = 'excellent';  // Green bar
-                statusBadge = '<span class="status-badge achieved">âœ“ Achieved Target</span>';
+                statusBadge = '<span class="status-badge achieved">✓ Achieved Target</span>';
             } else if (progressPercent >= 90) {
                 progressClass = 'good';  // Yellow bar (changed from 'good' to match yellow)
-                statusBadge = '<span class="status-badge slightly-under">âš  Slightly Under Target</span>';
+                statusBadge = '<span class="status-badge slightly-under">⚠ Slightly Under Target</span>';
             } else {
                 progressClass = 'poor';  // Red bar
-                statusBadge = '<span class="status-badge under">âœ— Under Target</span>';
+                statusBadge = '<span class="status-badge under">✗ Under Target</span>';
             }
             
             displayText = `${progressPercent.toFixed(1)}% (${formatNumber(actualValue)} / ${formatNumber(monthlyTarget)})`;
@@ -1077,12 +1077,12 @@ function renderTopMovers() {
                 <div class="mover-kr-name">${item.kr_name || 'N/A'}</div>
                 <div class="mover-kr-title">${item.kr_title_name || 'No description'}</div>
                 <div class="mover-stats">
-                    <div class="mover-change positive">â†‘ ${item.change.toFixed(1)}%</div>
+                    <div class="mover-change positive">↑ ${item.change.toFixed(1)}%</div>
                     <div class="mover-details">
                         <div><strong>Current:</strong> ${formatNumber(item.current)}</div>
                         <div><strong>Previous:</strong> ${formatNumber(item.previous)}</div>
                         <div style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.8rem;">
-                            ${item.goal_name} â†’ ${item.objective_name}
+                            ${item.goal_name} → ${item.objective_name}
                         </div>
                     </div>
                 </div>
@@ -1105,12 +1105,12 @@ function renderTopMovers() {
                 <div class="mover-kr-name">${item.kr_name || 'N/A'}</div>
                 <div class="mover-kr-title">${item.kr_title_name || 'No description'}</div>
                 <div class="mover-stats">
-                    <div class="mover-change negative">â†“ ${Math.abs(item.change).toFixed(1)}%</div>
+                    <div class="mover-change negative">↓ ${Math.abs(item.change).toFixed(1)}%</div>
                     <div class="mover-details">
                         <div><strong>Current:</strong> ${formatNumber(item.current)}</div>
                         <div><strong>Previous:</strong> ${formatNumber(item.previous)}</div>
                         <div style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.8rem;">
-                            ${item.goal_name} â†’ ${item.objective_name}
+                            ${item.goal_name} → ${item.objective_name}
                         </div>
                     </div>
                 </div>
@@ -1238,7 +1238,7 @@ function renderGoalHighlights() {
                 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
                     <div style="background: white; padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
-                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">ðŸ† Best Performer</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">🏆 Best Performer</div>
                         <div style="font-weight: 600; color: var(--primary); font-size: 0.9rem;">${bestKR.kr_name}</div>
                         <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.15rem; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${getShortTitle(bestKR.kr_title_name || '')}</div>
                         <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.75rem;">
@@ -1258,7 +1258,7 @@ function renderGoalHighlights() {
                     
                     ${worstKR.progress < 90 ? `
                         <div style="background: white; padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
-                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">âš ï¸ Needs Focus</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">⚠️ Needs Focus</div>
                             <div style="font-weight: 600; color: var(--primary); font-size: 0.9rem;">${worstKR.kr_name}</div>
                             <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.15rem; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${getShortTitle(worstKR.kr_title_name || '')}</div>
                             <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.75rem;">
@@ -1279,7 +1279,7 @@ function renderGoalHighlights() {
                     
                     ${biggestGrowth && biggestGrowth.change > 0 ? `
                         <div style="background: white; padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
-                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">ðŸ“ˆ Biggest Growth</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">📈 Biggest Growth</div>
                             <div style="font-weight: 600; color: var(--primary); font-size: 0.9rem;">${biggestGrowth.kr_name}</div>
                             <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.15rem; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${getShortTitle(biggestGrowth.kr_title_name || '')}</div>
                             <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.75rem;">
@@ -1383,15 +1383,15 @@ function renderActionItems() {
                 <div class="action-description">${item.description}</div>
                 <div class="action-meta">
                     <div class="action-meta-item">
-                        <span class="action-meta-label">ðŸ‘¤ Owner:</span>
+                        <span class="action-meta-label">👤 Owner:</span>
                         <span class="action-meta-value">${item.owner}</span>
                     </div>
                     <div class="action-meta-item">
-                        <span class="action-meta-label">â±Ã¯Â¸Â Timeline:</span>
+                        <span class="action-meta-label">⏱️ Timeline:</span>
                         <span class="action-meta-value">${item.timeline}</span>
                     </div>
                     <div class="action-meta-item">
-                        <span class="action-meta-label">ðŸ“Š Impact:</span>
+                        <span class="action-meta-label">📊 Impact:</span>
                         <span class="action-meta-value">${item.impact}</span>
                     </div>
                 </div>
@@ -1493,7 +1493,7 @@ function renderOKRCards() {
                     card.innerHTML = `
                         <div class="kr-header">
                             <div class="kr-name">${row.kr_name || 'N/A'}${krShortTitle ? ` <span style="color: var(--accent); font-weight: 700;">[${krShortTitle}]</span>` : ''}</div>
-                            ${row.kr_owner_name ? `<div class="kr-owner">ðŸ‘¤ ${row.kr_owner_name}</div>` : ''}
+                            ${row.kr_owner_name ? `<div class="kr-owner">👤 ${row.kr_owner_name}</div>` : ''}
                         </div>
                         <div class="kr-metrics">
                             <div class="kr-metric">
@@ -1550,7 +1550,7 @@ function renderOKRCards() {
                                 childCard.innerHTML = `
                                     <div class="kr-header">
                                         <div class="kr-name">${childRow.kr_name || 'N/A'}${childKrTitle ? ` <span style="color: var(--accent); font-weight: 700;">[${childKrTitle}]</span>` : ''}</div>
-                                        ${childRow.kr_owner_name ? `<div class="kr-owner">ðŸ‘¤ ${childRow.kr_owner_name}</div>` : ''}
+                                        ${childRow.kr_owner_name ? `<div class="kr-owner">👤 ${childRow.kr_owner_name}</div>` : ''}
                                     </div>
                                     <div class="kr-metrics">
                                         <div class="kr-metric">
@@ -1629,7 +1629,7 @@ function renderDataTable() {
             const objTitle = extractTitle(objData.krs[0]?.kr_title_name || '');
             const objRow = document.createElement('tr');
             objRow.className = 'objective-row';
-            objRow.innerHTML = `<td colspan="7"><strong>ðŸŽ¯ ${objName}</strong>${objTitle ? ` <span class="obj-title-text">- ${objTitle}</span>` : ''}</td>`;
+            objRow.innerHTML = `<td colspan="7"><strong>🎯 ${objName}</strong>${objTitle ? ` <span class="obj-title-text">- ${objTitle}</span>` : ''}</td>`;
             tbody.appendChild(objRow);
             
             const organizedKRs = organizeKRHierarchy(objData.krs);
@@ -1646,13 +1646,13 @@ function renderDataTable() {
                     let changeDisplay = 'N/A';
                     if (change !== null && !isNaN(change) && isFinite(change)) {
                         changeTrendClass = change >= 0 ? 'trend-positive' : 'trend-negative';
-                        changeDisplay = `${change >= 0 ? 'â†‘' : 'â†“'} ${Math.abs(change).toFixed(1)}%`;
+                        changeDisplay = `${change >= 0 ? '↑' : '↓'} ${Math.abs(change).toFixed(1)}%`;
                     }
                     const krTitle = getShortTitle(row.kr_title_name || '');
                     const indentPadding = 1.5 + (indent * 1.5);
                     const tr = document.createElement('tr');
                     tr.className = 'kr-row';
-                    const indentIndicator = indent > 0 ? '<span class="indent-indicator">â””</span>' : '';
+                    const indentIndicator = indent > 0 ? '<span class="indent-indicator">└</span>' : '';
                     tr.innerHTML = `
                         <td class="col-kr" style="padding-left: ${indentPadding}rem;">
                             <div class="kr-cell">
@@ -1677,10 +1677,10 @@ function renderDataTable() {
                                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                                         <span class="progress-text ${progress >= 100 ? 'complete' : progress >= 90 ? 'high' : 'low'}">${progress.toFixed(1)}%</span>
                                         ${progress >= 100 ? 
-                                            '<span class="table-status-badge achieved" title="Achieved Target">âœ“</span>' : 
+                                            '<span class="table-status-badge achieved" title="Achieved Target">✓</span>' : 
                                          progress >= 90 ? 
-                                            '<span class="table-status-badge slightly-under" title="Slightly Under Target">âš </span>' : 
-                                            '<span class="table-status-badge under" title="Under Target">âœ—</span>'}
+                                            '<span class="table-status-badge slightly-under" title="Slightly Under Target">⚠</span>' : 
+                                            '<span class="table-status-badge under" title="Under Target">✗</span>'}
                                     </div>
                                 </div>
                             ` : '<span class="na-text">N/A</span>'}
@@ -2146,10 +2146,10 @@ function processFirstTransactingFile(file) {
             console.log('Total rows:', results.data.length);
             
             firstTransactingData = results.data;
-            console.log('Ã¢Å“â€¦ First Transacting data loaded:', firstTransactingData.length, 'rows');
+            console.log('✅ First Transacting data loaded:', firstTransactingData.length, 'rows');
             
             // Show success status
-            showUploadStatus('firstTransactingStatus', 'success', `âœ“ Loaded ${firstTransactingData.length} rows from ${file.name}`);
+            showUploadStatus('firstTransactingStatus', 'success', `✓ Loaded ${firstTransactingData.length} rows from ${file.name}`);
             document.getElementById('firstTransactingUploadZone').classList.add('uploaded');
             
             // Only render if dashboard is already visible
@@ -2158,7 +2158,7 @@ function processFirstTransactingFile(file) {
             }
         },
         error: function(error) {
-            showUploadStatus('firstTransactingStatus', 'error', `âœ— Error: ${error.message}`);
+            showUploadStatus('firstTransactingStatus', 'error', `✗ Error: ${error.message}`);
         }
     });
 }
@@ -2177,10 +2177,10 @@ function processEarlyRetentionFile(file) {
             console.log('Total rows:', results.data.length);
             
             earlyRetentionData = results.data;
-            console.log('Ã¢Å“â€¦ Early Retention data loaded:', earlyRetentionData.length, 'rows');
+            console.log('✅ Early Retention data loaded:', earlyRetentionData.length, 'rows');
             
             // Show success status
-            showUploadStatus('earlyRetentionStatus', 'success', `âœ“ Loaded ${earlyRetentionData.length} rows from ${file.name}`);
+            showUploadStatus('earlyRetentionStatus', 'success', `✓ Loaded ${earlyRetentionData.length} rows from ${file.name}`);
             document.getElementById('earlyRetentionUploadZone').classList.add('uploaded');
             
             // Only render if dashboard is already visible
@@ -2189,7 +2189,7 @@ function processEarlyRetentionFile(file) {
             }
         },
         error: function(error) {
-            showUploadStatus('earlyRetentionStatus', 'error', `âœ— Error: ${error.message}`);
+            showUploadStatus('earlyRetentionStatus', 'error', `✗ Error: ${error.message}`);
         }
     });
 }
@@ -2207,7 +2207,7 @@ function renderHunterAnalysis() {
     if (firstTransactingData.length === 0 && earlyRetentionData.length === 0) {
         container.innerHTML = `
             <div class="no-monthly-data">
-                <h3 style="margin-bottom: 1rem;">ðŸŽ¯ Hunter Analysis</h3>
+                <h3 style="margin-bottom: 1rem;">🎯 Hunter Analysis</h3>
                 <p>Upload First Transacting and Early Retention CSV files to see activation and retention trends.</p>
             </div>
         `;
@@ -2778,7 +2778,7 @@ function processTeamPerfFile(file, statusElementId) {
             renderTeamPerformanceDynamic();
         },
         error: function(error) {
-            var msg = 'âœ— Error: ' + error.message;
+            var msg = '✗ Error: ' + error.message;
             showUploadStatus(statusElementId, 'error', msg);
             showUploadStatus(otherStatusId, 'error', msg);
         }
@@ -2981,7 +2981,7 @@ function renderTeamPerformanceDynamic() {
     html += '<div class="metric-subtitle">' + displayMonth;
     if (focusChange !== 0) {
         var changeClass = focusChange >= 0 ? 'positive' : '';
-        var arrow = focusChange >= 0 ? 'â†‘' : 'â†“';
+        var arrow = focusChange >= 0 ? '↑' : '↓';
         html += ' <span class="metric-change ' + changeClass + '">' + arrow + ' ' + Math.abs(focusChange).toFixed(1) + '% MoM</span>';
     }
     html += '</div></div>';
@@ -2992,7 +2992,7 @@ function renderTeamPerformanceDynamic() {
     html += '<div class="metric-subtitle">' + displayMonth;
     if (midtierChange !== 0) {
         var mChangeClass = midtierChange >= 0 ? 'positive' : '';
-        var mArrow = midtierChange >= 0 ? 'â†‘' : 'â†“';
+        var mArrow = midtierChange >= 0 ? '↑' : '↓';
         html += ' <span class="metric-change ' + mChangeClass + '">' + mArrow + ' ' + Math.abs(midtierChange).toFixed(1) + '% MoM</span>';
     }
     html += '</div></div>';
@@ -3043,7 +3043,7 @@ function renderTeamPerformanceDynamic() {
     
     // Key Highlights
     html += '<div class="insights-section" style="background: var(--card-bg); border-radius: 12px; padding: 2rem; box-shadow: var(--shadow-md); border: 1px solid var(--border); margin-bottom: 2rem;">';
-    html += '<h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 1.5rem; color: var(--primary);">ðŸ“Š Key Highlights - ' + displayMonth + '</h2>';
+    html += '<h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 1.5rem; color: var(--primary);">📊 Key Highlights - ' + displayMonth + '</h2>';
     
     // Top performer focus
     if (focusArr.length > 0) {
@@ -3328,7 +3328,7 @@ function resetTeamPerfData() {
 // Initialize file handlers on DOM ready
 setupTeamPerfFileHandlers();
 
-console.log('âœ… Dynamic Team Performance module loaded');
+console.log('✅ Dynamic Team Performance module loaded');
 
 // ========================================
 // FLEET ANALYSIS - GOOGLE SHEETS INTEGRATION
@@ -3356,13 +3356,13 @@ function fetchFleetData() {
     var statusEl = document.getElementById('fleetFetchStatus');
     
     if (!urlInput || !urlInput.value.trim()) {
-        showUploadStatus('fleetFetchStatus', 'error', 'âœ— Please enter a Google Sheet URL');
+        showUploadStatus('fleetFetchStatus', 'error', '✗ Please enter a Google Sheet URL');
         return;
     }
     
     var parsed = parseSheetUrl(urlInput.value.trim());
     if (!parsed.spreadsheetId) {
-        showUploadStatus('fleetFetchStatus', 'error', 'âœ— Invalid Google Sheet URL');
+        showUploadStatus('fleetFetchStatus', 'error', '✗ Invalid Google Sheet URL');
         return;
     }
     
@@ -3428,13 +3428,13 @@ function fetchFleetData() {
                 }
             },
             error: function(error) {
-                showUploadStatus('fleetFetchStatus', 'error', 'âœ— CSV parse error: ' + error.message);
+                showUploadStatus('fleetFetchStatus', 'error', '✗ CSV parse error: ' + error.message);
             }
         });
     })
     .catch(function(error) {
         console.error('Fetch error:', error);
-        showUploadStatus('fleetFetchStatus', 'error', 'âœ— ' + error.message);
+        showUploadStatus('fleetFetchStatus', 'error', '✗ ' + error.message);
     });
 }
 
@@ -3526,7 +3526,7 @@ function processFleetSheetData(rows) {
     console.log('Fleet policies:', policies);
     
     if (months.length === 0) {
-        showUploadStatus('fleetFetchStatus', 'error', 'âœ— No month data found. Check sheet format (Column A should have "YYYY-Mon" like "2026-Jan").');
+        showUploadStatus('fleetFetchStatus', 'error', '✗ No month data found. Check sheet format (Column A should have "YYYY-Mon" like "2026-Jan").');
         return;
     }
     
@@ -3649,7 +3649,7 @@ function renderFleetAnalysis() {
     html += '<div class="metric-subtitle">Target: ' + fmt(currentTarget);
     if (momGrowth !== 0) {
         var momColor = momGrowth >= 0 ? '#10B981' : '#EF4444';
-        var momArrow = momGrowth >= 0 ? 'â†‘' : 'â†“';
+        var momArrow = momGrowth >= 0 ? '↑' : '↓';
         html += ' <span class="metric-change" style="background: ' + (momGrowth >= 0 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)') + '; color: ' + momColor + ';">' + momArrow + ' ' + Math.abs(momGrowth).toFixed(1) + '% MoM</span>';
     }
     html += '</div></div>';
@@ -3671,7 +3671,7 @@ function renderFleetAnalysis() {
     html += '<div class="metric-label">MoM Growth</div>';
     var momClass = momGrowth >= 0 ? '#10B981' : '#EF4444';
     html += '<div class="metric-value" style="color: ' + momClass + ';">' + (momGrowth >= 0 ? '+' : '') + momGrowth.toFixed(1) + '%</div>';
-    html += '<div class="metric-subtitle">' + (prevActual > 0 ? fmt(prevActual) + ' â†’ ' + fmt(currentActual) : 'No previous data') + '</div>';
+    html += '<div class="metric-subtitle">' + (prevActual > 0 ? fmt(prevActual) + ' → ' + fmt(currentActual) : 'No previous data') + '</div>';
     html += '</div>';
     
     // Policies card (if data available)
@@ -3685,7 +3685,7 @@ function renderFleetAnalysis() {
         if (prevPol > 0) {
             var polChange = ((policies[currentMonthIdx] - prevPol) / prevPol * 100);
             var polColor = polChange >= 0 ? '#10B981' : '#EF4444';
-            var polArrow = polChange >= 0 ? 'â†‘' : 'â†“';
+            var polArrow = polChange >= 0 ? '↑' : '↓';
             html += '<div class="metric-subtitle">Prev: ' + prevPol.toLocaleString() + ' <span class="metric-change" style="background: ' + (polChange >= 0 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)') + '; color: ' + polColor + ';">' + polArrow + ' ' + Math.abs(polChange).toFixed(1) + '%</span></div>';
         }
         html += '</div>';
@@ -3737,9 +3737,9 @@ function renderFleetAnalysis() {
             if (pct >= 100) {
                 statusBadge = '<span class="table-status-badge achieved" title="Achieved">âœ”</span>';
             } else if (pct >= 90) {
-                statusBadge = '<span class="table-status-badge slightly-under" title="Near Target">âš </span>';
+                statusBadge = '<span class="table-status-badge slightly-under" title="Near Target">⚠</span>';
             } else {
-                statusBadge = '<span class="table-status-badge under" title="Under Target">âœ—</span>';
+                statusBadge = '<span class="table-status-badge under" title="Under Target">✗</span>';
             }
         } else {
             statusBadge = '<span style="color: var(--text-muted);">â€”</span>';
@@ -3748,7 +3748,7 @@ function renderFleetAnalysis() {
         var momDisplay = '';
         if (idx > 0 && a > 0 && prevA > 0) {
             var momCol = mom >= 0 ? '#10B981' : '#EF4444';
-            var momArr = mom >= 0 ? 'â†‘' : 'â†“';
+            var momArr = mom >= 0 ? '↑' : '↓';
             momDisplay = '<span style="color: ' + momCol + '; font-weight: 600;">' + momArr + ' ' + Math.abs(mom).toFixed(1) + '%</span>';
         } else {
             momDisplay = '<span style="color: var(--text-muted);">â€”</span>';
@@ -4148,4 +4148,4 @@ function renderFleetChart(months, targets, actuals, currentMonthIdx, scaleFactor
     });
 }
 
-console.log('âœ… Fleet Analysis module loaded');
+console.log('✅ Fleet Analysis module loaded');
