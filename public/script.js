@@ -1621,7 +1621,7 @@ function renderDataTable() {
         const goalTitle = firstKR ? getShortTitle(firstKR.kr_title_name) : '';
         const goalRow = document.createElement('tr');
         goalRow.className = 'goal-row';
-        goalRow.innerHTML = `<td colspan="7"><strong>ðŸ“Œ ${goalName}</strong>${goalTitle ? ` <span class="goal-title-text">- ${goalTitle}</span>` : ''}</td>`;
+        goalRow.innerHTML = `<td colspan="7"><strong> ${goalName}</strong>${goalTitle ? ` <span class="goal-title-text">- ${goalTitle}</span>` : ''}</td>`;
         tbody.appendChild(goalRow);
         
         Object.keys(hierarchy[goalName]).forEach(objName => {
