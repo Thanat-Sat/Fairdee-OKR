@@ -49,6 +49,34 @@ const EMBEDDED_TARGETS = {
 console.log('✅ Embedded targets loaded:', Object.keys(EMBEDDED_TARGETS).length, 'targets');
 
 // ========================================
+// LESS IS BETTER KRs
+// For these KRs, being UNDER the target = achieved (lower is better)
+// Progress = (target / current) * 100  — inverted formula
+// ========================================
+const LESS_IS_BETTER_KRS = new Set([
+    'KR-5.3.1',
+    'KR-5.3.2',
+    //'KR-5.5.2',
+    'KR-5.2.2',
+   //'KR-5.4.1',
+    'KR-5.4.2'
+]);
+
+// Central progress calculation — handles both normal and "less is better" KRs
+function calculateProgress(krName, current, target) {
+    if (target === null || target === undefined || current === null || current === undefined) return 0;
+    if (LESS_IS_BETTER_KRS.has(krName)) {
+        // Lower current = better. Formula: (target / actual) * 100
+        // e.g. target=40, actual=42 → (40/42)*100 = 95.2%
+        // e.g. target=0.2, actual=-86 → actual<=0, treat as fully achieved (100%)
+        if (current <= 0) return 100;
+        return (target / current) * 100;
+    }
+    if (!target || target === 0) return 0;
+    return (current / target) * 100;
+}
+
+// ========================================
 // HUNTER ANALYSIS EMBEDDED TARGETS
 // ========================================
 // First Transacting Targets (Jan 2026 - Dec 2026) in THB
@@ -672,7 +700,7 @@ function updateStats() {
     dataWithTargets.forEach(row => {
         const current = getLatestValue(row);
         const target = getTarget(row);
-        const progress = target > 0 && current !== null ? (current / target) * 100 : 0;
+        const progress = calculateProgress(row.kr_name, current, target);
         totalProgress += progress;
         if (progress >= 75) onTrackCount++;
     });
@@ -955,14 +983,14 @@ function createMonthlyProgressCard(row) {
         let statusBadge = '';
         
         if (monthlyTarget && actualValue !== null && actualValue !== undefined) {
-            progressPercent = (actualValue / monthlyTarget) * 100;
+            progressPercent = calculateProgress(krName, actualValue, monthlyTarget);
             
             // Determine status badge and class - MUST MATCH
             if (progressPercent >= 100) {
                 progressClass = 'excellent';  // Green bar
                 statusBadge = '<span class="status-badge achieved">✓ Achieved Target</span>';
             } else if (progressPercent >= 90) {
-                progressClass = 'good';  // Yellow bar (changed from 'good' to match yellow)
+                progressClass = 'good';  // Yellow bar
                 statusBadge = '<span class="status-badge slightly-under">⚠ Slightly Under Target</span>';
             } else {
                 progressClass = 'poor';  // Red bar
@@ -976,8 +1004,11 @@ function createMonthlyProgressCard(row) {
             displayText = `Actual: ${formatNumber(actualValue)}`;
         }
         
-        const labelClass = actualValue && monthlyTarget && actualValue >= monthlyTarget ? 'over-target' : 
-                          actualValue && monthlyTarget ? 'under-target' : '';
+        // For less-is-better KRs, "on track" means actual <= target
+        const isOnTrack = LESS_IS_BETTER_KRS.has(krName)
+            ? (actualValue && monthlyTarget && actualValue <= monthlyTarget)
+            : (actualValue && monthlyTarget && actualValue >= monthlyTarget);
+        const labelClass = isOnTrack ? 'over-target' : (actualValue && monthlyTarget ? 'under-target' : '');
         
         progressBar.innerHTML = `
             <div class="monthly-progress-label">
@@ -1017,11 +1048,12 @@ function createMonthlyProgressCard(row) {
             totalTarget += target;
             totalActual += actual;
             monthsTracked++;
-            if (actual >= target) monthsOnTrack++;
+            const isOnTrack = LESS_IS_BETTER_KRS.has(krName) ? actual <= target : actual >= target;
+            if (isOnTrack) monthsOnTrack++;
         }
     });
     
-    const overallProgress = totalTarget > 0 ? (totalActual / totalTarget) * 100 : 0;
+    const overallProgress = totalTarget > 0 ? calculateProgress(krName, totalActual, totalTarget) : 0;
     const onTrackPercent = monthsTracked > 0 ? (monthsOnTrack / monthsTracked) * 100 : 0;
     
     stats.innerHTML = `
@@ -1143,7 +1175,7 @@ function renderGoalHighlights() {
         const current = getLatestValue(row);
         const previous = getPreviousValue(row);
         const target = getTarget(row);
-        const progress = target > 0 && current !== null ? (current / target) * 100 : 0;
+        const progress = calculateProgress(row.kr_name, current, target);
         const change = calculateChange(current, previous);
         
         goalData[goalName].krs.push({
@@ -1319,7 +1351,7 @@ function renderActionItems() {
         const current = getLatestValue(row);
         const previous = getPreviousValue(row);
         const target = getTarget(row);
-        const progress = target > 0 && current !== null ? (current / target) * 100 : 0;
+        const progress = calculateProgress(row.kr_name, current, target);
         const change = calculateChange(current, previous);
         return { ...row, current, previous, target, progress, change };
     });
@@ -1473,7 +1505,7 @@ function renderOKRCards() {
                     
                     const latestValue = getLatestValue(row);
                     const target = getTarget(row);
-                    const progress = target > 0 && latestValue !== null ? Math.min((latestValue / target) * 100, 100) : 0;
+                    const progress = Math.min(calculateProgress(row.kr_name, latestValue, target), 100);
                     const numberClass = getNumberPairLengthClass(latestValue, target);
                     const card = document.createElement('div');
                     card.className = `okr-card ${getTopicClass(row.kr_topic_name)} horizontal-layout`;
@@ -1641,7 +1673,7 @@ function renderDataTable() {
                     const previous = getPreviousValue(row);
                     const target = getTarget(row);
                     const change = calculateChange(current, previous);
-                    const progress = target > 0 && current !== null ? ((current / target) * 100) : 0;
+                    const progress = calculateProgress(row.kr_name, current, target);
                     let changeTrendClass = 'trend-neutral';
                     let changeDisplay = 'N/A';
                     if (change !== null && !isNaN(change) && isFinite(change)) {
@@ -1748,7 +1780,7 @@ function exportTableToPDF() {
             var current = getLatestValue(row);
             var previous = getPreviousValue(row);
             var target = getTarget(row);
-            var progress = target > 0 && current !== null ? (current / target) * 100 : 0;
+            var progress = calculateProgress(row.kr_name, current, target);
             var change = calculateChange(current, previous);
             goalData[goalName].krs.push({
                 kr_name: row.kr_name, kr_title_name: row.kr_title_name,
