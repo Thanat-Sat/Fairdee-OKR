@@ -491,6 +491,13 @@ function processFile(file) {
                     return; // Skip this row
                 }
                 
+                // KR-5.2.1 has two unit types: "% of Positive Rating" and "Rating out of 5"
+                // Only keep the percentage version
+                if (krName.trim() === 'KR-5.2.1' && unitNameStr.includes('rating out of')) {
+                    filteredRowCount++;
+                    return; // Skip the "Rating out of 5" rows, keep only "% of Positive Rating"
+                }
+                
                 const monthStr = row[monthColumnName];
                 const valueStr = row[valueColumnName];
                 
