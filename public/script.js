@@ -1,52 +1,3 @@
-// ========================================
-// EMBEDDED TARGETS - EDIT THESE AS NEEDED  
-// ========================================
-const EMBEDDED_TARGETS = {
-    // Use short KR codes that match your data file (KR-0, KR-1, KR-1.1, etc.)
-    // NOT the long descriptive names
-    
-    "KR-0": 3824656074,
-    "KR-1": 3374656074,
-    "KR-1.1": 1400225810,
-    "KR-1.1.1": 90,
-    "KR-1.2": 80296927,
-    "KR-1.2.1": 80296927,
-    "KR-1.3": 635458029,
-    "KR-1.3.1": 166883999,
-    "KR-1.3.2": 440934031,
-    "KR-1.4": 999656489,
-    "KR-2": 450050000,
-    "KR-2.1": 120050000,
-    "KR-2.1.1": 56050000,
-    "KR-2.1.2": 64000000,
-    "KR-2.2": 230000000,
-    "KR-2.2.1": 480000000,
-    "KR-2.2.2": 25,
-    "KR-2.3": 110000000,
-    "KR-2.3.1": 550000000,
-    "KR-2.3.2": 10,
-    "KR-3.1": 25.70,
-    "KR-3.2": 45,
-    "KR-4.1": 2130926,
-    "KR-4.1.1": 57,
-    "KR-4.2": 675,
-    "KR-4.2.1": 1426,
-    "KR-4.2.2": 2333,
-    "KR-4.2.3": 6899,
-    "KR-4.2.4": 2581,
-    "KR-5.1.1": 90,
-    "KR-5.1.2": 90,
-    "KR-5.1.3": 95,
-    "KR-5.1.4": 80,
-    "KR-5.2.1": 93,
-    "KR-5.2.2": 0,
-    "KR-5.3.1": 33,
-    "KR-5.3.2": 14,
-    "KR-5.5.1": 5,
-    "KR-5.5.2": 3
-};
-
-console.log('✅ Embedded targets loaded:', Object.keys(EMBEDDED_TARGETS).length, 'targets');
 
 // ========================================
 // LESS IS BETTER KRs
@@ -271,10 +222,10 @@ function parseMonthString(monthStr) {
     return new Date(parseInt(yearPart), monthIndex, 1);
 }
 
-// Get target for a KR - uses embedded targets first, then falls back to CSV data
+// Get target for a KR - uses monthly targets file, then falls back to CSV data
 function getTarget(row) {
     const krName = row.kr_name;
-    
+
     // If a month is selected, try to get the monthly target first
     if (selectedMonth) {
         const monthlyTarget = getMonthlyTarget(krName, selectedMonth);
@@ -282,12 +233,7 @@ function getTarget(row) {
             return monthlyTarget;
         }
     }
-    
-    // First check embedded targets (annual targets)
-    if (EMBEDDED_TARGETS.hasOwnProperty(krName)) {
-        return EMBEDDED_TARGETS[krName];
-    }
-    
+
     // Fallback to CSV data if available
     if (row.ultimate_target_number) {
         let target = parseFloat(row.ultimate_target_number.toString().replace(/,/g, ""));
@@ -472,7 +418,7 @@ function processFile(file) {
                 
                 // FILTER: Skip year-to-month / YTD / cumulative rows
                 const unitName = row[cols.unit_name] || row.unit_name || '';
-                const rowType = row.type || row.result_type || row.measurement_type || row[cols.kr_title_name] || row.kr_title_name || '';
+                const rowType = row.type || row.result_type || row.measurement_type || '';
                 const unitNameStr = unitName.toString().toLowerCase();
                 const rowTypeStr = rowType.toString().toLowerCase();
                 
