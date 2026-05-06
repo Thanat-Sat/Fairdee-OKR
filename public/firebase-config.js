@@ -3,12 +3,12 @@
 // ============================================================================
 
 const firebaseConfig = {
-    apiKey: "AIzaSyCHvF2m6Y1DUTyIIy6sokmsN39jU5pRlIQ",
-    authDomain: "fairdee-okr.firebaseapp.com",
-    projectId: "fairdee-okr",
-    storageBucket: "fairdee-okr.firebasestorage.app",
-    messagingSenderId: "682945622014",
-    appId: "1:682945622014:web:287ff87afcb946dd781aaf"
+    apiKey: "AIzaSyBCUQKp8cMz9CM3hUA5YKvpZaOF84QflF4",
+    authDomain: "fairdee-monthly-metr.firebaseapp.com",
+    projectId: "fairdee-monthly-metr",
+    storageBucket: "fairdee-monthly-metr.firebasestorage.app",
+    messagingSenderId: "763249459864",
+    appId: "1:763249459864:web:87aa13a352c050c93446ed"
 };
 
 // Initialize Firebase

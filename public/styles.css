@@ -1634,6 +1634,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    flex-wrap: wrap;
 }
 
 .month-selector-label {
@@ -1652,8 +1653,12 @@
     background: var(--card-bg);
     color: var(--text-primary);
     cursor: pointer;
-    min-width: 130px;
+    min-width: 120px;
     transition: border-color 0.2s ease;
+}
+
+.global-year-select {
+    min-width: 92px;
 }
 
 .global-month-select:focus {

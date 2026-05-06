@@ -42,7 +42,7 @@ function initializeFirebase() {
 
     try {
         console.log('Initializing Firebase app...');
-        app = firebase.initializeApp(firebaseConfig);
+        app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
         console.log('✅ Firebase app initialized');
         
         console.log('Initializing Auth...');
@@ -134,14 +134,39 @@ function initializeFirebase() {
             console.log('✅ TargetsDatabase created, collection reference:', this.targetsCollection);
         }
 
+        waitForCurrentUser() {
+            if (auth.currentUser) {
+                return Promise.resolve(auth.currentUser);
+            }
+
+            return new Promise((resolve, reject) => {
+                let unsubscribe = null;
+                const timeout = setTimeout(() => {
+                    if (unsubscribe) unsubscribe();
+                    reject(new Error('User not authenticated'));
+                }, 8000);
+
+                unsubscribe = auth.onAuthStateChanged((user) => {
+                    clearTimeout(timeout);
+                    if (unsubscribe) unsubscribe();
+                    if (user) {
+                        resolve(user);
+                    } else {
+                        reject(new Error('User not authenticated'));
+                    }
+                }, (error) => {
+                    clearTimeout(timeout);
+                    if (unsubscribe) unsubscribe();
+                    reject(error);
+                });
+            });
+        }
+
         async saveTarget(targetData) {
             try {
                 console.log('saveTarget called with:', targetData);
                 
-                const user = auth.currentUser;
-                if (!user) {
-                    throw new Error('User not authenticated');
-                }
+                const user = await this.waitForCurrentUser();
 
                 const dataToSave = {
                     type: targetData.type,
@@ -177,6 +202,7 @@ function initializeFirebase() {
         async getAllTargets() {
             try {
                 console.log('Getting all targets...');
+                await this.waitForCurrentUser();
                 const snapshot = await this.targetsCollection.orderBy('updatedAt', 'desc').get();
                 const targets = [];
                 
@@ -197,6 +223,7 @@ function initializeFirebase() {
 
         async getTargetById(targetId) {
             try {
+                await this.waitForCurrentUser();
                 const doc = await this.targetsCollection.doc(targetId).get();
                 
                 if (doc.exists) {
@@ -218,6 +245,7 @@ function initializeFirebase() {
 
         async getTargetsByType(type) {
             try {
+                await this.waitForCurrentUser();
                 const snapshot = await this.targetsCollection
                     .where('type', '==', type)
                     .orderBy('updatedAt', 'desc')
@@ -240,6 +268,7 @@ function initializeFirebase() {
 
         async getTargetsByMonth(month) {
             try {
+                await this.waitForCurrentUser();
                 const snapshot = await this.targetsCollection
                     .where('month', '==', month)
                     .orderBy('updatedAt', 'desc')
@@ -262,10 +291,7 @@ function initializeFirebase() {
 
         async updateTarget(targetId, updates) {
             try {
-                const user = auth.currentUser;
-                if (!user) {
-                    throw new Error('User not authenticated');
-                }
+                const user = await this.waitForCurrentUser();
 
                 const updateData = {
                     ...updates,
@@ -284,6 +310,7 @@ function initializeFirebase() {
 
         async deleteTarget(targetId) {
             try {
+                await this.waitForCurrentUser();
                 await this.targetsCollection.doc(targetId).delete();
                 console.log('Target deleted:', targetId);
                 return { success: true };
@@ -295,22 +322,37 @@ function initializeFirebase() {
 
         onTargetsChanged(callback) {
             console.log('Setting up real-time listener...');
-            return this.targetsCollection.orderBy('updatedAt', 'desc').onSnapshot(
-                (snapshot) => {
-                    const targets = [];
-                    snapshot.forEach((doc) => {
-                        targets.push({
-                            id: doc.id,
-                            ...doc.data()
-                        });
-                    });
-                    console.log('Real-time update:', targets.length, 'targets');
-                    callback(targets);
-                },
-                (error) => {
-                    console.error('Error in real-time listener:', error);
-                }
-            );
+            let unsubscribe = null;
+            let cancelled = false;
+
+            this.waitForCurrentUser()
+                .then(() => {
+                    if (cancelled) return;
+                    unsubscribe = this.targetsCollection.orderBy('updatedAt', 'desc').onSnapshot(
+                        (snapshot) => {
+                            const targets = [];
+                            snapshot.forEach((doc) => {
+                                targets.push({
+                                    id: doc.id,
+                                    ...doc.data()
+                                });
+                            });
+                            console.log('Real-time update:', targets.length, 'targets');
+                            callback(targets);
+                        },
+                        (error) => {
+                            console.error('Error in real-time listener:', error);
+                        }
+                    );
+                })
+                .catch((error) => {
+                    console.error('Error setting up real-time listener:', error);
+                });
+
+            return () => {
+                cancelled = true;
+                if (unsubscribe) unsubscribe();
+            };
         }
 
         offTargetsChanged(unsubscribe) {

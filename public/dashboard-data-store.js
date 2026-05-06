@@ -161,5 +161,10 @@ window.getEffectiveMonth = function(availableMonths) {
     if (!availableMonths || availableMonths.length === 0) return null;
     const selected = localStorage.getItem('dashboard_selected_month');
     if (selected && availableMonths.includes(selected)) return selected;
+    if (selected && /^\d{4}-\d{2}$/.test(selected)) {
+        const priorMonths = availableMonths.filter(month => month <= selected);
+        if (priorMonths.length > 0) return priorMonths[priorMonths.length - 1];
+        return availableMonths[0];
+    }
     return availableMonths[availableMonths.length - 1];
 };

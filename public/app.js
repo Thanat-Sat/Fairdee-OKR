@@ -58,26 +58,78 @@ function formatMonthDisplay(monthStr) {
     return names[parseInt(month) - 1] + ' ' + year;
 }
 
+function getMonthParts(monthStr) {
+    if (!/^\d{4}-\d{2}$/.test(monthStr || '')) return null;
+    const [year, month] = monthStr.split('-');
+    return { year, month };
+}
+
+function getSelectableYears(months) {
+    const currentYear = new Date().getFullYear();
+    if (!months || months.length === 0) return [String(currentYear)];
+
+    const years = months
+        .map(month => parseInt(String(month).slice(0, 4), 10))
+        .filter(year => !Number.isNaN(year));
+
+    if (years.length === 0) return [String(currentYear)];
+
+    const minYear = Math.min(...years);
+    const maxYear = Math.max(...years, currentYear);
+    const selectableYears = [];
+    for (let year = minYear; year <= maxYear; year++) {
+        selectableYears.push(String(year));
+    }
+    return selectableYears;
+}
+
+function getSelectedMonthFromControls() {
+    const monthSelect = document.getElementById('globalMonthSelect');
+    const yearSelect = document.getElementById('globalYearSelect');
+    if (!monthSelect || !yearSelect || !monthSelect.value || !yearSelect.value) return '';
+    return `${yearSelect.value}-${monthSelect.value}`;
+}
+
+function setSelectedMonth(month) {
+    if (!month) return;
+    localStorage.setItem('dashboard_selected_month', month);
+    broadcastMonthChange(month);
+}
+
 function populateMonthSelector() {
-    const select = document.getElementById('globalMonthSelect');
-    if (!select || !window.dashboardDataStore) return;
+    const monthSelect = document.getElementById('globalMonthSelect');
+    const yearSelect = document.getElementById('globalYearSelect');
+    if (!monthSelect || !yearSelect || !window.dashboardDataStore) return;
 
     const months = window.dashboardDataStore.getAvailableMonths();
-    if (months.length === 0) return;
+    const selectableYears = getSelectableYears(months);
+    const savedParts = getMonthParts(localStorage.getItem('dashboard_selected_month'));
+    const latestParts = getMonthParts(months[months.length - 1]);
+    const now = new Date();
+    const fallbackParts = latestParts || {
+        year: String(now.getFullYear()),
+        month: String(now.getMonth() + 1).padStart(2, '0')
+    };
+    const selectedParts = savedParts || fallbackParts;
 
-    select.innerHTML = '';
-    months.slice().reverse().forEach(month => {
+    yearSelect.innerHTML = '';
+    selectableYears.slice().reverse().forEach(year => {
         const opt = document.createElement('option');
-        opt.value = month;
-        opt.textContent = formatMonthDisplay(month);
-        select.appendChild(opt);
+        opt.value = year;
+        opt.textContent = year;
+        yearSelect.appendChild(opt);
     });
 
-    const saved = localStorage.getItem('dashboard_selected_month');
-    const latest = months[months.length - 1];
-    const current = (saved && months.includes(saved)) ? saved : latest;
-    select.value = current;
-    localStorage.setItem('dashboard_selected_month', current);
+    if (!selectableYears.includes(selectedParts.year)) {
+        const opt = document.createElement('option');
+        opt.value = selectedParts.year;
+        opt.textContent = selectedParts.year;
+        yearSelect.insertBefore(opt, yearSelect.firstChild);
+    }
+
+    monthSelect.value = selectedParts.month;
+    yearSelect.value = selectedParts.year;
+    localStorage.setItem('dashboard_selected_month', `${selectedParts.year}-${selectedParts.month}`);
 }
 
 function broadcastMonthChange(month) {
@@ -95,12 +147,17 @@ function initMonthSelector() {
     }
     populateMonthSelector();
 
-    const select = document.getElementById('globalMonthSelect');
-    if (select) {
-        select.addEventListener('change', function() {
-            localStorage.setItem('dashboard_selected_month', this.value);
-            broadcastMonthChange(this.value);
-        });
+    const monthSelect = document.getElementById('globalMonthSelect');
+    const yearSelect = document.getElementById('globalYearSelect');
+    const handleChange = function() {
+        setSelectedMonth(getSelectedMonthFromControls());
+    };
+
+    if (monthSelect) {
+        monthSelect.addEventListener('change', handleChange);
+    }
+    if (yearSelect) {
+        yearSelect.addEventListener('change', handleChange);
     }
 }
 
