@@ -74,6 +74,7 @@ let monthlyTargets = new Map(); // Structure: Map<krName, Map<month, target>>
 // ========================================
 let firstTransactingData = [];
 let earlyRetentionData = [];
+let hunterChartInstances = {};
 
 // ========================================
 // END OF EMBEDDED TARGETS
@@ -83,6 +84,29 @@ let csvData = [];
 let filteredData = [];
 let allMonths = []; // All unique months found in data
 let selectedMonth = ''; // Currently selected month
+
+// ========================================
+// LOADING PROGRESS TRACKER
+// ========================================
+let _loadedCount = 0;
+const _totalSources = 5;
+
+function _markSourceLoaded() {
+    _loadedCount++;
+    var pct = Math.round((_loadedCount / _totalSources) * 100);
+    var fill = document.getElementById('dataLoadingFill');
+    var countEl = document.getElementById('dataLoadingCount');
+    var textEl = document.getElementById('dataLoadingText');
+    if (fill) fill.style.width = pct + '%';
+    if (countEl) countEl.textContent = _loadedCount + ' / ' + _totalSources;
+    if (_loadedCount >= _totalSources) {
+        if (textEl) textEl.textContent = 'All data loaded';
+        setTimeout(function() {
+            var bar = document.getElementById('dataLoadingBar');
+            if (bar) bar.style.display = 'none';
+        }, 1200);
+    }
+}
 
 // ========================================
 // HELPER FUNCTIONS
@@ -101,17 +125,8 @@ function showUploadStatus(elementId, status, message) {
     statusEl.innerHTML = message;
 }
 
-// Show dashboard (called when user clicks "View Dashboard" button)
+// Show dashboard — kept for compatibility but dashboard is now always visible
 function showDashboard() {
-    if (csvData.length === 0) {
-        alert('Please upload a data CSV file first.');
-        return;
-    }
-    
-    document.getElementById('uploadSection').style.display = 'none';
-    document.getElementById('dashboard').style.display = 'block';
-    
-    // Render all views
     renderAll();
 }
 
@@ -119,81 +134,8 @@ function showDashboard() {
 // FILE INPUT HANDLERS
 // ========================================
 
-// File input handler
-document.getElementById('fileInput').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        processFile(file);
-    }
-});
+// OKR, First Transacting, and Early Retention data are all loaded automatically from Google Sheets
 
-// Monthly targets file input handler
-document.getElementById('targetsFileInput').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        processMonthlyTargetsFile(file);
-    }
-});
-
-// First Transacting file input handler
-document.getElementById('firstTransactingInput').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        processFirstTransactingFile(file);
-    }
-});
-
-// Early Retention file input handler
-document.getElementById('earlyRetentionInput').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        processEarlyRetentionFile(file);
-    }
-});
-
-// Drag and drop handlers for data file
-const uploadZone = document.getElementById('uploadZone');
-
-uploadZone.addEventListener('dragover', function(e) {
-    e.preventDefault();
-    this.classList.add('dragover');
-});
-
-uploadZone.addEventListener('dragleave', function() {
-    this.classList.remove('dragover');
-});
-
-uploadZone.addEventListener('drop', function(e) {
-    e.preventDefault();
-    this.classList.remove('dragover');
-    const file = e.dataTransfer.files[0];
-    if (file && file.type === 'text/csv') {
-        document.getElementById('fileInput').files = e.dataTransfer.files;
-        processFile(file);
-    }
-});
-
-// Drag and drop handlers for targets file
-const targetsUploadZone = document.getElementById('targetsUploadZone');
-
-targetsUploadZone.addEventListener('dragover', function(e) {
-    e.preventDefault();
-    this.classList.add('dragover');
-});
-
-targetsUploadZone.addEventListener('dragleave', function() {
-    this.classList.remove('dragover');
-});
-
-targetsUploadZone.addEventListener('drop', function(e) {
-    e.preventDefault();
-    this.classList.remove('dragover');
-    const file = e.dataTransfer.files[0];
-    if (file && file.type === 'text/csv') {
-        document.getElementById('targetsFileInput').files = e.dataTransfer.files;
-        processMonthlyTargetsFile(file);
-    }
-});
 
 // Parse date from "Month, Year" or "YYYY-MM-DD" string
 function parseMonthString(monthStr) {
@@ -337,7 +279,8 @@ function processMonthlyTargetsFile(file) {
             
             // Show success status
             showUploadStatus('targetsFileStatus', 'success', `✓ Loaded targets for ${monthlyTargets.size} KRs from ${file.name}`);
-            document.getElementById('targetsUploadZone').classList.add('uploaded');
+            const _tuz = document.getElementById('targetsUploadZone');
+            if (_tuz) _tuz.classList.add('uploaded');
             
             // Re-render if data is already loaded
             if (csvData.length > 0) {
@@ -374,159 +317,176 @@ function resolveColumns(headers) {
     };
 }
 
-// Process CSV file - NEW FORMAT (long format with months as rows)
-function processFile(file) {
-    Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
-        transformHeader: function(header) {
-            return header.trim();
-        },
-        complete: function(results) {
-            console.log('=== CSV PARSING DEBUG ===');
-            console.log('Total rows:', results.data.length);
-            
-            // Find the month column name (flexible matching)
-            const headers = results.meta.fields || Object.keys(results.data[0] || {});
-            console.log('Headers:', headers);
+// Shared OKR data processor — accepts PapaParse results and a source label
+function processOKRParsedData(results, sourceName) {
+    console.log('=== CSV PARSING DEBUG ===');
+    console.log('Total rows:', results.data.length);
 
-            // Resolve column names — supports both snake_case and Title Case
-            const cols = resolveColumns(headers);
-            console.log('Resolved columns:', cols);
+    const headers = results.meta.fields || Object.keys(results.data[0] || {});
+    console.log('Headers:', headers);
 
-            const monthColumnName = cols.month;
-            const valueColumnName = cols.result_number || headers.find(h =>
-                h.toLowerCase().includes('result_number') || h.toLowerCase().includes('sum of')
-            ) || 'Sum of result_number';
-            
-            console.log('Month column:', monthColumnName);
-            console.log('Value column:', valueColumnName);
-            
-            if (!monthColumnName) {
-                alert('Cannot find month column in CSV. Please check file format.');
-                return;
+    const cols = resolveColumns(headers);
+    console.log('Resolved columns:', cols);
+
+    const monthColumnName = cols.month;
+    const valueColumnName = cols.result_number || headers.find(h =>
+        h.toLowerCase().includes('result_number') || h.toLowerCase().includes('sum of')
+    ) || 'Sum of result_number';
+
+    console.log('Month column:', monthColumnName);
+    console.log('Value column:', valueColumnName);
+
+    if (!monthColumnName) {
+        console.error('Headers received:', headers);
+        showUploadStatus('dataFileStatus', 'error', '✗ Cannot find month column. Headers: ' + headers.slice(0, 8).join(', '));
+        return;
+    }
+
+    const monthSet = new Set();
+    const groupedData = new Map();
+    let filteredRowCount = 0;
+
+    monthlyTargets.clear();
+
+    results.data.forEach(row => {
+        const krName = row[cols.kr_name] || row.kr_name;
+        if (!krName || !krName.trim()) return;
+
+        const unitName = row[cols.unit_name] || row.unit_name || '';
+        const rowType = row.type || row.result_type || row.measurement_type || '';
+        const unitNameStr = unitName.toString().toLowerCase();
+        const rowTypeStr = rowType.toString().toLowerCase();
+
+        if (unitNameStr.includes('year-to-month') ||
+            unitNameStr.includes('ytd') ||
+            unitNameStr.includes('year to month') ||
+            unitNameStr.includes('yearly average') ||
+            unitNameStr.includes('cumulative') ||
+            rowTypeStr.includes('year-to-month') ||
+            rowTypeStr.includes('ytd') ||
+            rowTypeStr.includes('year to month') ||
+            rowTypeStr.includes('yearly average') ||
+            rowTypeStr.includes('cumulative')) {
+            filteredRowCount++;
+            return;
+        }
+
+        if (krName.trim() === 'KR-5.2.1' && unitNameStr.includes('rating out of')) {
+            filteredRowCount++;
+            return;
+        }
+
+        const monthStr = row[monthColumnName];
+        const valueStr = row[valueColumnName];
+
+        if (monthStr) {
+            monthSet.add(monthStr.trim());
+        }
+
+        const goalName     = row[cols.goal_name]               || row.goal_name               || '';
+        const objName      = row[cols.objective_name]          || row.objective_name          || '';
+        const topicName    = row[cols.kr_topic_name]           || row.kr_topic_name           || '';
+        const titleName    = row[cols.kr_title_name]           || row.kr_title_name           || '';
+        const ownerName    = row[cols.kr_owner_name]           || row.kr_owner_name           || '';
+        const yearlyTarget = row[cols.ultimate_target_number]  || row.ultimate_target_number  || '';
+        const unitNameVal  = row[cols.unit_name]               || row.unit_name               || '';
+
+        const krKey = `${goalName}|${objName}|${krName}`;
+
+        if (!groupedData.has(krKey)) {
+            groupedData.set(krKey, {
+                goal_name: goalName,
+                objective_name: objName,
+                kr_name: krName,
+                kr_topic_name: topicName,
+                kr_title_name: titleName,
+                kr_owner_name: ownerName,
+                ultimate_target_number: yearlyTarget,
+                unit_name: unitNameVal,
+                monthlyData: new Map()
+            });
+        }
+
+        const krUnitName = unitNameVal.toString().toLowerCase();
+        const isPercentKR = krUnitName.includes('%') || krUnitName.includes('percent');
+
+        // Store monthly result value
+        if (monthStr && valueStr) {
+            let value = parseFloat(valueStr.toString().replace(/,/g, ''));
+            if (!isNaN(value)) {
+                if (isPercentKR && Math.abs(value) <= 1) value = value * 100;
+                groupedData.get(krKey).monthlyData.set(monthStr.trim(), value);
             }
-            
-            // Group data by KR and collect all months
-            const monthSet = new Set();
-            const groupedData = new Map();
-            let filteredRowCount = 0; // Track how many year-to-month/YTD/yearly average rows were filtered out
-            
-            results.data.forEach(row => {
-                const krName = row[cols.kr_name] || row.kr_name;
-                if (!krName || !krName.trim()) return;
-                
-                // FILTER: Skip year-to-month / YTD / cumulative rows
-                const unitName = row[cols.unit_name] || row.unit_name || '';
-                const rowType = row.type || row.result_type || row.measurement_type || '';
-                const unitNameStr = unitName.toString().toLowerCase();
-                const rowTypeStr = rowType.toString().toLowerCase();
-                
-                // Skip if this is a year-to-month/YTD/cumulative/yearly average row
-                if (unitNameStr.includes('year-to-month') || 
-                    unitNameStr.includes('ytd') || 
-                    unitNameStr.includes('year to month') ||
-                    unitNameStr.includes('yearly average') ||
-                    unitNameStr.includes('cumulative') ||
-                    rowTypeStr.includes('year-to-month') || 
-                    rowTypeStr.includes('ytd') || 
-                    rowTypeStr.includes('year to month') ||
-                    rowTypeStr.includes('yearly average') ||
-                    rowTypeStr.includes('cumulative')) {
-                    filteredRowCount++;
-                    return; // Skip this row
-                }
-                
-                // KR-5.2.1 has two unit types: "% of Positive Rating" and "Rating out of 5"
-                // Only keep the percentage version
-                if (krName.trim() === 'KR-5.2.1' && unitNameStr.includes('rating out of')) {
-                    filteredRowCount++;
-                    return; // Skip the "Rating out of 5" rows, keep only "% of Positive Rating"
-                }
-                
-                const monthStr = row[monthColumnName];
-                const valueStr = row[valueColumnName];
-                
-                if (monthStr) {
-                    monthSet.add(monthStr.trim());
-                }
+        }
 
-                // Resolve field values using both new and old column names
-                const goalName      = row[cols.goal_name]      || row.goal_name      || '';
-                const objName       = row[cols.objective_name] || row.objective_name || '';
-                const topicName     = row[cols.kr_topic_name]  || row.kr_topic_name  || '';
-                const titleName     = row[cols.kr_title_name]  || row.kr_title_name  || '';
-                const ownerName     = row[cols.kr_owner_name]  || row.kr_owner_name  || '';
-                const yearlyTarget  = row[cols.ultimate_target_number] || row.ultimate_target_number || '';
-                const unitNameVal   = row[cols.unit_name]      || row.unit_name      || '';
-                
-                // Create unique key for each KR
-                const krKey = `${goalName}|${objName}|${krName}`;
-                
-                if (!groupedData.has(krKey)) {
-                    groupedData.set(krKey, {
-                        goal_name: goalName,
-                        objective_name: objName,
-                        kr_name: krName,
-                        kr_topic_name: topicName,
-                        kr_title_name: titleName,
-                        kr_owner_name: ownerName,
-                        ultimate_target_number: yearlyTarget,
-                        unit_name: unitNameVal,
-                        monthlyData: new Map()
-                    });
-                }
-                
-                // Store monthly value
-                if (monthStr && valueStr) {
-                    let value = parseFloat(valueStr.toString().replace(/,/g, ''));
-                    if (!isNaN(value)) {
-                        // If the KR unit is percentage-based and value is in decimal form (e.g. 0.71 = 71%),
-                        // multiply by 100 to convert to proper percentage
-                        const krUnitName = unitNameVal.toString().toLowerCase();
-                        const isPercentKR = krUnitName.includes('%') || krUnitName.includes('percent');
-                        if (isPercentKR && Math.abs(value) <= 1) {
-                            value = value * 100;
-                        }
-                        groupedData.get(krKey).monthlyData.set(monthStr.trim(), value);
-                    }
-                }
-            });
-            
-            console.log('✓ Filtered out year-to-month/YTD/yearly average/cumulative rows:', filteredRowCount);
-            console.log('Processing monthly data rows:', results.data.length - filteredRowCount);
-            
-            // Convert to array and sort months chronologically
-            allMonths = Array.from(monthSet).sort((a, b) => {
-                const dateA = parseMonthString(a);
-                const dateB = parseMonthString(b);
-                if (!dateA || !dateB) return 0;
-                return dateA - dateB;
-            });
-            
-            console.log('All months found:', allMonths);
-            console.log('Total unique KRs:', groupedData.size);
-            
-            // Convert grouped data to array
-            csvData = Array.from(groupedData.values());
-            
-            // Default to latest month
-            selectedMonth = allMonths.length > 0 ? allMonths[allMonths.length - 1] : '';
-            console.log('Selected month (latest):', selectedMonth);
-            
-            filteredData = [...csvData];
-            populateFilters();
-            renderAll();
-            
-            // Show success status instead of auto-navigating
-            showUploadStatus('dataFileStatus', 'success', `✓ Loaded ${csvData.length} KRs from ${file.name}`);
-            document.getElementById('uploadZone').classList.add('uploaded');
-            document.getElementById('viewDashboardSection').style.display = 'block';
-        },
-        error: function(error) {
-            showUploadStatus('dataFileStatus', 'error', `✗ Error: ${error.message}`);
+        // Extract monthly target from the same row
+        const monthlyTargetStr = row[cols.monthly_target] || row.monthly_target || '';
+        if (monthlyTargetStr && monthStr) {
+            let monthlyTargetVal = parseFloat(monthlyTargetStr.toString().replace(/,/g, ''));
+            if (!isNaN(monthlyTargetVal)) {
+                if (isPercentKR && Math.abs(monthlyTargetVal) <= 1) monthlyTargetVal = monthlyTargetVal * 100;
+                const krTrimmed = krName.trim();
+                if (!monthlyTargets.has(krTrimmed)) monthlyTargets.set(krTrimmed, new Map());
+                monthlyTargets.get(krTrimmed).set(monthStr.trim(), monthlyTargetVal);
+            }
         }
     });
+
+    console.log('✓ Filtered rows:', filteredRowCount);
+    console.log('✓ Monthly targets loaded for', monthlyTargets.size, 'KRs');
+
+    allMonths = Array.from(monthSet).sort((a, b) => {
+        const dateA = parseMonthString(a);
+        const dateB = parseMonthString(b);
+        if (!dateA || !dateB) return 0;
+        return dateA - dateB;
+    });
+
+    console.log('All months found:', allMonths);
+    console.log('Total unique KRs:', groupedData.size);
+
+    csvData = Array.from(groupedData.values());
+    selectedMonth = allMonths.length > 0 ? allMonths[allMonths.length - 1] : '';
+    filteredData = [...csvData];
+    populateFilters();
+    renderAll();
+
+    showUploadStatus('dataFileStatus', 'success', `✓ Loaded ${csvData.length} KRs from ${sourceName}`);
+    document.getElementById('viewDashboardSection').style.display = 'block';
+    _markSourceLoaded();
+}
+
+// Fetch OKR data from Google Sheets
+function fetchOKRSheetData() {
+    const SHEET_ID = '1M51L7xRu_Y8MRO5ziDVZ4pbWtqi0Mxb1-oJ6WyfwKU0';
+    const GID = '2085534397';
+    const csvUrl = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&gid=' + GID;
+
+    showUploadStatus('dataFileStatus', 'loading', 'Fetching OKR data from Google Sheets...');
+
+    fetch(csvUrl)
+        .then(function(r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status + ' — make sure the sheet is shared publicly');
+            return r.text();
+        })
+        .then(function(csvText) {
+            Papa.parse(csvText, {
+                header: true,
+                skipEmptyLines: true,
+                transformHeader: function(header) { return header.trim(); },
+                complete: function(results) {
+                    processOKRParsedData(results, 'Google Sheets');
+                },
+                error: function(error) {
+                    showUploadStatus('dataFileStatus', 'error', '✗ Parse error: ' + error.message);
+                    _markSourceLoaded();
+                }
+            });
+        })
+        .catch(function(err) {
+            showUploadStatus('dataFileStatus', 'error', '✗ ' + err.message);
+            _markSourceLoaded();
+        });
 }
 
 // Populate filter dropdowns
@@ -861,7 +821,7 @@ function renderMonthlyProgress() {
     if (monthlyTargets.size === 0) {
         container.innerHTML = `
             <div class="no-monthly-data">
-                <h3 style="margin-bottom: 1rem;">ðŸ“… Monthly Progress Tracking</h3>
+                <h3 style="margin-bottom: 1rem;">📅 Monthly Progress Tracking</h3>
                 <p>Upload a monthly targets CSV file to see detailed monthly progress tracking.</p>
                 <p style="margin-top: 0.5rem; font-size: 0.9rem;">
                     The CSV should have columns: <code>kr_name</code>, <code>month</code>, <code>monthly_target</code>
@@ -1229,12 +1189,12 @@ function renderGoalHighlights() {
                         <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.75rem;">
                             <div>
                                 <div style="color: var(--text-muted); margin-bottom: 0.25rem;">CURRENT</div>
-                                <div style="font-weight: 700; color: var(--primary); font-family: 'IBM Plex Mono', monospace;">${formatNumber(bestKR.current)}</div>
+                                <div style="font-weight: 700; color: var(--primary); font-family: 'Google Sans Text', sans-serif;">${formatNumber(bestKR.current)}</div>
                                 <div style="color: var(--text-muted); font-size: 0.7rem;">${bestKR.unit_name || ''}</div>
                             </div>
                             <div style="text-align: right;">
                                 <div style="color: var(--text-muted); margin-bottom: 0.25rem;">TARGET</div>
-                                <div style="font-weight: 700; color: var(--primary); font-family: 'IBM Plex Mono', monospace;">${formatNumber(bestKR.target)}</div>
+                                <div style="font-weight: 700; color: var(--primary); font-family: 'Google Sans Text', sans-serif;">${formatNumber(bestKR.target)}</div>
                                 <div style="color: var(--text-muted); font-size: 0.7rem;">${bestKR.unit_name || ''}</div>
                             </div>
                         </div>
@@ -1249,12 +1209,12 @@ function renderGoalHighlights() {
                             <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.75rem;">
                                 <div>
                                     <div style="color: var(--text-muted); margin-bottom: 0.25rem;">CURRENT</div>
-                                    <div style="font-weight: 700; color: var(--primary); font-family: 'IBM Plex Mono', monospace;">${formatNumber(worstKR.current)}</div>
+                                    <div style="font-weight: 700; color: var(--primary); font-family: 'Google Sans Text', sans-serif;">${formatNumber(worstKR.current)}</div>
                                     <div style="color: var(--text-muted); font-size: 0.7rem;">${worstKR.unit_name || ''}</div>
                                 </div>
                                 <div style="text-align: right;">
                                     <div style="color: var(--text-muted); margin-bottom: 0.25rem;">TARGET</div>
-                                    <div style="font-weight: 700; color: var(--primary); font-family: 'IBM Plex Mono', monospace;">${formatNumber(worstKR.target)}</div>
+                                    <div style="font-weight: 700; color: var(--primary); font-family: 'Google Sans Text', sans-serif;">${formatNumber(worstKR.target)}</div>
                                     <div style="color: var(--text-muted); font-size: 0.7rem;">${worstKR.unit_name || ''}</div>
                                 </div>
                             </div>
@@ -1270,12 +1230,12 @@ function renderGoalHighlights() {
                             <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.75rem;">
                                 <div>
                                     <div style="color: var(--text-muted); margin-bottom: 0.25rem;">CURRENT</div>
-                                    <div style="font-weight: 700; color: var(--primary); font-family: 'IBM Plex Mono', monospace;">${formatNumber(biggestGrowth.current)}</div>
+                                    <div style="font-weight: 700; color: var(--primary); font-family: 'Google Sans Text', sans-serif;">${formatNumber(biggestGrowth.current)}</div>
                                     <div style="color: var(--text-muted); font-size: 0.7rem;">${biggestGrowth.unit_name || ''}</div>
                                 </div>
                                 <div style="text-align: right;">
                                     <div style="color: var(--text-muted); margin-bottom: 0.25rem;">TARGET</div>
-                                    <div style="font-weight: 700; color: var(--primary); font-family: 'IBM Plex Mono', monospace;">${formatNumber(biggestGrowth.target)}</div>
+                                    <div style="font-weight: 700; color: var(--primary); font-family: 'Google Sans Text', sans-serif;">${formatNumber(biggestGrowth.target)}</div>
                                     <div style="color: var(--text-muted); font-size: 0.7rem;">${biggestGrowth.unit_name || ''}</div>
                                 </div>
                             </div>
@@ -2049,7 +2009,7 @@ function exportTableToPDF() {
     } finally {
         if (btn) {
             btn.disabled = false;
-            btn.innerHTML = '<span style="margin-right: 0.4rem;">ðŸ“„</span> Export to PDF';
+            btn.innerHTML = '<span style="margin-right: 0.4rem;">🔄</span> Export to PDF';
         }
     }
 }
@@ -2058,8 +2018,6 @@ function exportTableToPDF() {
 function resetDashboard() {
     document.getElementById('dashboard').style.display = 'none';
     document.getElementById('uploadSection').style.display = 'block';
-    document.getElementById('fileInput').value = '';
-    document.getElementById('targetsFileInput').value = '';
     document.getElementById('firstTransactingInput').value = '';
     document.getElementById('earlyRetentionInput').value = '';
     
@@ -2111,72 +2069,116 @@ function resetDashboard() {
     var tpContent = document.getElementById('teamPerfDynamicContent');
     if (tpUpload) tpUpload.style.display = 'block';
     if (tpContent) { tpContent.style.display = 'none'; tpContent.innerHTML = ''; }
+
+    // Reset loading bar
+    _loadedCount = 0;
+    var bar = document.getElementById('dataLoadingBar');
+    var fill = document.getElementById('dataLoadingFill');
+    var countEl = document.getElementById('dataLoadingCount');
+    var textEl = document.getElementById('dataLoadingText');
+    if (bar) bar.style.display = 'flex';
+    if (fill) fill.style.width = '0%';
+    if (countEl) countEl.textContent = '0 / 5';
+    if (textEl) textEl.textContent = 'Fetching data from Google Sheets...';
+
+    // Re-fetch all data from Google Sheets
+    fetchOKRSheetData();
+    fetchFirstTransactingData();
+    fetchEarlyRetentionData();
+    fetchTeamPerfData();
+    fetchFleetData();
 }
 
 // ========================================
 // HUNTER ANALYSIS FUNCTIONS
 // ========================================
 
-// Process First Transacting CSV file
-function processFirstTransactingFile(file) {
-    showUploadStatus('firstTransactingStatus', 'loading', 'Processing...');
-    Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
-        transformHeader: function(header) {
-            return header.trim();
-        },
-        complete: function(results) {
-            console.log('=== FIRST TRANSACTING PARSING ===');
-            console.log('Total rows:', results.data.length);
-            
-            firstTransactingData = results.data;
-            console.log('✅ First Transacting data loaded:', firstTransactingData.length, 'rows');
-            
-            // Show success status
-            showUploadStatus('firstTransactingStatus', 'success', `✓ Loaded ${firstTransactingData.length} rows from ${file.name}`);
-            document.getElementById('firstTransactingUploadZone').classList.add('uploaded');
-            
-            // Only render if dashboard is already visible
-            if (document.getElementById('dashboard').style.display !== 'none') {
-                renderHunterAnalysis();
-            }
-        },
-        error: function(error) {
-            showUploadStatus('firstTransactingStatus', 'error', `✗ Error: ${error.message}`);
-        }
-    });
+// Shared helper: fetch a sheet tab by name and parse as CSV
+function fetchSheetTab(sheetName, onSuccess, statusElementId) {
+    var SHEET_ID = '1M51L7xRu_Y8MRO5ziDVZ4pbWtqi0Mxb1-oJ6WyfwKU0';
+    var csvUrl = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent(sheetName);
+
+    showUploadStatus(statusElementId, 'loading', 'Fetching from Google Sheets...');
+
+    fetch(csvUrl)
+        .then(function(r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.text();
+        })
+        .then(function(csvText) {
+            Papa.parse(csvText, {
+                header: true,
+                skipEmptyLines: true,
+                transformHeader: function(h) { return h.trim(); },
+                complete: onSuccess,
+                error: function(err) {
+                    showUploadStatus(statusElementId, 'error', '✗ Parse error: ' + err.message);
+                    _markSourceLoaded();
+                }
+            });
+        })
+        .catch(function(err) {
+            showUploadStatus(statusElementId, 'error', '✗ ' + err.message);
+            _markSourceLoaded();
+        });
 }
 
-// Process Early Retention CSV file
-function processEarlyRetentionFile(file) {
-    showUploadStatus('earlyRetentionStatus', 'loading', 'Processing...');
-    Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
-        transformHeader: function(header) {
-            return header.trim();
-        },
-        complete: function(results) {
-            console.log('=== EARLY RETENTION PARSING ===');
-            console.log('Total rows:', results.data.length);
-            
-            earlyRetentionData = results.data;
-            console.log('✅ Early Retention data loaded:', earlyRetentionData.length, 'rows');
-            
-            // Show success status
-            showUploadStatus('earlyRetentionStatus', 'success', `✓ Loaded ${earlyRetentionData.length} rows from ${file.name}`);
-            document.getElementById('earlyRetentionUploadZone').classList.add('uploaded');
-            
-            // Only render if dashboard is already visible
-            if (document.getElementById('dashboard').style.display !== 'none') {
-                renderHunterAnalysis();
-            }
-        },
-        error: function(error) {
-            showUploadStatus('earlyRetentionStatus', 'error', `✗ Error: ${error.message}`);
-        }
-    });
+// Fetch First Transacting data from Google Sheets
+function fetchFirstTransactingData() {
+    var SHEET_ID = '1M51L7xRu_Y8MRO5ziDVZ4pbWtqi0Mxb1-oJ6WyfwKU0';
+    var csvUrl = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&gid=553513707';
+    showUploadStatus('firstTransactingStatus', 'loading', 'Fetching from Google Sheets...');
+    fetch(csvUrl)
+        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+        .then(function(csvText) {
+            Papa.parse(csvText, {
+                header: true, skipEmptyLines: true,
+                transformHeader: function(h) { return h.trim(); },
+                complete: function(results) {
+                    firstTransactingData = results.data;
+                    showUploadStatus('firstTransactingStatus', 'success', '✓ Loaded ' + firstTransactingData.length + ' rows');
+                    _markSourceLoaded();
+                    renderHunterAnalysis();
+                },
+                error: function(err) {
+                    showUploadStatus('firstTransactingStatus', 'error', '✗ ' + err.message);
+                    _markSourceLoaded();
+                }
+            });
+        })
+        .catch(function(err) {
+            showUploadStatus('firstTransactingStatus', 'error', '✗ ' + err.message);
+            _markSourceLoaded();
+        });
+}
+
+// Fetch Early Retention data from Google Sheets
+function fetchEarlyRetentionData() {
+    var SHEET_ID = '1M51L7xRu_Y8MRO5ziDVZ4pbWtqi0Mxb1-oJ6WyfwKU0';
+    var csvUrl = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&gid=851643069';
+    showUploadStatus('earlyRetentionStatus', 'loading', 'Fetching from Google Sheets...');
+    fetch(csvUrl)
+        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+        .then(function(csvText) {
+            Papa.parse(csvText, {
+                header: true, skipEmptyLines: true,
+                transformHeader: function(h) { return h.trim(); },
+                complete: function(results) {
+                    earlyRetentionData = results.data;
+                    showUploadStatus('earlyRetentionStatus', 'success', '✓ Loaded ' + earlyRetentionData.length + ' rows');
+                    _markSourceLoaded();
+                    renderHunterAnalysis();
+                },
+                error: function(err) {
+                    showUploadStatus('earlyRetentionStatus', 'error', '✗ ' + err.message);
+                    _markSourceLoaded();
+                }
+            });
+        })
+        .catch(function(err) {
+            showUploadStatus('earlyRetentionStatus', 'error', '✗ ' + err.message);
+            _markSourceLoaded();
+        });
 }
 
 // Render Hunter Analysis View
@@ -2193,7 +2195,7 @@ function renderHunterAnalysis() {
         container.innerHTML = `
             <div class="no-monthly-data">
                 <h3 style="margin-bottom: 1rem;">🎯 Hunter Analysis</h3>
-                <p>Upload First Transacting and Early Retention CSV files to see activation and retention trends.</p>
+                <p>Hunter Analysis data is loading from Google Sheets. Please wait a moment.</p>
             </div>
         `;
         return;
@@ -2212,7 +2214,7 @@ function renderHunterAnalysis() {
     
     // Create charts container
     const chartsContainer = document.createElement('div');
-    chartsContainer.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; max-height: 450px;';
+    chartsContainer.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; align-items: start;';
     
     // First Transacting Chart
     if (firstTransactingData.length > 0) {
@@ -2237,73 +2239,151 @@ function renderHunterAnalysis() {
 function createHunterChartCard(title, data, type) {
     const card = document.createElement('div');
     card.style.cssText = 'background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid #E5E7EB;';
-    
+
+    // Pre-compute available months from data (sorted)
+    const allMonthOrder = ['July, 2025', 'August, 2025', 'September, 2025', 'October, 2025', 'November, 2025', 'December, 2025',
+                           'January, 2026', 'February, 2026', 'March, 2026', 'April, 2026', 'May, 2026', 'June, 2026',
+                           'July, 2026', 'August, 2026', 'September, 2026', 'October, 2026', 'November, 2026', 'December, 2026'];
+    const monthSet = {};
+    data.forEach(row => {
+        const m = row['metric_month: Month'] || row['metric_month'];
+        if (m) monthSet[m] = true;
+    });
+    const availableMonths = Object.keys(monthSet).sort((a, b) => allMonthOrder.indexOf(a) - allMonthOrder.indexOf(b));
+    const defaultMonth = availableMonths[availableMonths.length - 1] || '';
+
+    // Build month select options
+    const monthOptions = availableMonths.map(m => {
+        const parts = m.split(', ');
+        const label = parts[0].substring(0, 3) + (parts[1] ? " '" + parts[1].slice(2) : '');
+        return `<option value="${m}"${m === defaultMonth ? ' selected' : ''}>${label}</option>`;
+    }).join('');
+
+    // Header row: title | month select + run rate checkbox
     const header = document.createElement('div');
-    header.innerHTML = `<h3 style="margin: 0 0 1rem 0; color: var(--primary); font-size: 1.25rem;">${title}</h3>`;
+    header.style.cssText = 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;';
+    header.innerHTML = `
+        <h3 style="margin: 0; color: var(--primary); font-size: 1.25rem;">${title}</h3>
+        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.875rem; color: #374151;">
+                <span style="font-weight: 600;">Up to</span>
+                <select id="${type}MonthSelect" style="padding: 3px 8px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 0.875rem; background: white; cursor: pointer; color: #374151;">
+                    ${monthOptions}
+                </select>
+            </div>
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.875rem; font-weight: 600; color: #374151; user-select: none;">
+                <input type="checkbox" id="${type}RunRateCheckbox" style="cursor: pointer; width: 16px; height: 16px; accent-color: #F59E0B;">
+                Show Run Rate
+            </label>
+        </div>
+    `;
     card.appendChild(header);
-    
-    // Create a wrapper div to contain the canvas with fixed height
+
+    // Run rate banner (hidden until checkbox checked)
+    const banner = document.createElement('div');
+    banner.id = `${type}RunRateBanner`;
+    banner.style.cssText = 'display: none; background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; padding: 0.625rem 1rem; margin-bottom: 1rem; font-size: 0.875rem; color: #92400E; align-items: center; gap: 0.5rem; flex-wrap: wrap;';
+    const today = new Date().getDate();
+    banner.innerHTML = `
+        <span>Today = day</span>
+        <input type="number" id="${type}DayInput" min="1" max="31" value="${today}"
+               style="width: 58px; padding: 2px 6px; border: 1px solid #FCD34D; border-radius: 4px; background: white; text-align: center; font-size: 0.875rem; color: #92400E; font-weight: 600;">
+        <span>of this month</span>
+        <span style="margin: 0 0.25rem;">→ projected</span>
+        <strong id="${type}ProjectedValue" style="color: #B45309; font-size: 1rem;"></strong>
+        <span id="${type}GrowthBadge" style="margin-left: 0.5rem; font-weight: 700;"></span>
+    `;
+    card.appendChild(banner);
+
+    // Canvas wrapper
     const canvasWrapper = document.createElement('div');
     canvasWrapper.style.cssText = 'position: relative; height: 300px; width: 100%;';
-    
     const canvas = document.createElement('canvas');
     canvas.id = `${type}Chart`;
     canvasWrapper.appendChild(canvas);
-    
     card.appendChild(canvasWrapper);
-    
-    // Render chart after DOM is ready
-    setTimeout(() => renderHunterChart(type, data), 100);
-    
+
+    // Wire up controls after DOM is ready
+    setTimeout(() => {
+        const checkbox = document.getElementById(`${type}RunRateCheckbox`);
+        const dayInput = document.getElementById(`${type}DayInput`);
+        const monthSelect = document.getElementById(`${type}MonthSelect`);
+
+        function rerender() {
+            renderHunterChart(type, data, {
+                selectedMonth: monthSelect.value,
+                showRunRate: checkbox.checked,
+                dayOfMonth: Math.min(31, Math.max(1, parseInt(dayInput.value) || today))
+            });
+        }
+
+        rerender();
+
+        monthSelect.addEventListener('change', rerender);
+
+        checkbox.addEventListener('change', () => {
+            banner.style.display = checkbox.checked ? 'flex' : 'none';
+            rerender();
+        });
+
+        dayInput.addEventListener('input', () => {
+            if (checkbox.checked) rerender();
+        });
+    }, 100);
+
     return card;
 }
 
 // Render Hunter Chart using Chart.js
-function renderHunterChart(type, data) {
+function renderHunterChart(type, data, options = {}) {
     const canvas = document.getElementById(`${type}Chart`);
     if (!canvas) return;
-    
+
+    // Destroy existing instance before re-creating
+    if (hunterChartInstances[type]) {
+        hunterChartInstances[type].destroy();
+        delete hunterChartInstances[type];
+    }
+
     const ctx = canvas.getContext('2d');
-    
+
     // Aggregate data by month
     const monthlyData = {};
-    
     data.forEach(row => {
         const month = row['metric_month: Month'] || row['metric_month'];
         if (!month) return;
-        
         const gwp = parseFloat((row['Sum of monthly_premium'] || '0').replace(/,/g, ''));
-        
-        if (!monthlyData[month]) {
-            monthlyData[month] = 0;
-        }
+        if (!monthlyData[month]) monthlyData[month] = 0;
         monthlyData[month] += gwp;
     });
-    
-    // Sort months chronologically - include all months but filter for targets
-    const monthOrder = ['July, 2025', 'August, 2025', 'September, 2025', 'October, 2025', 'November, 2025', 'December, 2025', 'January, 2026', 'February, 2026'];
-    const sortedMonths = Object.keys(monthlyData).sort((a, b) => {
-        return monthOrder.indexOf(a) - monthOrder.indexOf(b);
-    });
-    
-    const values = sortedMonths.map(m => monthlyData[m] / 1000000); // Convert to millions
-    const labels = sortedMonths.map(m => m.split(',')[0].substring(0, 3)); // Short month names
-    
-    // Get target values (only for 2026 months)
+
+    // Sort months chronologically
+    const monthOrder = ['July, 2025', 'August, 2025', 'September, 2025', 'October, 2025', 'November, 2025', 'December, 2025',
+                        'January, 2026', 'February, 2026', 'March, 2026', 'April, 2026', 'May, 2026', 'June, 2026',
+                        'July, 2026', 'August, 2026', 'September, 2026', 'October, 2026', 'November, 2026', 'December, 2026'];
+    let sortedMonths = Object.keys(monthlyData).sort((a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b));
+
+    // Slice to latest 5 months ending at selectedMonth
+    if (options.selectedMonth && sortedMonths.includes(options.selectedMonth)) {
+        const endIdx = sortedMonths.indexOf(options.selectedMonth);
+        sortedMonths = sortedMonths.slice(Math.max(0, endIdx - 4), endIdx + 1);
+    } else {
+        sortedMonths = sortedMonths.slice(-5);
+    }
+
+    const values = sortedMonths.map(m => monthlyData[m] / 1000000);
+    const labels = sortedMonths.map(m => m.split(',')[0].substring(0, 3));
+
+    // Target values (2026 months only)
     const targetArray = type === 'firstTransacting' ? FIRST_TRANSACTING_TARGETS : EARLY_RETENTION_TARGETS;
-    const month2026Names = ['January, 2026', 'February, 2026', 'March, 2026', 'April, 2026', 'May, 2026', 'June, 2026', 
+    const month2026Names = ['January, 2026', 'February, 2026', 'March, 2026', 'April, 2026', 'May, 2026', 'June, 2026',
                             'July, 2026', 'August, 2026', 'September, 2026', 'October, 2026', 'November, 2026', 'December, 2026'];
-    
-    // Map targets to actual months in the data
     const targetValues = sortedMonths.map(month => {
-        const index2026 = month2026Names.indexOf(month);
-        if (index2026 !== -1 && index2026 < targetArray.length) {
-            return targetArray[index2026] / 1000000; // Convert to millions
-        }
-        return null; // No target for 2025 months
+        const idx = month2026Names.indexOf(month);
+        return (idx !== -1 && idx < targetArray.length) ? targetArray[idx] / 1000000 : null;
     });
-    
-    // Build datasets
+
+    // Build base datasets
     const datasets = [
         {
             label: 'Actual',
@@ -2317,8 +2397,7 @@ function renderHunterChart(type, data) {
             fill: true
         }
     ];
-    
-    // Add target line only if there are 2026 months with targets
+
     if (targetValues.some(v => v !== null)) {
         datasets.push({
             label: 'Target',
@@ -2334,16 +2413,119 @@ function renderHunterChart(type, data) {
             fill: false
         });
     }
-    
-    new Chart(ctx, {
+
+    // Run rate datasets
+    let runRateProjected = null;
+    let growthPct = null;
+    if (options.showRunRate && values.length > 0) {
+        const lastIdx = values.length - 1;
+        const lastMonth = sortedMonths[lastIdx];
+        const dayOfMonth = options.dayOfMonth || new Date().getDate();
+
+        // Days in the last month
+        const monthDate = new Date(lastMonth.replace(', ', ' '));
+        const daysInMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
+
+        runRateProjected = (values[lastIdx] / dayOfMonth) * daysInMonth;
+
+        // Growth vs previous month
+        if (lastIdx >= 1) {
+            const prev = values[lastIdx - 1];
+            growthPct = ((runRateProjected - prev) / prev) * 100;
+        }
+
+        // Update banner displays
+        const projEl = document.getElementById(`${type}ProjectedValue`);
+        const growthEl = document.getElementById(`${type}GrowthBadge`);
+        if (projEl) projEl.textContent = runRateProjected.toFixed(2) + 'M THB';
+        if (growthEl && growthPct !== null) {
+            const sign = growthPct >= 0 ? '+' : '';
+            growthEl.style.color = growthPct >= 0 ? '#16A34A' : '#DC2626';
+            growthEl.textContent = `(${sign}${growthPct.toFixed(0)}% vs prev month)`;
+        }
+
+        // Red connector line: previous month actual → projected current month
+        if (lastIdx >= 1) {
+            const connectorData = sortedMonths.map((_, i) => {
+                if (i === lastIdx - 1) return values[lastIdx - 1];
+                if (i === lastIdx) return runRateProjected;
+                return null;
+            });
+            datasets.push({
+                label: '_connector',
+                data: connectorData,
+                borderColor: '#EF4444',
+                backgroundColor: 'transparent',
+                borderWidth: 2,
+                borderDash: [6, 4],
+                pointRadius: 0,
+                tension: 0,
+                fill: false
+            });
+        }
+
+        // Orange diamond for run rate projected value
+        const runRateData = sortedMonths.map((_, i) => (i === lastIdx ? runRateProjected : null));
+        datasets.push({
+            label: `Run Rate (day ${dayOfMonth})`,
+            data: runRateData,
+            borderColor: 'transparent',
+            backgroundColor: '#F59E0B',
+            borderWidth: 0,
+            pointRadius: 10,
+            pointStyle: 'rectRot',
+            pointBackgroundColor: '#F59E0B',
+            pointBorderColor: '#D97706',
+            pointBorderWidth: 2,
+            showLine: false,
+            fill: false
+        });
+    }
+
+    // Inline plugin: draw value labels above each data point
+    const pointLabelsPlugin = {
+        id: 'hunterPointLabels',
+        afterDatasetsDraw(chart) {
+            const ctx = chart.ctx;
+            chart.data.datasets.forEach((dataset, dsIdx) => {
+                if (dataset.label === '_connector') return;
+                const meta = chart.getDatasetMeta(dsIdx);
+                if (meta.hidden) return;
+                const isRunRate = dataset.label && dataset.label.startsWith('Run Rate');
+                const isTarget = dataset.label === 'Target';
+                meta.data.forEach((point, idx) => {
+                    const val = dataset.data[idx];
+                    if (val === null || val === undefined) return;
+                    ctx.save();
+                    ctx.font = `bold 11px sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+                    if (isRunRate) {
+                        ctx.fillStyle = '#D97706';
+                        ctx.fillText(val.toFixed(1) + 'M', point.x, point.y - 14);
+                    } else if (isTarget) {
+                        ctx.fillStyle = '#059669';
+                        ctx.fillText(val.toFixed(1) + 'M', point.x, point.y - 8);
+                    } else {
+                        ctx.fillStyle = '#1D4ED8';
+                        ctx.fillText(val.toFixed(1) + 'M', point.x, point.y - 8);
+                    }
+                    ctx.restore();
+                });
+            });
+        }
+    };
+
+    hunterChartInstances[type] = new Chart(ctx, {
         type: 'line',
-        data: {
-            labels: labels,
-            datasets: datasets
-        },
+        data: { labels, datasets },
+        plugins: [pointLabelsPlugin],
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            layout: {
+                padding: { top: 20, left: 24, right: 24, bottom: 4 }
+            },
             plugins: {
                 legend: {
                     display: true,
@@ -2351,15 +2533,17 @@ function renderHunterChart(type, data) {
                     labels: {
                         boxWidth: 12,
                         padding: 10,
-                        font: {
-                            size: 12
-                        }
+                        font: { size: 12 },
+                        filter: item => item.text !== '_connector'
                     }
                 },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return 'GWP: ' + context.parsed.y.toFixed(2) + 'M THB';
+                            if (context.dataset.label === '_connector') return null;
+                            const val = context.parsed.y;
+                            if (val === null) return null;
+                            return context.dataset.label + ': ' + val.toFixed(2) + 'M THB';
                         }
                     }
                 }
@@ -2367,41 +2551,17 @@ function renderHunterChart(type, data) {
             scales: {
                 y: {
                     beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'GWP (Million THB)',
-                        font: {
-                            size: 11
-                        }
-                    },
+                    title: { display: true, text: 'GWP (Million THB)', font: { size: 11 } },
                     ticks: {
-                        callback: function(value) {
-                            return value.toFixed(1) + 'M';
-                        },
-                        font: {
-                            size: 10
-                        }
+                        callback: value => value.toFixed(1) + 'M',
+                        font: { size: 10 }
                     },
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.05)'
-                    }
+                    grid: { color: 'rgba(0, 0, 0, 0.05)' }
                 },
                 x: {
-                    title: {
-                        display: true,
-                        text: 'Month',
-                        font: {
-                            size: 11
-                        }
-                    },
-                    ticks: {
-                        font: {
-                            size: 10
-                        }
-                    },
-                    grid: {
-                        display: false
-                    }
+                    title: { display: true, text: 'Month', font: { size: 11 } },
+                    ticks: { font: { size: 10 } },
+                    grid: { display: false }
                 }
             }
         }
@@ -2633,20 +2793,22 @@ let teamPerfChartInstances = {}; // Track chart instances for cleanup
 
 // Agent code to name mapping
 const agentNameMap = {
-    'FM-19134': 'à¸›à¸£à¸°à¸§à¸´à¸—à¸¢à¹Œ',
-    'FM-19645': 'à¹‚à¸¡à¹„à¸™à¸¢',
+    // Focus Team
+    'FM-19867': 'ทรงวุฒิ',
     'FM-19729': 'Jack',
-    'FM-21511': 'à¸•à¸²à¸¥',
-    'FM-21975': 'à¸–à¸²à¸§à¸£',
-    'FM-23273': 'à¹€à¸¡à¸˜à¸´à¸Šà¸±à¸¢',
-    'FM-23277': 'à¸›à¸±à¸™',
-    'FM-23437': 'à¸„à¸™à¸­à¸‡',
-    'FM-24406': 'à¸ˆà¸‡à¸£à¸±à¸à¸©à¹Œ',
-    'FM-24885': 'à¹‚à¸­à¹‹',
-    'FM-42800': 'à¸šà¹Šà¸§à¸¢',
-    'FM-20898': 'à¸šà¸´à¹Šà¸',
-    'FM-21461': 'à¸˜à¸™à¸žà¸£',
-    'FM-23332': 'à¸”à¸´à¸™'
+    'FM-21975': 'ถาวร',
+    'FM-21511': 'ตาล',
+    'FM-23437': 'คนอง',
+    'FM-19134': 'ประวิทย์',
+    'FM-23277': 'ปัน',
+    'FM-23273': 'เมธิชัย',
+    'FM-19119': 'คมกฤษณ์',
+    'FM-42800': 'บ๊วย',
+    // Mid Tier
+    'FM-28595': 'พิมพาภรณ์',
+    'FM-21461': 'ธนพร',
+    'FM-23332': 'ดิน',
+    'FM-20898': 'บิ๊ก'
 };
 
 // File input handlers for Team Performance
@@ -2751,7 +2913,7 @@ function processTeamPerfFile(file, statusElementId) {
                 console.log('Sample row:', teamPerfRawData[0]);
             }
             
-            var msg = 'âœ” Loaded ' + teamPerfRawData.length + ' rows from ' + file.name;
+            var msg = '✔ Loaded ' + teamPerfRawData.length + ' rows from ' + file.name;
             showUploadStatus(statusElementId, 'success', msg);
             showUploadStatus(otherStatusId, 'success', msg);
             
@@ -2768,6 +2930,61 @@ function processTeamPerfFile(file, statusElementId) {
             showUploadStatus(otherStatusId, 'error', msg);
         }
     });
+}
+
+// Fetch Team Performance (MLM Key Funnel) data from Google Sheets
+function fetchTeamPerfData() {
+    var SHEET_ID = '1M51L7xRu_Y8MRO5ziDVZ4pbWtqi0Mxb1-oJ6WyfwKU0';
+    var csvUrl = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&gid=233478706';
+    showUploadStatus('teamPerfFileStatusMain', 'loading', 'Fetching from Google Sheets...');
+    fetch(csvUrl)
+        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+        .then(function(csvText) {
+            Papa.parse(csvText, {
+                header: true, skipEmptyLines: true,
+                transformHeader: function(h) { return h.trim(); },
+                complete: function(results) { _processTeamPerfResults(results); },
+                error: function(err) { showUploadStatus('teamPerfFileStatusMain', 'error', '✗ ' + err.message); }
+            });
+        })
+        .catch(function(err) { showUploadStatus('teamPerfFileStatusMain', 'error', '✗ ' + err.message); });
+}
+function _processTeamPerfResults(results) {
+        console.log('=== TEAM PERFORMANCE PARSING ===', results.data.length, 'rows');
+
+        var headers = results.meta.fields || [];
+        var colMap = {};
+        headers.forEach(function(h) {
+            var lower = h.toLowerCase().trim();
+            if (lower === 'team_name' || lower === 'teamname') colMap.team_name = h;
+            if (lower === 'team_anchor_code' || lower === 'team_code' || lower === 'anchor_code') colMap.team_anchor_code = h;
+            if (lower === 'agent_province' || lower === 'province') colMap.agent_province = h;
+            if (lower === 'agent_region' || lower === 'region') colMap.agent_region = h;
+            if (lower === 'month') colMap.month = h;
+            if (lower === 'gwp') colMap.gwp = h;
+            if (lower === 'active_agent' || lower === 'active_agents') colMap.active_agent = h;
+            if (lower === 'sales') colMap.sales = h;
+            if (lower === 'product_type_name' || lower === 'product_type' || lower === 'product') colMap.product_type_name = h;
+        });
+
+        teamPerfRawData = results.data.map(function(row) {
+            return {
+                team_name: row[colMap.team_name] || '',
+                team_anchor_code: row[colMap.team_anchor_code] || '',
+                agent_province: row[colMap.agent_province] || '',
+                agent_region: row[colMap.agent_region] || '',
+                month: row[colMap.month] || '',
+                gwp: row[colMap.gwp] || '0',
+                active_agent: row[colMap.active_agent] || '0',
+                sales: row[colMap.sales] || '0',
+                product_type_name: row[colMap.product_type_name] || ''
+            };
+        }).filter(function(row) { return row.team_name && row.month; });
+
+        showUploadStatus('teamPerfFileStatusMain', 'success', '✓ Loaded ' + teamPerfRawData.length + ' rows');
+        showUploadStatus('teamPerfFileStatus', 'success', '✓ Loaded ' + teamPerfRawData.length + ' rows');
+        _markSourceLoaded();
+        renderTeamPerformanceDynamic();
 }
 
 // Get the selected month in YYYY-MM format for team perf filtering
@@ -2872,7 +3089,7 @@ function renderTeamPerformanceDynamic() {
         var target;
         if (teamName === 'focus_team') {
             target = focusTeams;
-        } else if (teamName === 'midtier') {
+        } else if (teamName === 'mid-tier_team') {
             target = midtierTeams;
         } else {
             target = nonFocusTeams;
@@ -2907,7 +3124,7 @@ function renderTeamPerformanceDynamic() {
         var gwp = parseFloat(String(row.gwp || '0').replace(/,/g, ''));
         if (isNaN(gwp)) gwp = 0;
         if (teamName === 'focus_team') prevFocusGwp += gwp;
-        else if (teamName === 'midtier') prevMidtierGwp += gwp;
+        else if (teamName === 'mid-tier_team') prevMidtierGwp += gwp;
     });
     
     var focusChange = prevFocusGwp > 0 ? ((totalFocusGwp - prevFocusGwp) / prevFocusGwp * 100) : 0;
@@ -2930,7 +3147,7 @@ function renderTeamPerformanceDynamic() {
             var gwp = parseFloat(String(row.gwp || '0').replace(/,/g, ''));
             if (isNaN(gwp)) gwp = 0;
             if (tn === 'focus_team') fTotal += gwp;
-            else if (tn === 'midtier') mTotal += gwp;
+            else if (tn === 'mid-tier_team') mTotal += gwp;
         });
         focusTrend.push(fTotal / 1000000);
         midtierTrend.push(mTotal / 1000000);
@@ -2946,7 +3163,7 @@ function renderTeamPerformanceDynamic() {
     // Re-upload button + month selector
     html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">';
     html += '<div style="display: flex; align-items: center; gap: 1rem;">';
-    html += '<label style="font-weight: 600; font-size: 0.875rem; color: var(--text-primary);">ðŸ“… View Month:</label>';
+    html += '<label style="font-weight: 600; font-size: 0.875rem; color: var(--text-primary);">📅 View Month:</label>';
     html += '<select id="teamPerfMonthSelect" onchange="onTeamPerfMonthChange()" class="filter-select month-select" style="width: auto; min-width: 180px;">';
     sortedTeamMonths.forEach(function(m) {
         var sel = m === selectedYYYYMM ? ' selected' : '';
@@ -2954,7 +3171,7 @@ function renderTeamPerformanceDynamic() {
     });
     html += '</select>';
     html += '</div>';
-    html += '<button class="btn-reset" onclick="resetTeamPerfData()" style="font-size: 0.85rem; padding: 0.5rem 1rem;">ðŸ“ Upload New Team Data</button>';
+    html += '<button class="btn-reset" onclick="resetTeamPerfData()" style="font-size: 0.85rem; padding: 0.5rem 1rem;">📁 Upload New Team Data</button>';
     html += '</div>';
     
     // Metrics cards
@@ -3334,34 +3551,15 @@ function parseSheetUrl(url) {
     return { spreadsheetId: spreadsheetId, gid: gid };
 }
 
-// Fetch data from Google Sheets
+// Fetch Fleet data from Google Sheets
 function fetchFleetData() {
-    var urlInput = document.getElementById('fleetSheetUrl');
-    var sheetNameInput = document.getElementById('fleetSheetName');
-    var statusEl = document.getElementById('fleetFetchStatus');
-    
-    if (!urlInput || !urlInput.value.trim()) {
-        showUploadStatus('fleetFetchStatus', 'error', '✗ Please enter a Google Sheet URL');
-        return;
-    }
-    
-    var parsed = parseSheetUrl(urlInput.value.trim());
-    if (!parsed.spreadsheetId) {
-        showUploadStatus('fleetFetchStatus', 'error', '✗ Invalid Google Sheet URL');
-        return;
-    }
-    
-    showUploadStatus('fleetFetchStatus', 'loading', 'ðŸ”„ Fetching data from Google Sheets...');
-    
-    var sheetName = (sheetNameInput && sheetNameInput.value.trim()) || 'summary';
-    
-    // Use the Google Sheets CSV export URL
-    var csvUrl = 'https://docs.google.com/spreadsheets/d/' + parsed.spreadsheetId + '/gviz/tq?tqx=out:csv&gid=' + parsed.gid;
-    
-    console.log('Fetching summary:', csvUrl);
+    var FLEET_SHEET_ID = '1BcCiO2TiHhJfWDj62RJ_8U1bmAjIpqxgSpTJjkWsTTg';
+    var csvUrl = 'https://docs.google.com/spreadsheets/d/' + FLEET_SHEET_ID + '/gviz/tq?tqx=out:csv&sheet=summary';
+
+    showUploadStatus('fleetFetchStatus', 'loading', 'Fetching Fleet data...');
     
     // Also fetch sale-tracking tab (gid=653258568)
-    var saleTrackingUrl = 'https://docs.google.com/spreadsheets/d/' + parsed.spreadsheetId + '/gviz/tq?tqx=out:csv&gid=653258568';
+    var saleTrackingUrl = 'https://docs.google.com/spreadsheets/d/' + FLEET_SHEET_ID + '/gviz/tq?tqx=out:csv&gid=653258568';
     
     // Fetch both tabs in parallel
     Promise.all([
@@ -3414,12 +3612,14 @@ function fetchFleetData() {
             },
             error: function(error) {
                 showUploadStatus('fleetFetchStatus', 'error', '✗ CSV parse error: ' + error.message);
+                _markSourceLoaded();
             }
         });
     })
     .catch(function(error) {
         console.error('Fetch error:', error);
         showUploadStatus('fleetFetchStatus', 'error', '✗ ' + error.message);
+        _markSourceLoaded();
     });
 }
 
@@ -3427,6 +3627,7 @@ function fetchFleetData() {
 // Rows 10-21 (1-indexed) = indices 9-20
 // Column C = index 2 (targets), Column D = index 3 (actuals)
 function processFleetSheetData(rows) {
+    _markSourceLoaded();
     console.log('=== PROCESSING FLEET SHEET ===');
     console.log('Total rows:', rows.length);
     for (var d = 0; d < Math.min(rows.length, 25); d++) {
@@ -3532,7 +3733,7 @@ function processFleetSheetData(rows) {
         year: parseInt(mainYear) || 2026
     };
     
-    showUploadStatus('fleetFetchStatus', 'success', 'âœ” Data loaded: ' + months.length + ' months of Fleet GWP data (includes historical)');
+    showUploadStatus('fleetFetchStatus', 'success', '✔ Data loaded: ' + months.length + ' months of Fleet GWP data (includes historical)');
     
     renderFleetAnalysis();
 }
@@ -3622,7 +3823,7 @@ function renderFleetAnalysis() {
     // Header
     html += '<div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); color: white; padding: 2rem; border-radius: 12px; margin-bottom: 2rem;">';
     html += '<h1 style="margin: 0; font-size: 2rem; font-weight: 800;">Fleet GWP</h1>';
-    html += '<p style="margin: 0.5rem 0 0 0; opacity: 0.9;">Data pulled from Google Sheets â€” ' + (fleetData.year || '') + '</p>';
+    html += '<p style="margin: 0.5rem 0 0 0; opacity: 0.9;">Data pulled from Google Sheets — ' + (fleetData.year || '') + '</p>';
     html += '</div>';
     
     // Metric cards
@@ -3689,7 +3890,7 @@ function renderFleetAnalysis() {
     
     // Chart
     html += '<div class="chart-card" style="margin-bottom: 2rem;">';
-    html += '<h3 class="chart-title">Fleet GWP â€” Target vs Actual</h3>';
+    html += '<h3 class="chart-title">Fleet GWP — Target vs Actual</h3>';
     html += '<div style="position: relative; height: 400px;"><canvas id="fleetGwpChart"></canvas></div>';
     html += '</div>';
     
@@ -3717,17 +3918,17 @@ function renderFleetAnalysis() {
         }
         if (isFuture) {
             rowStyle = 'opacity: 0.4;';
-            statusBadge = '<span style="color: var(--text-muted);">â€”</span>';
+            statusBadge = '<span style="color: var(--text-muted);">—</span>';
         } else if (a > 0) {
             if (pct >= 100) {
-                statusBadge = '<span class="table-status-badge achieved" title="Achieved">âœ”</span>';
+                statusBadge = '<span class="table-status-badge achieved" title="Achieved">✔</span>';
             } else if (pct >= 90) {
                 statusBadge = '<span class="table-status-badge slightly-under" title="Near Target">⚠</span>';
             } else {
                 statusBadge = '<span class="table-status-badge under" title="Under Target">✗</span>';
             }
         } else {
-            statusBadge = '<span style="color: var(--text-muted);">â€”</span>';
+            statusBadge = '<span style="color: var(--text-muted);">—</span>';
         }
         
         var momDisplay = '';
@@ -3736,22 +3937,22 @@ function renderFleetAnalysis() {
             var momArr = mom >= 0 ? '↑' : '↓';
             momDisplay = '<span style="color: ' + momCol + '; font-weight: 600;">' + momArr + ' ' + Math.abs(mom).toFixed(1) + '%</span>';
         } else {
-            momDisplay = '<span style="color: var(--text-muted);">â€”</span>';
+            momDisplay = '<span style="color: var(--text-muted);">—</span>';
         }
         
         var monthLabel = month.split(',')[0];
         var monthLabel = month;
         if (isCurrent) monthLabel = '<span style="background: #FEF08A; padding: 0.15rem 0.5rem; border-radius: 4px;">' + month + '</span>';
         
-        var polCell = (policies.length > idx && policies[idx] > 0) ? policies[idx].toLocaleString() : 'â€”';
-        var aovCell = (aovs.length > idx && aovs[idx] > 0) ? Math.round(aovs[idx]).toLocaleString() : 'â€”';
+        var polCell = (policies.length > idx && policies[idx] > 0) ? policies[idx].toLocaleString() : '—';
+        var aovCell = (aovs.length > idx && aovs[idx] > 0) ? Math.round(aovs[idx]).toLocaleString() : '—';
         
         html += '<tr style="' + rowStyle + '">';
         html += '<td>' + monthLabel + '</td>';
         html += '<td style="font-family: \'IBM Plex Mono\', monospace;">' + fmt(t) + '</td>';
-        html += '<td style="font-family: \'IBM Plex Mono\', monospace; font-weight: 600; color: #2563EB;">' + (a > 0 ? fmt(a) : '<span style="color: var(--text-muted);">â€”</span>') + '</td>';
-        html += '<td style="font-family: \'IBM Plex Mono\', monospace; color: ' + (v >= 0 ? '#10B981' : '#EF4444') + ';">' + (a > 0 ? (v >= 0 ? '+' : '') + fmt(v) : 'â€”') + '</td>';
-        html += '<td style="font-family: \'IBM Plex Mono\', monospace;">' + (a > 0 ? pct.toFixed(1) + '%' : 'â€”') + '</td>';
+        html += '<td style="font-family: \'IBM Plex Mono\', monospace; font-weight: 600; color: #2563EB;">' + (a > 0 ? fmt(a) : '<span style="color: var(--text-muted);">—</span>') + '</td>';
+        html += '<td style="font-family: \'IBM Plex Mono\', monospace; color: ' + (v >= 0 ? '#10B981' : '#EF4444') + ';">' + (a > 0 ? (v >= 0 ? '+' : '') + fmt(v) : '—') + '</td>';
+        html += '<td style="font-family: \'IBM Plex Mono\', monospace;">' + (a > 0 ? pct.toFixed(1) + '%' : '—') + '</td>';
         html += '<td style="font-family: \'IBM Plex Mono\', monospace;">' + polCell + '</td>';
         html += '<td style="font-family: \'IBM Plex Mono\', monospace;">' + aovCell + '</td>';
         html += '<td>' + momDisplay + '</td>';
@@ -3882,8 +4083,8 @@ function analyzeSaleTracking(monthName) {
     
     console.log('=== ANALYZING SALE TRACKING for month:', monthName, '===');
     
-    // Find the column that contains check-premium month (à¹€à¸”à¸·à¸­à¸™à¹€à¸Šà¹‡à¸„à¹€à¸šà¸µà¹‰à¸¢)
-    // From the sheet: column headers include à¹€à¸”à¸·à¸­à¸™à¹€à¸Šà¹‡à¸„à¹€à¸šà¸µà¹‰à¸¢ and à¸ªà¸£à¸¸à¸›à¸ªà¸–à¸²à¸™à¸°à¸à¸£à¸¡à¸˜à¸£à¸£à¸¡à¹Œ
+    // Find the column that contains check-premium month (เดือนเช็คเบี้ย)
+    // From the sheet: column headers include เดือนเช็คเบี้ย and สรุปสถานะกรมธรรม์
     var headers = Object.keys(fleetSaleTrackingData[0] || {});
     console.log('Sale-tracking headers:', headers);
     
@@ -3919,12 +4120,12 @@ function analyzeSaleTracking(monthName) {
     
     headers.forEach(function(h) {
         var hLower = h.toLowerCase().trim();
-        // à¹€à¸”à¸·à¸­à¸™à¹€à¸Šà¹‡à¸„à¹€à¸šà¸µà¹‰à¸¢ = premium check month
-        if (h.indexOf('à¹€à¸”à¸·à¸­à¸™à¹€à¸Šà¹‡à¸„à¹€à¸šà¸µà¹‰à¸¢') !== -1 && h.indexOf('week') === -1) {
+        // เดือนเช็คเบี้ย = premium check month
+        if (h.indexOf('เดือนเช็คเบี้ย') !== -1 && h.indexOf('week') === -1) {
             premiumMonthCol = h;
         }
-        // à¸ªà¸£à¸¸à¸›à¸ªà¸–à¸²à¸™à¸°à¸à¸£à¸¡à¸˜à¸£à¸£à¸¡à¹Œ = policy status summary  
-        if (h.indexOf('à¸ªà¸£à¸¸à¸›à¸ªà¸–à¸²à¸™à¸°à¸à¸£à¸¡à¸˜à¸£à¸£à¸¡à¹Œ') !== -1 || h.indexOf('à¸ªà¸£à¸¸à¸›à¸ªà¸–à¸²à¸™à¸°') !== -1) {
+        // สรุปสถานะกรมธรรม์ = policy status summary  
+        if (h.indexOf('สรุปสถานะกรมธรรม์') !== -1 || h.indexOf('สรุปสถานะ') !== -1) {
             statusCol = h;
         }
     });
@@ -3932,9 +4133,9 @@ function analyzeSaleTracking(monthName) {
     console.log('Premium month col:', premiumMonthCol, 'Status col:', statusCol);
     
     if (!premiumMonthCol) {
-        // Try alternative: use à¹€à¸”à¸·à¸­à¸™à¹à¸ˆà¹‰à¸‡à¸‡à¸²à¸™ or another month column
+        // Try alternative: use เดือนแจ้งงาน or another month column
         headers.forEach(function(h) {
-            if (!premiumMonthCol && h.indexOf('à¹€à¸”à¸·à¸­à¸™à¹à¸ˆà¹‰à¸‡à¸‡à¸²à¸™') !== -1 && h.indexOf('à¸„à¸£à¸±à¹‰à¸‡à¹à¸£à¸') === -1 && h.indexOf('à¸¥à¹ˆà¸²à¸ªà¸¸à¸”') === -1) {
+            if (!premiumMonthCol && h.indexOf('เดือนแจ้งงาน') !== -1 && h.indexOf('ครั้งแรก') === -1 && h.indexOf('ล่าสุด') === -1) {
                 premiumMonthCol = h;
             }
         });
@@ -4045,14 +4246,14 @@ function renderFleetChart(months, targets, actuals, currentMonthIdx, scaleFactor
                     labels: {
                         usePointStyle: true,
                         padding: 20,
-                        font: { size: 13, family: "'Manrope', sans-serif", weight: '600' }
+                        font: { size: 13, family: "'Google Sans Text', sans-serif", weight: '600' }
                     }
                 },
                 tooltip: {
                     backgroundColor: 'rgba(10, 14, 39, 0.95)',
                     padding: 14,
-                    titleFont: { size: 14, family: "'Manrope', sans-serif" },
-                    bodyFont: { size: 13, family: "'IBM Plex Mono', monospace" },
+                    titleFont: { size: 14, family: "'Google Sans Text', sans-serif" },
+                    bodyFont: { size: 13, family: "'Google Sans Text', sans-serif" },
                     callbacks: {
                         label: function(context) {
                             if (context.parsed.y === null) return null;
@@ -4067,17 +4268,17 @@ function renderFleetChart(months, targets, actuals, currentMonthIdx, scaleFactor
                     title: { display: true, text: 'GWP (' + scaleLabel + ')', font: { size: 12, weight: '600' } },
                     ticks: {
                         callback: function(value) { return value.toFixed(1) + scaleLabel; },
-                        font: { family: "'IBM Plex Mono', monospace" }
+                        font: { family: "'Google Sans Text', sans-serif" }
                     },
                     grid: { color: 'rgba(0, 0, 0, 0.05)' }
                 },
                 x: {
                     grid: { display: false },
                     ticks: {
-                        font: { family: "'Manrope', sans-serif", size: 11 },
+                        font: { family: "'Google Sans Text', sans-serif", size: 11 },
                         callback: function(value, index) {
                             var label = labels[index];
-                            if (index === currentMonthIdx) return 'â–¶ ' + label;
+                            if (index === currentMonthIdx) return '▶ ' + label;
                             return label;
                         }
                     }
@@ -4121,7 +4322,7 @@ function renderFleetChart(months, targets, actuals, currentMonthIdx, scaleFactor
                         
                         ctx.save();
                         ctx.fillStyle = dataset.borderColor;
-                        ctx.font = '600 11px "IBM Plex Mono", monospace';
+                        ctx.font = '600 11px "Google Sans Text", sans-serif';
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'bottom';
                         ctx.fillText(value.toFixed(1) + scaleLabel, x, y - 10);
@@ -4134,3 +4335,10 @@ function renderFleetChart(months, targets, actuals, currentMonthIdx, scaleFactor
 }
 
 console.log('✅ Fleet Analysis module loaded');
+
+// Auto-fetch all data on page load
+fetchOKRSheetData();
+fetchFirstTransactingData();
+fetchEarlyRetentionData();
+fetchTeamPerfData();
+fetchFleetData();

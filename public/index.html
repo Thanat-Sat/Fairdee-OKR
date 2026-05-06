@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Text:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
     
     <!-- CSV Parser -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -55,7 +55,7 @@
         }
         @keyframes authSpin { to { transform: rotate(360deg); } }
         .auth-loading-text {
-            font-family: 'Manrope', sans-serif;
+            font-family: 'Google Sans Text', sans-serif;
             font-size: 1.1rem;
             font-weight: 600;
             opacity: 0.9;
@@ -70,7 +70,7 @@
             align-items: center;
             justify-content: flex-end;
             gap: 1rem;
-            font-family: 'Manrope', sans-serif;
+            font-family: 'Google Sans Text', sans-serif;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             position: sticky;
             top: 0;
@@ -107,7 +107,7 @@
             font-weight: 600;
             color: var(--text-secondary, #64748B);
             cursor: pointer;
-            font-family: 'Manrope', sans-serif;
+            font-family: 'Google Sans Text', sans-serif;
             transition: all 0.2s ease;
         }
         .user-bar-signout:hover {
@@ -228,7 +228,7 @@
         }
         
         .monthly-progress-label-value {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Google Sans Text', sans-serif;
             font-weight: 700;
         }
         
@@ -296,7 +296,7 @@
         .monthly-stat-value {
             font-size: 1.125rem;
             font-weight: 700;
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Google Sans Text', sans-serif;
             color: var(--primary);
         }
         
@@ -326,7 +326,7 @@
             border-radius: 8px;
             font-size: 0.875rem;
             font-weight: 600;
-            font-family: 'Manrope', sans-serif;
+            font-family: 'Google Sans Text', sans-serif;
             cursor: pointer;
             transition: all 0.2s ease;
             box-shadow: 0 2px 8px rgba(220, 38, 38, 0.25);
@@ -364,109 +364,54 @@
     </div>
 
     <div class="container">
-        <!-- Upload Section -->
-        <div id="uploadSection" class="upload-section">
+        <!-- Upload Section (hidden - data loads automatically) -->
+        <div id="uploadSection" class="upload-section" style="display: none;">
             <h1 class="upload-title">OKR Dashboard</h1>
-            <p class="upload-subtitle">Upload your CSV files to visualize monthly metrics</p>
+            <p class="upload-subtitle">OKR data loads automatically. Optionally upload Hunter Analysis and Team Performance files.</p>
             
-            <!-- Data File Upload -->
-            <div class="upload-zone" id="uploadZone">
-                <div class="upload-icon">📊</div>
-                <div class="upload-text">Drop your data CSV file here or click to browse</div>
-                <div class="upload-hint">Supports .csv files with monthly data</div>
-                <input type="file" id="fileInput" accept=".csv">
-            </div>
-            
-            <div style="margin-top: 1.5rem; text-align: center;">
-                <button class="btn-upload" onclick="document.getElementById('fileInput').click()">
-                    Choose Data File
-                </button>
+            <!-- OKR Data Source -->
+            <div style="border: 2px solid var(--border); border-radius: 12px; padding: 2rem; background: #FAFBFC; text-align: center;">
+                <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📊</div>
+                <div style="font-weight: 600; font-size: 1rem; margin-bottom: 0.5rem; color: var(--text-primary);">OKR Data</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">Auto-loaded from Google Sheets</div>
                 <div id="dataFileStatus" class="upload-status"></div>
             </div>
             
-            <!-- Monthly Targets Upload -->
+            <!-- Hunter Analysis Auto-load -->
             <div style="margin-top: 3rem;">
                 <h3 style="text-align: center; color: var(--primary); margin-bottom: 1rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                    <span style="font-size: 1.2rem;">📅</span> Monthly Targets (Optional)
+                    <span style="font-size: 1.2rem;">🎯</span> Hunter Analysis
                 </h3>
-                
-                <div style="border: 2px dashed var(--border); border-radius: 12px; padding: 2rem; background: #FAFBFC;">
-                    <div class="upload-zone" id="targetsUploadZone" style="border: none; background: transparent; padding: 2rem 1rem;">
-                        <div class="upload-icon" style="background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);">🎯</div>
-                        <div class="upload-text">Drop your monthly targets CSV here</div>
-                        <div class="upload-hint">Format: kr_name, month, monthly_target</div>
-                        <input type="file" id="targetsFileInput" accept=".csv">
-                    </div>
-                    
-                    <div style="text-align: center;">
-                        <button class="btn-upload" onclick="document.getElementById('targetsFileInput').click()">
-                            Choose Monthly Targets File
-                        </button>
-                        <div id="targetsFileStatus" class="upload-status"></div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Hunter Analysis Upload -->
-            <div style="margin-top: 3rem;">
-                <h3 style="text-align: center; color: var(--primary); margin-bottom: 1rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                    <span style="font-size: 1.2rem;">🎯</span> Hunter Analysis (Optional)
-                </h3>
-                
-                <div style="border: 2px dashed var(--border); border-radius: 12px; padding: 2rem; background: #FAFBFC;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-                        <div>
-                            <div class="upload-zone" id="firstTransactingUploadZone" style="border: none; background: transparent; padding: 2rem 1rem;">
-                                <div class="upload-icon" style="background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%); font-size: 2rem;">📈</div>
-                                <div class="upload-text" style="font-size: 1rem;">First Transacting CSV</div>
-                                <div class="upload-hint">Format: agent_region, metric_month, Sum of monthly_premium</div>
-                                <input type="file" id="firstTransactingInput" accept=".csv">
-                            </div>
-                            <div style="text-align: center;">
-                                <button class="btn-upload" onclick="document.getElementById('firstTransactingInput').click()">
-                                    Choose File
-                                </button>
-                                <div id="firstTransactingStatus" class="upload-status"></div>
-                            </div>
+
+                <div style="border: 2px solid var(--border); border-radius: 12px; padding: 1.5rem; background: #FAFBFC;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                        <div style="text-align: center; padding: 1rem;">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📈</div>
+                            <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem; color: var(--text-primary);">First Transacting</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem;">Auto-loaded from Google Sheets</div>
+                            <div id="firstTransactingStatus" class="upload-status"></div>
                         </div>
-                        
-                        <div>
-                            <div class="upload-zone" id="earlyRetentionUploadZone" style="border: none; background: transparent; padding: 2rem 1rem;">
-                                <div class="upload-icon" style="background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%); font-size: 2rem;">📊</div>
-                                <div class="upload-text" style="font-size: 1rem;">Early Retention CSV</div>
-                                <div class="upload-hint">Format: metric_month, agent_region, Sum of monthly_premium</div>
-                                <input type="file" id="earlyRetentionInput" accept=".csv">
-                            </div>
-                            <div style="text-align: center;">
-                                <button class="btn-upload" onclick="document.getElementById('earlyRetentionInput').click()">
-                                    Choose File
-                                </button>
-                                <div id="earlyRetentionStatus" class="upload-status"></div>
-                            </div>
+                        <div style="text-align: center; padding: 1rem;">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📊</div>
+                            <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem; color: var(--text-primary);">Early Retention</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem;">Auto-loaded from Google Sheets</div>
+                            <div id="earlyRetentionStatus" class="upload-status"></div>
                         </div>
                     </div>
                 </div>
             </div>
             
-            <!-- Team Performance Upload -->
+            <!-- Team Performance Auto-load -->
             <div style="margin-top: 3rem;">
                 <h3 style="text-align: center; color: var(--primary); margin-bottom: 1rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                    <span style="font-size: 1.2rem;">📊</span> Team Performance Data (Optional)
+                    <span style="font-size: 1.2rem;">📊</span> Team Performance Data
                 </h3>
-                
-                <div style="border: 2px dashed var(--border); border-radius: 12px; padding: 2rem; background: #FAFBFC;">
-                    <div class="upload-zone" id="teamPerfUploadZoneMain" style="border: none; background: transparent; padding: 2rem 1rem;">
-                        <div class="upload-icon" style="background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%); font-size: 2rem;">📊</div>
-                        <div class="upload-text" style="font-size: 1rem;">Team Performance CSV</div>
-                        <div class="upload-hint">Format: team_name, team_anchor_code, agent_province, month, gwp, active_agent, sales</div>
-                        <input type="file" id="teamPerfFileInputMain" accept=".csv">
-                    </div>
-                    <div style="text-align: center;">
-                        <button class="btn-upload" onclick="document.getElementById('teamPerfFileInputMain').click()">
-                            Choose File
-                        </button>
-                        <div id="teamPerfFileStatusMain" class="upload-status"></div>
-                    </div>
+
+                <div style="border: 2px solid var(--border); border-radius: 12px; padding: 2rem; background: #FAFBFC; text-align: center;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">📊</div>
+                    <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem; color: var(--text-primary);">MLM Key Funnel</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem;">Auto-loaded from Google Sheets</div>
+                    <div id="teamPerfFileStatusMain" class="upload-status"></div>
                 </div>
             </div>
             
@@ -484,6 +429,19 @@
 
         <!-- Dashboard Section -->
         <div class="dashboard" id="dashboard">
+            <!-- Loading Progress Bar -->
+            <div id="dataLoadingBar" style="background: #F0F4FF; border: 1px solid #C7D2FE; border-radius: 12px; padding: 1rem 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem;">
+                <div style="flex: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <span id="dataLoadingText" style="font-size: 0.875rem; font-weight: 600; color: #4338CA;">Fetching data from Google Sheets...</span>
+                        <span id="dataLoadingCount" style="font-size: 0.8rem; color: #6366F1; font-weight: 600;">0 / 5</span>
+                    </div>
+                    <div style="background: #C7D2FE; border-radius: 999px; height: 6px; overflow: hidden;">
+                        <div id="dataLoadingFill" style="height: 100%; width: 0%; background: linear-gradient(90deg, #4F46E5, #7C3AED); border-radius: 999px; transition: width 0.4s ease;"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Header with Stats -->
             <div class="header">
                 <h1>OKR Performance Dashboard</h1>
@@ -666,35 +624,7 @@
             <!-- Fleet Analysis View -->
             <div class="tab-content" id="fleetAnalysis">
                 <div id="fleetAnalysisContainer">
-                    <!-- Config section -->
-                    <div id="fleetConfigSection" style="background: var(--card-bg); border-radius: 12px; padding: 2rem; box-shadow: var(--shadow-md); border: 1px solid var(--border); margin-bottom: 2rem;">
-                        <h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 1rem; color: var(--primary);">🔗 Google Sheet Connection</h2>
-                        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Connect to a Google Sheet to pull Fleet GWP data. The sheet must be shared as "Anyone with the link can view".</p>
-                        
-                        <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; margin-bottom: 1.5rem;">
-                            <div style="flex: 1; min-width: 300px;">
-                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.875rem; color: var(--text-primary);">Google Sheet URL</label>
-                                <input type="text" id="fleetSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..." 
-                                    value="https://docs.google.com/spreadsheets/d/1BcCiO2TiHhJfWDj62RJ_8U1bmAjIpqxgSpTJjkWsTTg/edit?usp=sharing"
-                                    style="width: 100%; padding: 0.75rem 1rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; font-family: 'Manrope', sans-serif; background: var(--bg); color: var(--text-primary); transition: all 0.2s ease;">
-                            </div>
-                            <div style="min-width: 120px;">
-                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.875rem; color: var(--text-primary);">Sheet/Tab Name</label>
-                                <input type="text" id="fleetSheetName" placeholder="summary" value="summary"
-                                    style="width: 100%; padding: 0.75rem 1rem; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; font-family: 'Manrope', sans-serif; background: var(--bg); color: var(--text-primary);">
-                            </div>
-                            <button onclick="fetchFleetData()" style="background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; font-weight: 600; cursor: pointer; font-family: 'Manrope', sans-serif; transition: all 0.3s ease; white-space: nowrap;">
-                                🔄 Fetch Data
-                            </button>
-                        </div>
-                        
-                        <div style="background: var(--bg); border-radius: 8px; padding: 1rem; font-size: 0.85rem; color: var(--text-muted);">
-                            <strong>ℹ️ Setup:</strong> Make sure your Google Sheet is shared publicly ("Anyone with the link can view"). 
-                            Data is read from the <strong>summary</strong> tab — Column A = Month, Column B = Target, Column C = Net Premium (GWP). Includes 2025 historical + 2026 data.
-                        </div>
-                        
-                        <div id="fleetFetchStatus" class="upload-status" style="margin-top: 1rem;"></div>
-                    </div>
+                    <div id="fleetFetchStatus" class="upload-status" style="margin-bottom: 1rem;"></div>
                     
                     <!-- Dynamic fleet content -->
                     <div id="fleetDynamicContent"></div>
