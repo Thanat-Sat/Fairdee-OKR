@@ -101,16 +101,17 @@ function showUploadStatus(elementId, status, message) {
     statusEl.innerHTML = message;
 }
 
-// Show dashboard (called when user clicks "View Dashboard" button)
+// Show dashboard (called automatically after the Google Sheet finishes loading)
 function showDashboard() {
     if (csvData.length === 0) {
-        alert('Please upload a data CSV file first.');
+        // Sheet hasn't returned yet (or failed) — leave the upload section visible so
+        // the status/error message is readable and the Refresh button is reachable.
         return;
     }
-    
+
     document.getElementById('uploadSection').style.display = 'none';
     document.getElementById('dashboard').style.display = 'block';
-    
+
     // Render all views
     renderAll();
 }
@@ -374,7 +375,55 @@ function resolveColumns(headers) {
     };
 }
 
+// ========================================
+// GOOGLE SHEETS DATA SOURCE
+// OKR data is fetched directly from this sheet — users no longer upload it manually.
+// The sheet must be readable by "Anyone with the link" (or Anyone on the internet).
+// ========================================
+const OKR_SHEET_ID  = '1M51L7xRu_Y8MRO5ziDVZ4pbWtqi0Mxb1-oJ6WyfwKU0';
+const OKR_SHEET_GID = '2085534397';
+const OKR_SHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${OKR_SHEET_ID}/export?format=csv&gid=${OKR_SHEET_GID}`;
+const OKR_SHEET_VIEW_URL = `https://docs.google.com/spreadsheets/d/${OKR_SHEET_ID}/edit?gid=${OKR_SHEET_GID}`;
+
+// Auto-fetch the OKR data sheet from Google. Cache-bust so we always get the latest values.
+function loadOkrFromGoogleSheet(opts) {
+    const isRefresh = !!(opts && opts.refresh);
+    showUploadStatus('dataFileStatus', 'loading',
+        isRefresh ? 'Refreshing OKR data from Google Sheets…' : 'Loading OKR data from Google Sheets…');
+
+    const url = `${OKR_SHEET_CSV_URL}&_=${Date.now()}`;
+    Papa.parse(url, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        transformHeader: function(header) { return header.trim(); },
+        complete: function(results) {
+            try {
+                handleOkrParsedData(results, 'Google Sheets');
+                if (!isRefresh) {
+                    // First load: jump straight to the dashboard.
+                    showDashboard();
+                } else {
+                    // Refresh while dashboard is open: re-render in place.
+                    if (document.getElementById('dashboard').style.display !== 'none') {
+                        renderAll();
+                    }
+                }
+            } catch (err) {
+                console.error('OKR sheet parse error:', err);
+                showUploadStatus('dataFileStatus', 'error', `✗ Failed to parse OKR sheet: ${err.message}`);
+            }
+        },
+        error: function(error) {
+            console.error('OKR sheet fetch error:', error);
+            showUploadStatus('dataFileStatus', 'error',
+                `✗ Could not load Google Sheet: ${error.message || error}. Make sure the sheet is shared as "Anyone with the link can view".`);
+        }
+    });
+}
+
 // Process CSV file - NEW FORMAT (long format with months as rows)
+// Kept for the legacy file-upload code path; the primary entry point is now loadOkrFromGoogleSheet().
 function processFile(file) {
     Papa.parse(file, {
         header: true,
@@ -383,8 +432,19 @@ function processFile(file) {
             return header.trim();
         },
         complete: function(results) {
-            console.log('=== CSV PARSING DEBUG ===');
-            console.log('Total rows:', results.data.length);
+            handleOkrParsedData(results, file.name);
+        },
+        error: function(error) {
+            showUploadStatus('dataFileStatus', 'error', `✗ Error: ${error.message}`);
+        }
+    });
+}
+
+// Shared OKR parsed-data handler — used by both the Google Sheets fetch and the legacy file upload.
+function handleOkrParsedData(results, sourceLabel) {
+    console.log('=== CSV PARSING DEBUG ===');
+    console.log('Source:', sourceLabel);
+    console.log('Total rows:', results.data.length);
             
             // Find the month column name (flexible matching)
             const headers = results.meta.fields || Object.keys(results.data[0] || {});
@@ -411,7 +471,12 @@ function processFile(file) {
             const monthSet = new Set();
             const groupedData = new Map();
             let filteredRowCount = 0; // Track how many year-to-month/YTD/yearly average rows were filtered out
-            
+            let embeddedTargetCount = 0; // Track monthly targets read from the OKR summary file itself
+
+            // Reset monthly targets — they will be populated from the OKR summary's Monthly Target column.
+            // A separate monthly-targets CSV (uploaded after this) can still override/supplement.
+            monthlyTargets.clear();
+
             results.data.forEach(row => {
                 const krName = row[cols.kr_name] || row.kr_name;
                 if (!krName || !krName.trim()) return;
@@ -477,18 +542,39 @@ function processFile(file) {
                     });
                 }
                 
+                const krUnitName = unitNameVal.toString().toLowerCase();
+                const isPercentKR = krUnitName.includes('%') || krUnitName.includes('percent');
+
                 // Store monthly value
                 if (monthStr && valueStr) {
                     let value = parseFloat(valueStr.toString().replace(/,/g, ''));
                     if (!isNaN(value)) {
                         // If the KR unit is percentage-based and value is in decimal form (e.g. 0.71 = 71%),
                         // multiply by 100 to convert to proper percentage
-                        const krUnitName = unitNameVal.toString().toLowerCase();
-                        const isPercentKR = krUnitName.includes('%') || krUnitName.includes('percent');
                         if (isPercentKR && Math.abs(value) <= 1) {
                             value = value * 100;
                         }
                         groupedData.get(krKey).monthlyData.set(monthStr.trim(), value);
+                    }
+                }
+
+                // Pull the embedded "Monthly Target" from the OKR summary file itself.
+                // Saves the user from uploading a separate monthly-targets CSV.
+                if (monthStr && cols.monthly_target) {
+                    const monthlyTargetRaw = row[cols.monthly_target];
+                    if (monthlyTargetRaw !== undefined && monthlyTargetRaw !== null && monthlyTargetRaw !== '') {
+                        let mt = parseFloat(monthlyTargetRaw.toString().replace(/,/g, ''));
+                        if (!isNaN(mt)) {
+                            if (isPercentKR && Math.abs(mt) <= 1) {
+                                mt = mt * 100;
+                            }
+                            const trimmedKr = krName.trim();
+                            if (!monthlyTargets.has(trimmedKr)) {
+                                monthlyTargets.set(trimmedKr, new Map());
+                            }
+                            monthlyTargets.get(trimmedKr).set(monthStr.trim(), mt);
+                            embeddedTargetCount++;
+                        }
                     }
                 }
             });
@@ -518,15 +604,22 @@ function processFile(file) {
             populateFilters();
             renderAll();
             
-            // Show success status instead of auto-navigating
-            showUploadStatus('dataFileStatus', 'success', `✓ Loaded ${csvData.length} KRs from ${file.name}`);
-            document.getElementById('uploadZone').classList.add('uploaded');
-            document.getElementById('viewDashboardSection').style.display = 'block';
-        },
-        error: function(error) {
-            showUploadStatus('dataFileStatus', 'error', `✗ Error: ${error.message}`);
-        }
-    });
+    console.log('✓ Embedded monthly targets loaded:', embeddedTargetCount, 'rows across', monthlyTargets.size, 'KRs');
+
+    // Surface success in the data-source status row.
+    showUploadStatus('dataFileStatus', 'success', `✓ Loaded ${csvData.length} KRs from ${sourceLabel}`);
+    const uz = document.getElementById('uploadZone');
+    if (uz) uz.classList.add('uploaded');
+    const vds = document.getElementById('viewDashboardSection');
+    if (vds) vds.style.display = 'block';
+
+    // Reflect that monthly targets are already populated from the same source —
+    // the separate monthly-targets upload is no longer needed.
+    if (embeddedTargetCount > 0) {
+        showUploadStatus('targetsFileStatus', 'success', `✓ ${embeddedTargetCount} monthly targets loaded from ${sourceLabel}`);
+        const tz = document.getElementById('targetsUploadZone');
+        if (tz) tz.classList.add('uploaded');
+    }
 }
 
 // Populate filter dropdowns
@@ -2054,12 +2147,13 @@ function exportTableToPDF() {
     }
 }
 
-// Reset dashboard
+// Reset dashboard — re-fetch OKR data from Google Sheets and surface the upload section
+// so optional Hunter / Team Performance uploads remain reachable.
 function resetDashboard() {
     document.getElementById('dashboard').style.display = 'none';
     document.getElementById('uploadSection').style.display = 'block';
-    document.getElementById('fileInput').value = '';
-    document.getElementById('targetsFileInput').value = '';
+    var fi = document.getElementById('fileInput');           if (fi) fi.value = '';
+    var tfi = document.getElementById('targetsFileInput');   if (tfi) tfi.value = '';
     document.getElementById('firstTransactingInput').value = '';
     document.getElementById('earlyRetentionInput').value = '';
     
@@ -2111,6 +2205,9 @@ function resetDashboard() {
     var tpContent = document.getElementById('teamPerfDynamicContent');
     if (tpUpload) tpUpload.style.display = 'block';
     if (tpContent) { tpContent.style.display = 'none'; tpContent.innerHTML = ''; }
+
+    // Auto re-fetch the OKR sheet so the dashboard is repopulated without any manual step.
+    loadOkrFromGoogleSheet();
 }
 
 // ========================================

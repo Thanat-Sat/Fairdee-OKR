@@ -367,44 +367,28 @@
         <!-- Upload Section -->
         <div id="uploadSection" class="upload-section">
             <h1 class="upload-title">OKR Dashboard</h1>
-            <p class="upload-subtitle">Upload your CSV files to visualize monthly metrics</p>
-            
-            <!-- Data File Upload -->
-            <div class="upload-zone" id="uploadZone">
-                <div class="upload-icon">📊</div>
-                <div class="upload-text">Drop your data CSV file here or click to browse</div>
-                <div class="upload-hint">Supports .csv files with monthly data</div>
-                <input type="file" id="fileInput" accept=".csv">
-            </div>
-            
-            <div style="margin-top: 1.5rem; text-align: center;">
-                <button class="btn-upload" onclick="document.getElementById('fileInput').click()">
-                    Choose Data File
-                </button>
-                <div id="dataFileStatus" class="upload-status"></div>
-            </div>
-            
-            <!-- Monthly Targets Upload -->
-            <div style="margin-top: 3rem;">
-                <h3 style="text-align: center; color: var(--primary); margin-bottom: 1rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                    <span style="font-size: 1.2rem;">📅</span> Monthly Targets (Optional)
-                </h3>
-                
-                <div style="border: 2px dashed var(--border); border-radius: 12px; padding: 2rem; background: #FAFBFC;">
-                    <div class="upload-zone" id="targetsUploadZone" style="border: none; background: transparent; padding: 2rem 1rem;">
-                        <div class="upload-icon" style="background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);">🎯</div>
-                        <div class="upload-text">Drop your monthly targets CSV here</div>
-                        <div class="upload-hint">Format: kr_name, month, monthly_target</div>
-                        <input type="file" id="targetsFileInput" accept=".csv">
+            <p class="upload-subtitle">OKR data auto-loads from Google Sheets — no manual upload needed</p>
+
+            <!-- OKR data source: auto-fetched from Google Sheets -->
+            <div id="okrDataSourceCard" style="border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem 1.75rem; background: #FAFBFC; display: flex; align-items: center; gap: 1.25rem;">
+                <div style="font-size: 2rem;">🔄</div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; color: var(--primary); margin-bottom: 0.25rem;">OKR Summary 2026</div>
+                    <div style="color: var(--text-secondary, #64748B); font-size: 0.875rem;">
+                        Live source: <a id="okrSheetLink" href="#" target="_blank" rel="noopener" style="color: var(--accent, #FF6B35); text-decoration: none;">Google Sheets</a>
                     </div>
-                    
-                    <div style="text-align: center;">
-                        <button class="btn-upload" onclick="document.getElementById('targetsFileInput').click()">
-                            Choose Monthly Targets File
-                        </button>
-                        <div id="targetsFileStatus" class="upload-status"></div>
-                    </div>
+                    <div id="dataFileStatus" class="upload-status" style="margin-top: 0.5rem;"></div>
+                    <div id="targetsFileStatus" class="upload-status"></div>
                 </div>
+                <button class="btn-upload" onclick="loadOkrFromGoogleSheet({refresh: true})">
+                    Refresh
+                </button>
+            </div>
+
+            <!-- Hidden legacy file inputs — kept so existing event handlers don't error if referenced. -->
+            <div style="display: none;" aria-hidden="true">
+                <div class="upload-zone" id="uploadZone"><input type="file" id="fileInput" accept=".csv"></div>
+                <div class="upload-zone" id="targetsUploadZone"><input type="file" id="targetsFileInput" accept=".csv"></div>
             </div>
             
             <!-- Hunter Analysis Upload -->
@@ -701,9 +685,10 @@
                 </div>
             </div>
             
-            <!-- Reset Button -->
-            <div style="text-align: center; margin-top: 2rem;">
-                <button class="btn-reset" onclick="resetDashboard()">Upload New Files</button>
+            <!-- Reset / Refresh Buttons -->
+            <div style="text-align: center; margin-top: 2rem; display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+                <button class="btn-reset" onclick="loadOkrFromGoogleSheet({refresh: true})">↻ Refresh OKR Data</button>
+                <button class="btn-reset" onclick="resetDashboard()">Manage Files</button>
             </div>
         </div>
     </div>
@@ -742,6 +727,15 @@
 
                     // Show user bar
                     userBar.style.display = 'flex';
+
+                    // Wire the live-source link, then auto-fetch the OKR sheet.
+                    if (typeof OKR_SHEET_VIEW_URL !== 'undefined') {
+                        var lnk = document.getElementById('okrSheetLink');
+                        if (lnk) lnk.href = OKR_SHEET_VIEW_URL;
+                    }
+                    if (typeof loadOkrFromGoogleSheet === 'function') {
+                        loadOkrFromGoogleSheet();
+                    }
                 }
             });
         })();
