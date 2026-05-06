@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agency Performance Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Text:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=1778061958986">
+</head>
+<body>
+    <div id="loadingBar" class="loading-bar"></div>
+    <div class="container">
+        <!-- Header (hidden when in iframe) -->
+        <header class="dashboard-header" id="dashboardHeader">
+            <div class="header-content">
+                <div class="brand">
+                    <div class="brand-icon"></div>
+                    <h1>Agency Performance</h1>
+                </div>
+                <a href="index.html" class="back-link">← Back to Main Dashboard</a>
+            </div>
+        </header>
+
+        <!-- No Data Message -->
+        <section class="upload-section" id="noDataSection">
+            <div class="upload-zone">
+                <div class="upload-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+                    </svg>
+                </div>
+                <h2>No Agency Data Available</h2>
+                <p>No agency data is currently available.</p>
+            </div>
+        </section>
+
+        <!-- Dashboard Content -->
+        <div class="dashboard-content" id="dashboardContent" style="display: none;">
+            
+            <section class="agency-section">
+                <div class="section-header">
+                    <h2>Agency</h2>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <span id="dataStatus" style="font-size: 0.875rem; color: #10b981;">
+                            ✓ Data loaded from storage
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Agency Table -->
+                <div class="agency-table-container">
+                    <table class="agency-table">
+                        <thead id="agencyTableHead">
+                            <!-- Headers will be populated dynamically -->
+                        </thead>
+                        <tbody id="agencyTableBody">
+                            <!-- Data will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+
+            </section>
+
+        </div>
+    </div>
+
+    <!-- Centralized Data Store -->
+    <script src="dashboard-data-store.js?v=1778059031137"></script>
+    <script src="agency-dashboard.js?v=1778059031137"></script>
+</body>
+</html>

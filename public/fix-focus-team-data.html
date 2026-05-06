@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Focus Team Data Fixer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Text:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Google Sans Text', sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #FF6B35;
+        }
+        button {
+            background: #FF6B35;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #E85A2B;
+        }
+        .success {
+            background: #10B981;
+            padding: 15px;
+            border-radius: 6px;
+            color: white;
+            margin: 15px 0;
+            display: none;
+        }
+        .error {
+            background: #EF4444;
+            padding: 15px;
+            border-radius: 6px;
+            color: white;
+            margin: 15px 0;
+            display: none;
+        }
+        .info {
+            background: #F0F9FF;
+            border-left: 4px solid #3B82F6;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        pre {
+            background: #1e293b;
+            color: #10b981;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            max-height: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Focus Team Data Fixer</h1>
+        
+        <div class="info">
+            <strong>What this does:</strong>
+            <ul>
+                <li>Checks if your Focus Team data is properly saved</li>
+                <li>Shows you the exact structure of your data</li>
+                <li>Helps diagnose why the dashboard isn't loading</li>
+            </ul>
+        </div>
+
+        <button onclick="checkData()">1. Check Current Data</button>
+        <button onclick="clearAndReload()">2. Clear & Reload Dashboard</button>
+        
+        <div id="success" class="success"></div>
+        <div id="error" class="error"></div>
+        
+        <div id="output"></div>
+    </div>
+
+    <script>
+        function showSuccess(msg) {
+            const el = document.getElementById('success');
+            el.textContent = msg;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 5000);
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('error');
+            el.textContent = msg;
+            el.style.display = 'block';
+        }
+
+        function checkData() {
+            const output = document.getElementById('output');
+            const stored = localStorage.getItem('dashboard_data_v1');
+            
+            if (!stored) {
+                output.innerHTML = '<h3 style="color: #EF4444;">❌ No data found in localStorage!</h3><p>No Focus Team data was found.</p>';
+                return;
+            }
+
+            try {
+                const data = JSON.parse(stored);
+                
+                let html = '<h3>📊 Data Analysis:</h3>';
+                
+                // Check what data types are available
+                html += '<h4>Available Data Types:</h4><ul>';
+                for (let key in data) {
+                    if (key !== 'lastUpdated' && data[key]) {
+                        html += `<li>✓ ${key}</li>`;
+                    }
+                }
+                html += '</ul>';
+
+                // Check Focus Team specifically
+                if (data.focusTeam) {
+                    html += '<h4 style="color: #10B981;">✓ Focus Team Data Found!</h4>';
+                    html += '<p><strong>Structure:</strong></p>';
+                    html += '<ul>';
+                    html += `<li>Teams: ${data.focusTeam.teams ? 'Yes ✓' : 'No ❌'}</li>`;
+                    html += `<li>Months: ${data.focusTeam.months ? data.focusTeam.months.length + ' months' : 'No ❌'}</li>`;
+                    html += `<li>Team List: ${data.focusTeam.teamList ? data.focusTeam.teamList.length + ' teams' : 'No ❌'}</li>`;
+                    html += '</ul>';
+                    
+                    if (data.focusTeam.teamList && data.focusTeam.teamList.length > 0) {
+                        html += '<h4>Teams Found:</h4><pre>';
+                        data.focusTeam.teamList.forEach(team => {
+                            html += `${team.code}: ${team.name}\n`;
+                        });
+                        html += '</pre>';
+                    }
+
+                    if (data.focusTeam.months && data.focusTeam.months.length > 0) {
+                        html += '<h4>Months:</h4><pre>';
+                        html += data.focusTeam.months.join(', ');
+                        html += '</pre>';
+                    }
+
+                    html += '<div class="info"><strong>✓ Your data is saved correctly!</strong><br>If the dashboard still shows "No Data", just <strong>refresh the page</strong> or click the refresh button.</div>';
+                } else {
+                    html += '<h4 style="color: #EF4444;">❌ Focus Team Data NOT Found!</h4>';
+                    html += '<p>Your data has other types but not Focus Team data.</p>';
+                    html += '<p><strong>Solution:</strong> Add Focus Team data before running this fixer.</p>';
+                }
+
+                output.innerHTML = html;
+
+            } catch (e) {
+                output.innerHTML = `<h3 style="color: #EF4444;">Error parsing data:</h3><pre>${e.message}</pre>`;
+            }
+        }
+
+        function clearAndReload() {
+            if (confirm('This will reload all dashboard pages. Continue?')) {
+                // Trigger a storage event to reload all dashboards
+                window.dispatchEvent(new CustomEvent('dashboardDataUpdated', { 
+                    detail: JSON.parse(localStorage.getItem('dashboard_data_v1'))
+                }));
+                showSuccess('✓ Dashboards reloaded! Go check your Focus Team page.');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Renewal Rate Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Text:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=1778061958986">
+</head>
+<body>
+    <div id="loadingBar" class="loading-bar"></div>
+    <div class="container">
+        <!-- Header (hidden when in iframe) -->
+        <header class="dashboard-header" id="dashboardHeader">
+            <div class="header-content">
+                <div class="brand">
+                    <div class="brand-icon"></div>
+                    <h1>Renewal Rate Analysis</h1>
+                </div>
+                <a href="index.html" class="back-link">← Back to Main Dashboard</a>
+            </div>
+        </header>
+
+        <!-- No Data Message -->
+        <section class="upload-section" id="noDataSection">
+            <div class="upload-zone">
+                <div class="upload-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M3 12a9 9 0 019-9 9.75 9.75 0 016.74 2.74L21 8"/>
+                        <path d="M21 3v5h-5"/>
+                        <path d="M21 12a9 9 0 01-9 9 9.75 9.75 0 01-6.74-2.74L3 16"/>
+                        <path d="M3 21v-5h5"/>
+                    </svg>
+                </div>
+                <h2>No Renewal Data Available</h2>
+                <p>No renewal rate data is currently available.</p>
+            </div>
+        </section>
+
+        <!-- Dashboard Content -->
+        <div class="dashboard-content" id="dashboardContent" style="display: none;">
+            
+            <!-- Current Month KPIs -->
+            <section class="kpi-section">
+                <div class="section-header">
+                    <h2>Current Month Renewal Rates</h2>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <span id="dataStatus" style="font-size: 0.875rem; color: #10b981;">
+                            ✓ Data loaded from storage
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="kpi-grid">
+                    <!-- MLM Agent Card -->
+                    <div class="kpi-card">
+                        <div class="kpi-label">
+                            <span class="channel-dot team"></span>
+                            MLM Agent
+                        </div>
+                        <div class="kpi-value" id="mlmRate">—</div>
+                        <div class="kpi-change" id="mlmChange">
+                            <span class="change-badge">—</span>
+                        </div>
+                    </div>
+
+                    <!-- Direct Agent Card -->
+                    <div class="kpi-card">
+                        <div class="kpi-label">
+                            <span class="channel-dot fd"></span>
+                            Direct Agent
+                        </div>
+                        <div class="kpi-value" id="directRate">—</div>
+                        <div class="kpi-change" id="directChange">
+                            <span class="change-badge">—</span>
+                        </div>
+                    </div>
+
+                    <!-- AO Agent Card -->
+                    <div class="kpi-card">
+                        <div class="kpi-label">
+                            <span class="channel-dot fd"></span>
+                            AO Agent
+                        </div>
+                        <div class="kpi-value" id="aoRate">—</div>
+                        <div class="kpi-change" id="aoChange">
+                            <span class="change-badge">—</span>
+                        </div>
+                    </div>
+
+                    <!-- IG Card -->
+                    <div class="kpi-card">
+                        <div class="kpi-label">
+                            <span class="channel-dot ig"></span>
+                            Inspection Garage
+                        </div>
+                        <div class="kpi-value" id="igRate">—</div>
+                        <div class="kpi-change" id="igChange">
+                            <span class="change-badge">—</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Chart Section -->
+            <section class="chart-section">
+                <div class="section-header">
+                    <h2>Renewal Rate Trends</h2>
+                    <div class="chart-legend">
+                        <div class="legend-item">
+                            <span class="legend-dot team"></span>
+                            MLM Agent
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot fd"></span>
+                            Direct Agent
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot fd" style="opacity: 0.6;"></span>
+                            AO Agent
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot ig"></span>
+                            IG
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="renewalChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Renewal Rate Table -->
+            <section class="renewal-section">
+                <div class="section-header">
+                    <h2>Monthly Breakdown</h2>
+                </div>
+
+                <div class="renewal-table-container">
+                    <table class="renewal-table">
+                        <thead id="renewalTableHead">
+                            <!-- Headers will be populated dynamically -->
+                        </thead>
+                        <tbody id="renewalTableBody">
+                            <!-- Data will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <!-- Centralized Data Store -->
+    <script src="dashboard-data-store.js?v=1778059031137"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="renewal-dashboard.js?v=1778061958986"></script>
+</body>
+</html>

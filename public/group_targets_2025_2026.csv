@@ -1,0 +1,49 @@
+type,name,month,value,unit,notes
+mlm_agent,Focus Team,2026-01,92641999,THB,Group total
+mlm_agent,Focus Team,2026-02,93725716,THB,Group total
+mlm_agent,Focus Team,2026-03,102163718,THB,Group total
+mlm_agent,Focus Team,2026-04,116569540,THB,Group total
+mlm_agent,Focus Team,2026-05,126062836,THB,Group total
+mlm_agent,Focus Team,2026-06,125201245,THB,Group total
+mlm_agent,Focus Team,2026-07,132901055,THB,Group total
+mlm_agent,Focus Team,2026-08,138021574,THB,Group total
+mlm_agent,Focus Team,2026-09,150002660,THB,Group total
+mlm_agent,Focus Team,2026-10,166361830,THB,Group total
+mlm_agent,Focus Team,2026-11,176808071,THB,Group total
+mlm_agent,Focus Team,2026-12,202104444,THB,Group total
+mlm_agent,Mid Tier,2026-01,5312620,THB,Group total
+mlm_agent,Mid Tier,2026-02,5374767,THB,Group total
+mlm_agent,Mid Tier,2026-03,5858650,THB,Group total
+mlm_agent,Mid Tier,2026-04,6684762,THB,Group total
+mlm_agent,Mid Tier,2026-05,7229161,THB,Group total
+mlm_agent,Mid Tier,2026-06,7179752,THB,Group total
+mlm_agent,Mid Tier,2026-07,7621303,THB,Group total
+mlm_agent,Mid Tier,2026-08,7914943,THB,Group total
+mlm_agent,Mid Tier,2026-09,8602007,THB,Group total
+mlm_agent,Mid Tier,2026-10,9540136,THB,Group total
+mlm_agent,Mid Tier,2026-11,10139183,THB,Group total
+mlm_agent,Mid Tier,2026-12,11589821,THB,Group total
+mlm_agent,Non Focus Team,2025-01,35800000,THB,Include FD/AO
+mlm_agent,Non Focus Team,2025-02,33300000,THB,Include FD/AO
+mlm_agent,Non Focus Team,2025-03,32100000,THB,Include FD/AO
+mlm_agent,Non Focus Team,2025-04,22500000,THB,Include FD/AO
+mlm_agent,Non Focus Team,2025-05,27700000,THB,Include FD/AO
+mlm_agent,Non Focus Team,2025-06,30900000,THB,Include FD/AO
+mlm_agent,Non Focus Team,2025-07,34900000,THB,Include FD/AO
+mlm_agent,Non Focus Team,2025-08,44000000,THB,Include FD/AO
+mlm_agent,Non Focus Team,2025-09,49800000,THB,Include FD/AO
+mlm_agent,Non Focus Team,2025-10,54500000,THB,Include FD/AO
+mlm_agent,Non Focus Team,2025-11,59000000,THB,Include FD/AO
+mlm_agent,Non Focus Team,2025-12,66800000,THB,Include FD/AO
+mlm_agent,Non Focus Team,2026-01,59180545,THB,Include FD/AO
+mlm_agent,Non Focus Team,2026-02,59872832,THB,Include FD/AO
+mlm_agent,Non Focus Team,2026-03,65263104,THB,Include FD/AO
+mlm_agent,Non Focus Team,2026-04,79380088,THB,Include FD/AO
+mlm_agent,Non Focus Team,2026-05,82740619,THB,Include FD/AO
+mlm_agent,Non Focus Team,2026-06,83022546,THB,Include FD/AO
+mlm_agent,Non Focus Team,2026-07,89006492,THB,Include FD/AO
+mlm_agent,Non Focus Team,2026-08,88945985,THB,Include FD/AO
+mlm_agent,Non Focus Team,2026-09,94716860,THB,Include FD/AO
+mlm_agent,Non Focus Team,2026-10,102518726,THB,Include FD/AO
+mlm_agent,Non Focus Team,2026-11,107917992,THB,Include FD/AO
+mlm_agent,Non Focus Team,2026-12,120717590,THB,Include FD/AO

@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Performance Recap Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Text:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=1778061958986">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .performance-recap {
+            padding: 1.5rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header Section */
+        .recap-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .recap-header .logo {
+            width: 52px;
+            height: 52px;
+            background: linear-gradient(135deg, #FF6B35 0%, #E85A2B 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 800;
+            font-size: 1.5rem;
+        }
+
+        .recap-header h1 {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: #1e293b;
+            flex: 1;
+        }
+
+        .month-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .month-selector label {
+            font-weight: 600;
+            color: #64748b;
+            font-size: 0.95rem;
+        }
+
+        .month-selector select {
+            padding: 0.6rem 1.25rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-family: 'Google Sans Text', sans-serif;
+            font-weight: 600;
+            font-size: 0.95rem;
+            background: white;
+            cursor: pointer;
+            min-width: 160px;
+        }
+
+        .month-selector select:focus {
+            outline: none;
+            border-color: #FF6B35;
+        }
+
+        /* Main Content Grid - Side by Side */
+        .recap-main {
+            display: grid;
+            grid-template-columns: minmax(400px, 1fr) minmax(450px, 1.3fr);
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+            align-items: stretch;
+        }
+
+        @media (max-width: 1100px) {
+            .recap-main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Chart Card */
+        .chart-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-container {
+            position: relative;
+            flex: 1;
+            min-height: 350px;
+        }
+
+        /* Table Card */
+        .table-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .table-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #059669;
+            margin-bottom: 1rem;
+            line-height: 1.4;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            flex: 1;
+        }
+
+        .recap-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+
+        .recap-table th {
+            background: #f1f5f9;
+            padding: 0.6rem 0.75rem;
+            text-align: center;
+            font-weight: 600;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+            font-size: 0.75rem;
+        }
+
+        .recap-table td {
+            padding: 0.5rem 0.75rem;
+            text-align: right;
+            border: 1px solid #e2e8f0;
+            font-family: 'Google Sans Text', monospace;
+            font-size: 0.75rem;
+        }
+
+        .recap-table td.segment-name {
+            text-align: left;
+            font-weight: 600;
+            background: #fafafa;
+            font-family: 'Google Sans Text', sans-serif;
+        }
+
+        .recap-table td.month-cell {
+            text-align: center;
+            font-weight: 600;
+            background: #fafafa;
+            font-family: 'Google Sans Text', sans-serif;
+            vertical-align: middle;
+        }
+
+        .recap-table tr.total-row td {
+            font-weight: 700;
+            background: #f8fafc;
+        }
+
+        .recap-table .positive {
+            color: #059669;
+        }
+
+        .recap-table .negative {
+            color: #dc2626;
+        }
+
+        .recap-table td.col-retained,
+        .recap-table td.col-first,
+        .recap-table td.col-resurrected { background: #ffffff; }
+
+        /* Insights Section */
+        .insights-section {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border-left: 5px solid #f59e0b;
+        }
+
+        .insight-item {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .insight-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .insight-number {
+            width: 32px;
+            height: 32px;
+            min-width: 32px;
+            background: #f59e0b;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .insight-content {
+            flex: 1;
+        }
+
+        .insight-content p {
+            color: #1e293b;
+            line-height: 1.7;
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        .insight-content strong {
+            color: #b45309;
+        }
+
+        .insight-content .highlight-green {
+            color: #059669;
+            font-weight: 700;
+        }
+
+        .insight-content .highlight-orange {
+            color: #ea580c;
+            font-weight: 700;
+        }
+
+        /* No Data Section */
+        .no-data-message {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem 2rem;
+            text-align: center;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .no-data-message svg {
+            width: 80px;
+            height: 80px;
+            color: #d1d5db;
+            margin-bottom: 1.5rem;
+        }
+
+        .no-data-message h3 {
+            font-size: 1.25rem;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+        }
+
+        .no-data-message p {
+            color: #94a3b8;
+        }
+
+    </style>
+</head>
+<body>
+    <div id="loadingBar" class="loading-bar"></div>
+    <div class="container">
+        <!-- Header (hidden when in iframe) -->
+        <header class="dashboard-header" id="dashboardHeader">
+            <div class="header-content">
+                <div class="brand">
+                    <div class="brand-icon"></div>
+                    <h1>Performance Recap</h1>
+                </div>
+                <a href="index.html" class="back-link">← Back to Main Dashboard</a>
+            </div>
+        </header>
+
+        <!-- No Data Section -->
+        <div class="no-data-message" id="noDataSection" style="display: none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            <h3>No Data Available</h3>
+            <p>Segment and MLM data are required to view the Performance Recap.</p>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div class="performance-recap" id="dashboardContent" style="display: none;">
+            
+            <!-- Header with Logo and Month Selector -->
+            <div class="recap-header">
+                <div class="logo">FD</div>
+                <h1 id="recapTitle">Dec Performance Recap</h1>
+                <select id="monthSelect" style="display:none;"></select>
+            </div>
+
+            <!-- Main Content: Chart + Table Side by Side -->
+            <div class="recap-main">
+                
+                <!-- Chart Card -->
+                <div class="chart-card">
+                    <!-- Run Rate Controls -->
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem; flex-wrap: wrap;">
+                        <label style="display: flex; align-items: center; gap: 0.45rem; cursor: pointer; font-weight: 600; color: #1e293b; font-size: 0.875rem; user-select: none;">
+                            <input type="checkbox" id="showRunRate" style="width: 15px; height: 15px; accent-color: #f59e0b; cursor: pointer;">
+                            Show Run Rate
+                        </label>
+                        <div id="runRateInputs" style="display: none; align-items: center; gap: 0.5rem; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 0.375rem 0.75rem;">
+                            <span style="font-size: 0.8rem; color: #92400e; font-weight: 500;">Today = day</span>
+                            <input type="number" id="runRateDay" min="1" max="31" value="22"
+                                style="width: 52px; padding: 0.25rem 0.4rem; border: 1px solid #fcd34d; border-radius: 6px; font-family: 'Google Sans Text', monospace; font-size: 0.875rem; font-weight: 600; text-align: center; background: white; color: #1e293b;">
+                            <span style="font-size: 0.8rem; color: #92400e; font-weight: 500;">of this month</span>
+                            <span id="runRateProjected" style="font-size: 0.78rem; color: #b45309; font-weight: 700; margin-left: 0.25rem;"></span>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="gwpChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Table Card -->
+                <div class="table-card">
+                    <div class="table-title" id="tableTitle">Identifying MoM growth without seasonality by Cohort and Segment</div>
+                    <div class="table-wrapper">
+                        <table class="recap-table">
+                            <thead id="recapTableHead">
+                                <!-- Will be populated by JavaScript -->
+                            </thead>
+                            <tbody id="recapTableBody">
+                                <!-- Will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Insights Section -->
+            <div class="insights-section">
+                <div class="insight-item">
+                    <div class="insight-number">1</div>
+                    <div class="insight-content">
+                        <p id="insight1">Loading insights...</p>
+                    </div>
+                </div>
+                <div class="insight-item">
+                    <div class="insight-number">2</div>
+                    <div class="insight-content">
+                        <p id="insight2">Loading insights...</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Firebase SDK (COMPAT — REQUIRED) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <!-- Your Firebase config MUST be after SDK -->
+    <script src="mm-firebase-config.js?v=1778059239583"></script>
+
+    <!-- Centralized Data Store -->
+    <script src="dashboard-data-store.js?v=1778059239583"></script>
+
+    <script src="performance-recap.js?v=1778061958986"></script>
+</body>
+</html>

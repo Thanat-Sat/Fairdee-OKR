@@ -691,7 +691,7 @@
         
         .indent-indicator {
             color: var(--text-muted);
-            font-family: monospace;
+            font-family: 'Google Sans Text', sans-serif;
             margin-right: 0.25rem;
         }
         
@@ -1574,4 +1574,728 @@
     .chart-section {
         grid-template-columns: 1fr !important;
     }
+}
+/* ============================================================================
+   MONTHLY METRICS (MM) DASHBOARD STYLES
+   ============================================================================ */
+
+/* Tab Navigation */
+.tab-navigation {
+    display: flex;
+    gap: 0.25rem;
+    margin-top: 1rem;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+}
+
+.tab-button {
+    background: transparent;
+    border: none;
+    padding: 0.875rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 2px solid transparent;
+    font-family: 'Google Sans Text', sans-serif;
+    position: relative;
+    bottom: -1px;
+    white-space: nowrap;
+}
+
+.tab-button:hover {
+    color: var(--text-primary);
+}
+
+.tab-button.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+/* Iframe Container */
+.iframe-container {
+    width: 100%;
+    animation: fadeIn 0.4s ease-out;
+    margin-top: 1.5rem;
+}
+
+.iframe-container iframe {
+    width: 100%;
+    min-height: 800px;
+    height: calc(100vh - 160px);
+    border: none;
+    border-radius: 12px;
+    background: var(--card-bg);
+}
+
+/* Month selector in mm header */
+.month-selector-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.month-selector-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.global-month-select {
+    padding: 0.5rem 0.75rem;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-family: 'Google Sans Text', sans-serif;
+    background: var(--card-bg);
+    color: var(--text-primary);
+    cursor: pointer;
+    min-width: 130px;
+    transition: border-color 0.2s ease;
+}
+
+.global-month-select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+/* User email in mm header */
+.user-email {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-family: 'Google Sans Text', sans-serif;
+}
+
+/* Sign out button in mm header */
+.sign-out-btn {
+    padding: 0.5rem 1rem;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-family: 'Google Sans Text', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.sign-out-btn:hover {
+    background: var(--accent-dark);
+    transform: translateY(-1px);
+}
+
+/* Refresh button */
+.refresh-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: #10B981;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-family: 'Google Sans Text', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.refresh-btn:hover { background: #059669; transform: translateY(-1px); }
+.refresh-btn:active { transform: translateY(0); }
+.refresh-btn:disabled { cursor: not-allowed; opacity: 0.6; }
+.refresh-btn svg { flex-shrink: 0; }
+
+/* Home button (← Home) in mm header */
+.home-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    padding: 0.375rem 0.875rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    font-family: 'Google Sans Text', sans-serif;
+    white-space: nowrap;
+}
+
+.home-btn:hover {
+    background: var(--bg);
+    color: var(--text-primary);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================================
+   MM HEADER LAYOUT (dashboard-header, brand, user-menu)
+   ============================================================================ */
+
+.dashboard-header {
+    margin-bottom: 1.5rem;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 0;
+    border-bottom: 2px solid var(--primary);
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+}
+
+.brand-icon {
+    width: 6px;
+    height: 36px;
+    background: linear-gradient(180deg, var(--accent) 0%, var(--accent-dark) 100%);
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.brand h1 {
+    font-size: 1.625rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--primary);
+    font-family: 'Google Sans Text', sans-serif;
+}
+
+.user-menu {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+/* ============================================================
+   LOADING BAR
+   ============================================================ */
+.loading-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: rgba(99, 102, 241, 0.15);
+    z-index: 99999;
+    display: none;
+    overflow: hidden;
+}
+
+.loading-bar.active {
+    display: block;
+}
+
+.loading-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -60%;
+    height: 100%;
+    width: 60%;
+    background: linear-gradient(to right, transparent, #6366F1, #818CF8, transparent);
+    animation: lb-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes lb-shimmer {
+    0%   { left: -60%; }
+    100% { left: 160%; }
+}
+
+/* ============================================================================
+   MM SUB-DASHBOARD SHARED COMPONENTS
+   ============================================================================ */
+
+/* ---- Back link ---- */
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    padding: 0.375rem 0.875rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    font-family: 'Google Sans Text', sans-serif;
+    white-space: nowrap;
+}
+.back-link:hover { background: var(--bg); color: var(--text-primary); }
+
+/* ---- Reset / Upload button ---- */
+.reset-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Google Sans Text', sans-serif;
+    white-space: nowrap;
+}
+.reset-button:hover { background: var(--bg); color: var(--text-primary); border-color: var(--accent); }
+
+/* ---- Upload button ---- */
+.upload-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.625rem 1.25rem;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Google Sans Text', sans-serif;
+    white-space: nowrap;
+}
+.upload-button:hover { background: var(--accent-dark); transform: translateY(-1px); }
+
+/* ---- Section containers ---- */
+.mlm-section,
+.agency-section,
+.segment-section,
+.renewal-section,
+.focus-team-section,
+.regional-section,
+.kpi-section,
+.chart-section,
+.targets-section {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.75rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-sm);
+}
+
+/* ---- Section header ---- */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+.section-header h2 {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    font-family: 'Google Sans Text', sans-serif;
+}
+
+/* ---- Dashboard content wrapper ---- */
+.dashboard-content { animation: fadeIn 0.4s ease-out; }
+
+/* ============================================================================
+   KPI CARD GRID (Channel, Renewal, Executive Summary)
+   ============================================================================ */
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.kpi-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.2s ease;
+}
+.kpi-card:hover { box-shadow: var(--shadow-md); }
+.kpi-card.primary-card {
+    border-left: 4px solid var(--accent);
+}
+.kpi-card.success { border-left: 4px solid #10B981; }
+.kpi-card.warning { border-left: 4px solid #F59E0B; }
+.kpi-card.danger  { border-left: 4px solid #EF4444; }
+
+.kpi-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.kpi-value {
+    font-size: 1.875rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    font-family: 'Google Sans Text', sans-serif;
+    margin-bottom: 0.625rem;
+    line-height: 1.15;
+}
+
+.kpi-change { font-size: 0.8rem; }
+
+.kpi-trend {
+    font-size: 0.8rem;
+    font-family: 'Google Sans Text', sans-serif;
+    margin-top: 0.25rem;
+}
+
+.change-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.625rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    font-family: 'Google Sans Text', sans-serif;
+}
+.change-badge.positive { background: #D1FAE5; color: #065F46; }
+.change-badge.negative { background: #FEE2E2; color: #991B1B; }
+.change-badge.neutral  { background: #F1F5F9; color: #475569; }
+
+/* ---- Channel colour dots ---- */
+.channel-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.channel-dot.team { background: #6366F1; }
+.channel-dot.ig   { background: #EC4899; }
+.channel-dot.fd   { background: #10B981; }
+
+/* ============================================================================
+   CHART SECTION
+   ============================================================================ */
+
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+
+.chart-legend {
+    display: flex;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.legend-dot.team { background: #6366F1; }
+.legend-dot.ig   { background: #EC4899; }
+.legend-dot.fd   { background: #10B981; }
+
+/* ============================================================================
+   SHARED TABLE STYLES (MLM, Regional, Agency, Segment, Renewal)
+   ============================================================================ */
+
+.regional-table-container,
+.agency-table-container,
+.segment-table-container,
+.renewal-table-container,
+.focus-team-table-container {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.regional-table,
+.agency-table,
+.segment-table,
+.renewal-table,
+.focus-team-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Google Sans Text', sans-serif;
+    font-size: 0.875rem;
+}
+
+/* ---- Table header cells ---- */
+.team-header,
+.row-type-header,
+.month-header,
+.total-header,
+.account-header,
+.segment-header,
+.channel-header,
+.region-header {
+    background: var(--primary);
+    color: #ffffff;
+    padding: 0.875rem 1rem;
+    text-align: left;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    border-right: 1px solid rgba(255,255,255,0.08);
+}
+.month-header,
+.total-header,
+.account-header { text-align: right; }
+.segment-header { text-align: left; }
+
+/* ---- Row type styles ---- */
+.target-row  { background: #FFFFFF; }
+.actual-row  { background: #FFFFFF; }
+.percent-row { background: #F8FAFC; }
+.total-row   { background: #F1F5F9; font-weight: 700; }
+.growth-row  { background: #F8FAFC; }
+
+/* ---- Row label / name cells ---- */
+.team-name,
+.region-name,
+.segment-name,
+.channel-name,
+.metric-label,
+.row-label {
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Google Sans Text', sans-serif;
+}
+.row-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    padding-left: 0.75rem;
+}
+
+/* ---- Data cells ---- */
+.data-cell,
+.target-cell,
+.actual-cell,
+.percent-cell,
+.total-cell,
+.growth-cell {
+    padding: 0.75rem 1rem;
+    text-align: right;
+    font-family: 'Google Sans Text', sans-serif;
+    font-size: 0.8125rem;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+}
+
+.target-cell { color: var(--text-secondary); }
+.actual-cell { color: var(--text-primary); font-weight: 600; }
+.total-cell  { font-weight: 700; background: rgba(99,102,241,0.04); }
+
+/* ---- Percent / growth colour states ---- */
+.percent-cell.positive,
+.growth-cell.positive { color: #059669; }
+.percent-cell.negative,
+.growth-cell.negative { color: #DC2626; }
+.percent-cell.neutral,
+.growth-cell.neutral  { color: var(--text-secondary); }
+
+/* ---- Cell sub-content (agency growth sub-line) ---- */
+.cell-content { display: flex; flex-direction: column; gap: 2px; }
+.cell-value   { font-family: 'Google Sans Text', sans-serif; font-size: 0.8125rem; }
+.cell-growth  { font-size: 0.72rem; }
+.cell-growth.positive { color: #059669; }
+.cell-growth.negative { color: #DC2626; }
+.cell-growth.neutral  { color: var(--text-secondary); }
+
+/* ---- Total/growth row specifics ---- */
+.total-label { font-weight: 700; }
+.total-cell  { font-weight: 700; }
+
+/* ============================================================================
+   MODAL
+   ============================================================================ */
+
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10,14,39,0.55);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    backdrop-filter: blur(2px);
+}
+.modal[style*="flex"] { display: flex !important; }
+
+.modal-content {
+    background: var(--card-bg);
+    border-radius: 16px;
+    box-shadow: var(--shadow-lg);
+    width: 100%;
+    max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: fadeIn 0.25s ease-out;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 1.75rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+}
+.modal-header h2 {
+    font-size: 1.125rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    font-family: 'Google Sans Text', sans-serif;
+}
+
+.modal-body { padding: 1.5rem 1.75rem; }
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: color 0.2s ease;
+}
+.modal-close:hover { color: var(--text-primary); }
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border);
+}
+
+/* ============================================================================
+   FORM ELEMENTS
+   ============================================================================ */
+
+.form-group { margin-bottom: 1.25rem; }
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.form-label {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    font-family: 'Google Sans Text', sans-serif;
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-family: 'Google Sans Text', sans-serif;
+    color: var(--text-primary);
+    background: var(--card-bg);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    outline: none;
+}
+.form-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(255,107,53,0.12);
+}
+
+.button-secondary {
+    padding: 0.625rem 1.25rem;
+    background: transparent;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Google Sans Text', sans-serif;
+}
+.button-secondary:hover { background: var(--bg); color: var(--text-primary); }
+
+/* ============================================================================
+   PERFORMANCE RECAP & EXECUTIVE SUMMARY CARDS
+   ============================================================================ */
+
+.chart-card,
+.table-card,
+.section-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.no-data-message {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-secondary);
+    font-size: 0.9375rem;
+}
+
+/* ============================================================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+    .form-row { grid-template-columns: 1fr; }
+    .section-header { flex-direction: column; align-items: flex-start; }
+    .modal-content { max-width: 100%; }
 }

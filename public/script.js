@@ -1,3 +1,9 @@
+window.addEventListener('load', function() {
+    if (typeof Chart !== 'undefined') {
+        Chart.defaults.font.family = "'Google Sans Text', sans-serif";
+    }
+});
+
 
 // ========================================
 // LESS IS BETTER KRs
@@ -40,7 +46,7 @@ const FIRST_TRANSACTING_TARGETS = [
     13149513,   // June 2026
     14832855,   // July 2026
     16754086,   // August 2026
-    18943159,   // September 2026
+    18949159,   // September 2026
     21459735,   // October 2026
     24334121,   // November 2026
     27628374    // December 2026
@@ -2391,8 +2397,11 @@ function renderHunterChart(type, data, options = {}) {
             borderColor: '#3B82F6',
             backgroundColor: 'rgba(59, 130, 246, 0.1)',
             borderWidth: 3,
-            pointRadius: 6,
+            pointRadius: 7,
+            pointHoverRadius: 9,
             pointBackgroundColor: '#3B82F6',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
             tension: 0.4,
             fill: true
         }
@@ -2404,9 +2413,12 @@ function renderHunterChart(type, data, options = {}) {
             data: targetValues,
             borderColor: '#10B981',
             backgroundColor: 'transparent',
-            borderWidth: 2,
-            pointRadius: 5,
+            borderWidth: 2.5,
+            pointRadius: 7,
+            pointHoverRadius: 9,
             pointBackgroundColor: '#10B981',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
             pointStyle: 'rectRot',
             tension: 0.4,
             borderDash: [5, 5],
@@ -2497,7 +2509,7 @@ function renderHunterChart(type, data, options = {}) {
                     const val = dataset.data[idx];
                     if (val === null || val === undefined) return;
                     ctx.save();
-                    ctx.font = `bold 11px sans-serif`;
+                    ctx.font = `bold 11px "Google Sans Text", sans-serif`;
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'bottom';
                     if (isRunRate) {
@@ -2538,6 +2550,10 @@ function renderHunterChart(type, data, options = {}) {
                     }
                 },
                 tooltip: {
+                    backgroundColor: 'rgba(10, 14, 39, 0.95)',
+                    padding: 12,
+                    titleFont: { size: 13 },
+                    bodyFont: { size: 12, family: "'Google Sans Text', monospace" },
                     callbacks: {
                         label: function(context) {
                             if (context.dataset.label === '_connector') return null;
@@ -2564,7 +2580,101 @@ function renderHunterChart(type, data, options = {}) {
                     grid: { display: false }
                 }
             }
-        }
+        },
+        plugins: [{
+            id: 'hunterDataLabels',
+            afterDatasetsDraw: function(chart) {
+                var ctx = chart.ctx;
+                chart.data.datasets.forEach(function(dataset, datasetIndex) {
+                    var meta = chart.getDatasetMeta(datasetIndex);
+                    meta.data.forEach(function(element, index) {
+                        var value = dataset.data[index];
+                        if (value === null || value === undefined) return;
+                        var x = element.x;
+                        var y = element.y;
+                        ctx.save();
+                        ctx.fillStyle = dataset.borderColor;
+                        ctx.font = '600 11px "Google Sans Text", monospace';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'bottom';
+                        ctx.fillText(value.toFixed(2) + 'M', x, y - 10);
+                        ctx.restore();
+                    });
+                });
+            }
+        }, {
+            id: 'hunterMomArrow',
+            afterDatasetsDraw: function(chart) {
+                // Draw MoM arrow between the last two COMPLETED months
+                // (skip the current calendar month if it appears in the data)
+                var actualMeta = chart.getDatasetMeta(0);
+                var actualData = chart.data.datasets[0].data;
+                var n = actualData.length;
+                if (n < 2) return;
+
+                var now = new Date();
+                var currentMonthName = now.toLocaleString('en-US', { month: 'long' }) + ', ' + now.getFullYear();
+                // If the last month in the chart is the current (partial) month, step back one
+                var currIdx = (sortedMonths[n - 1] === currentMonthName) ? n - 2 : n - 1;
+                var prevIdx = currIdx - 1;
+                if (prevIdx < 0) return;
+                var prevVal = actualData[prevIdx];
+                var currVal = actualData[currIdx];
+                if (prevVal == null || currVal == null || prevVal === 0) return;
+
+                var prevEl = actualMeta.data[prevIdx];
+                var currEl = actualMeta.data[currIdx];
+                var x1 = prevEl.x;
+                var y1 = prevEl.y;
+                var x2 = currEl.x;
+                var y2 = currEl.y;
+
+                var mom = ((currVal - prevVal) / prevVal) * 100;
+                var isUp = mom >= 0;
+                // Early Retention always red; First Transacting uses direction color
+                var color = type === 'earlyRetention' ? '#EF4444' : (isUp ? '#10B981' : '#EF4444');
+                var pctText = (isUp ? '+' : '') + mom.toFixed(1) + '%';
+
+                var ctx = chart.ctx;
+                ctx.save();
+
+                // Curved arrow path: control point arcs upward (or downward)
+                var cpX = (x1 + x2) / 2;
+                var cpY = Math.min(y1, y2) - 40;
+
+                // Draw curved line
+                ctx.beginPath();
+                ctx.moveTo(x1, y1 - 8);
+                ctx.quadraticCurveTo(cpX, cpY, x2, y2 - 8);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([]);
+                ctx.stroke();
+
+                // Arrowhead at end point
+                var angle = Math.atan2((y2 - 8) - cpY, x2 - cpX);
+                var headLen = 10;
+                ctx.beginPath();
+                ctx.moveTo(x2, y2 - 8);
+                ctx.lineTo(x2 - headLen * Math.cos(angle - 0.4), y2 - 8 - headLen * Math.sin(angle - 0.4));
+                ctx.moveTo(x2, y2 - 8);
+                ctx.lineTo(x2 - headLen * Math.cos(angle + 0.4), y2 - 8 - headLen * Math.sin(angle + 0.4));
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Percentage label near the midpoint of the curve
+                var labelX = cpX;
+                var labelY = cpY - 10;
+                ctx.font = 'bold 13px "Google Sans Text", sans-serif';
+                ctx.fillStyle = color;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText(pctText, labelX, labelY);
+
+                ctx.restore();
+            }
+        }]
     });
 }
 
@@ -3325,12 +3435,12 @@ function buildTeamTable(title, teams, totalGwp) {
         html += '<tr>';
         html += '<td>' + (idx + 1) + '</td>';
         html += '<td style="font-weight: 600; color: var(--text-primary);">' + name + '</td>';
-        html += '<td style="font-family: \'IBM Plex Mono\', monospace; font-size: 0.85rem; color: var(--text-secondary);">' + team.code + '</td>';
+        html += '<td style="font-family: \'Google Sans Text\', monospace; font-size: 0.85rem; color: var(--text-secondary);">' + team.code + '</td>';
         html += '<td>' + team.province + '</td>';
-        html += '<td style="font-family: \'IBM Plex Mono\', monospace; font-weight: 600; color: var(--accent);">' + gwpMB + ' MB</td>';
-        html += '<td style="font-family: \'IBM Plex Mono\', monospace;">' + team.activeAgent.toLocaleString() + '</td>';
-        html += '<td style="font-family: \'IBM Plex Mono\', monospace;">' + team.sales.toLocaleString() + '</td>';
-        html += '<td style="font-family: \'IBM Plex Mono\', monospace;">' + (gwpPerAgent === 'N/A' ? gwpPerAgent : parseFloat(gwpPerAgent).toLocaleString()) + '</td>';
+        html += '<td style="font-family: \'Google Sans Text\', monospace; font-weight: 600; color: var(--accent);">' + gwpMB + ' MB</td>';
+        html += '<td style="font-family: \'Google Sans Text\', monospace;">' + team.activeAgent.toLocaleString() + '</td>';
+        html += '<td style="font-family: \'Google Sans Text\', monospace;">' + team.sales.toLocaleString() + '</td>';
+        html += '<td style="font-family: \'Google Sans Text\', monospace;">' + (gwpPerAgent === 'N/A' ? gwpPerAgent : parseFloat(gwpPerAgent).toLocaleString()) + '</td>';
         html += '<td>' + pct + '%</td>';
         html += '</tr>';
     });
@@ -3341,9 +3451,9 @@ function buildTeamTable(title, teams, totalGwp) {
     var totalSales = teams.reduce(function(s, t) { return s + t.sales; }, 0);
     html += '<tr style="background: var(--bg); font-weight: 700; border-top: 2px solid var(--accent);">';
     html += '<td></td><td>Total</td><td></td><td></td>';
-    html += '<td style="font-family: \'IBM Plex Mono\', monospace; color: var(--accent);">' + totalGwpMB + ' MB</td>';
-    html += '<td style="font-family: \'IBM Plex Mono\', monospace;">' + totalAgents.toLocaleString() + '</td>';
-    html += '<td style="font-family: \'IBM Plex Mono\', monospace;">' + totalSales.toLocaleString() + '</td>';
+    html += '<td style="font-family: \'Google Sans Text\', monospace; color: var(--accent);">' + totalGwpMB + ' MB</td>';
+    html += '<td style="font-family: \'Google Sans Text\', monospace;">' + totalAgents.toLocaleString() + '</td>';
+    html += '<td style="font-family: \'Google Sans Text\', monospace;">' + totalSales.toLocaleString() + '</td>';
     html += '<td></td><td>100%</td>';
     html += '</tr>';
     
@@ -3923,23 +4033,23 @@ function renderFleetAnalysis() {
             if (pct >= 100) {
                 statusBadge = '<span class="table-status-badge achieved" title="Achieved">✔</span>';
             } else if (pct >= 90) {
-                statusBadge = '<span class="table-status-badge slightly-under" title="Near Target">⚠</span>';
+                statusBadge = '<span class=”table-status-badge slightly-under” title=”Near Target”>⚠</span>';
             } else {
-                statusBadge = '<span class="table-status-badge under" title="Under Target">✗</span>';
+                statusBadge = '<span class=”table-status-badge under” title=”Under Target”>✗</span>';
             }
         } else {
             statusBadge = '<span style="color: var(--text-muted);">—</span>';
         }
-        
+
         var momDisplay = '';
         if (idx > 0 && a > 0 && prevA > 0) {
             var momCol = mom >= 0 ? '#10B981' : '#EF4444';
             var momArr = mom >= 0 ? '↑' : '↓';
-            momDisplay = '<span style="color: ' + momCol + '; font-weight: 600;">' + momArr + ' ' + Math.abs(mom).toFixed(1) + '%</span>';
+            momDisplay = '<span style=”color: ' + momCol + '; font-weight: 600;”>' + momArr + ' ' + Math.abs(mom).toFixed(1) + '%</span>';
         } else {
             momDisplay = '<span style="color: var(--text-muted);">—</span>';
         }
-        
+
         var monthLabel = month.split(',')[0];
         var monthLabel = month;
         if (isCurrent) monthLabel = '<span style="background: #FEF08A; padding: 0.15rem 0.5rem; border-radius: 4px;">' + month + '</span>';
@@ -3949,12 +4059,12 @@ function renderFleetAnalysis() {
         
         html += '<tr style="' + rowStyle + '">';
         html += '<td>' + monthLabel + '</td>';
-        html += '<td style="font-family: \'IBM Plex Mono\', monospace;">' + fmt(t) + '</td>';
-        html += '<td style="font-family: \'IBM Plex Mono\', monospace; font-weight: 600; color: #2563EB;">' + (a > 0 ? fmt(a) : '<span style="color: var(--text-muted);">—</span>') + '</td>';
-        html += '<td style="font-family: \'IBM Plex Mono\', monospace; color: ' + (v >= 0 ? '#10B981' : '#EF4444') + ';">' + (a > 0 ? (v >= 0 ? '+' : '') + fmt(v) : '—') + '</td>';
-        html += '<td style="font-family: \'IBM Plex Mono\', monospace;">' + (a > 0 ? pct.toFixed(1) + '%' : '—') + '</td>';
-        html += '<td style="font-family: \'IBM Plex Mono\', monospace;">' + polCell + '</td>';
-        html += '<td style="font-family: \'IBM Plex Mono\', monospace;">' + aovCell + '</td>';
+        html += '<td style="font-family: \'Google Sans Text\', monospace;">' + fmt(t) + '</td>';
+        html += '<td style="font-family: \'Google Sans Text\', monospace; font-weight: 600; color: #2563EB;">' + (a > 0 ? fmt(a) : '<span style="color: var(--text-muted);">—</span>') + '</td>';
+        html += '<td style="font-family: \'Google Sans Text\', monospace; color: ' + (v >= 0 ? '#10B981' : '#EF4444') + ';">' + (a > 0 ? (v >= 0 ? '+' : '') + fmt(v) : '—') + '</td>';
+        html += '<td style="font-family: \'Google Sans Text\', monospace;">' + (a > 0 ? pct.toFixed(1) + '%' : '—') + '</td>';
+        html += '<td style="font-family: \'Google Sans Text\', monospace;">' + polCell + '</td>';
+        html += '<td style="font-family: \'Google Sans Text\', monospace;">' + aovCell + '</td>';
         html += '<td>' + momDisplay + '</td>';
         html += '<td>' + statusBadge + '</td>';
         html += '</tr>';
@@ -3964,13 +4074,13 @@ function renderFleetAnalysis() {
     var totalPolicies = policies.reduce(function(s, p, i) { return i <= currentMonthIdx ? s + p : s; }, 0);
     html += '<tr style="background: var(--bg); font-weight: 700; border-top: 2px solid var(--accent);">';
     html += '<td>YTD Total</td>';
-    html += '<td style="font-family: \'IBM Plex Mono\', monospace;">' + fmt(ytdTarget) + '</td>';
-    html += '<td style="font-family: \'IBM Plex Mono\', monospace; color: #2563EB;">' + fmt(ytdActual) + '</td>';
+    html += '<td style="font-family: \'Google Sans Text\', monospace;">' + fmt(ytdTarget) + '</td>';
+    html += '<td style="font-family: \'Google Sans Text\', monospace; color: #2563EB;">' + fmt(ytdActual) + '</td>';
     var ytdVar = ytdActual - ytdTarget;
-    html += '<td style="font-family: \'IBM Plex Mono\', monospace; color: ' + (ytdVar >= 0 ? '#10B981' : '#EF4444') + ';">' + (ytdVar >= 0 ? '+' : '') + fmt(ytdVar) + '</td>';
+    html += '<td style="font-family: \'Google Sans Text\', monospace; color: ' + (ytdVar >= 0 ? '#10B981' : '#EF4444') + ';">' + (ytdVar >= 0 ? '+' : '') + fmt(ytdVar) + '</td>';
     var ytdPct = ytdTarget > 0 ? (ytdActual / ytdTarget * 100) : 0;
-    html += '<td style="font-family: \'IBM Plex Mono\', monospace;">' + ytdPct.toFixed(1) + '%</td>';
-    html += '<td style="font-family: \'IBM Plex Mono\', monospace;">' + (totalPolicies > 0 ? totalPolicies.toLocaleString() : '') + '</td>';
+    html += '<td style="font-family: \'Google Sans Text\', monospace;">' + ytdPct.toFixed(1) + '%</td>';
+    html += '<td style="font-family: \'Google Sans Text\', monospace;">' + (totalPolicies > 0 ? totalPolicies.toLocaleString() : '') + '</td>';
     html += '<td></td><td></td><td></td>';
     html += '</tr>';
     
@@ -4265,6 +4375,7 @@ function renderFleetChart(months, targets, actuals, currentMonthIdx, scaleFactor
             scales: {
                 y: {
                     beginAtZero: true,
+                    grace: '15%',
                     title: { display: true, text: 'GWP (' + scaleLabel + ')', font: { size: 12, weight: '600' } },
                     ticks: {
                         callback: function(value) { return value.toFixed(1) + scaleLabel; },
