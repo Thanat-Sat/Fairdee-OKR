@@ -52,21 +52,23 @@
 
                 <!-- Filter Section -->
                 <div class="filter-section">
-                    <div class="filter-group">
-                        <label class="filter-label">Type:</label>
-                        <select id="filterType" class="filter-select">
-                            <option value="">All Types</option>
-                            <option value="channel">Channel</option>
-                            <option value="mlm_agent">MLM Agent</option>
-                            <option value="regional">Regional</option>
-                            <option value="agency">Agency</option>
-                        </select>
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label class="filter-label">Type:</label>
+                            <select id="filterType" class="filter-select">
+                                <option value="">All Types</option>
+                                <option value="channel">Channel</option>
+                                <option value="mlm_agent">MLM Agent</option>
+                                <option value="regional">Regional</option>
+                                <option value="agency">Agency</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="filter-label">Month:</label>
+                            <input type="month" id="filterMonth" class="filter-input">
+                        </div>
+                        <button class="reset-button" id="clearFilters">Clear Filters</button>
                     </div>
-                    <div class="filter-group">
-                        <label class="filter-label">Month:</label>
-                        <input type="month" id="filterMonth" class="filter-input">
-                    </div>
-                    <button class="reset-button" id="clearFilters">Clear Filters</button>
                 </div>
 
                 <!-- Targets Table -->
