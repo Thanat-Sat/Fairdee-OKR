@@ -45,11 +45,12 @@ class ExecutiveSummary {
     }
 
     formatNumber(num) {
+        if (num === null || num === undefined || !Number.isFinite(num)) return '—';
         return num.toLocaleString('en-US', { maximumFractionDigits: 0 });
     }
 
     formatPercentage(num) {
-        if (num === null || isNaN(num)) return '';
+        if (num === null || num === undefined || !Number.isFinite(num)) return '—';
         return num.toFixed(1) + '%';
     }
 
@@ -128,13 +129,13 @@ class ExecutiveSummary {
                     });
                 }
                 
-                const estimatedTarget = ytd * 1.2; // Simulated target
+                const estimatedTarget = ytd > 0 ? ytd * 1.2 : 0; // Simulated target
                 
                 this.data.regions.push({
                     name: regionName,
                     ytd: ytd,
                     target: estimatedTarget,
-                    achievement: (ytd / estimatedTarget) * 100
+                    achievement: estimatedTarget > 0 ? (ytd / estimatedTarget) * 100 : 0
                 });
             });
             
@@ -160,7 +161,7 @@ class ExecutiveSummary {
                     });
                 }
                 
-                const estimatedTarget = ytd * 1.15; // Simulated target
+                const estimatedTarget = ytd > 0 ? ytd * 1.15 : 0; // Simulated target
                 
                 // Use correct team display name from mapping
                 const displayName = this.getTeamDisplayName(team.code);
@@ -170,7 +171,7 @@ class ExecutiveSummary {
                     code: team.code,
                     ytd: ytd,
                     target: estimatedTarget,
-                    achievement: (ytd / estimatedTarget) * 100
+                    achievement: estimatedTarget > 0 ? (ytd / estimatedTarget) * 100 : 0
                 });
             });
             
@@ -206,7 +207,6 @@ class ExecutiveSummary {
     renderOverview() {
         this.renderKPIs();
         this.renderChannelPerformance();
-        this.renderRegionalPerformance();
         this.renderFocusTeamPerformance();
         this.renderMonthlyTrend();
     }
@@ -231,7 +231,7 @@ class ExecutiveSummary {
         }
 
         const monthlyGrowth = previousMonth > 0 ? ((currentMonth - previousMonth) / previousMonth) * 100 : 0;
-        const targetAchievement = (totalYTD / totalTarget) * 100;
+        const targetAchievement = totalTarget > 0 ? (totalYTD / totalTarget) * 100 : null;
 
         // Total GWP
         document.getElementById('totalGWP').textContent = this.formatCurrency(totalYTD);
@@ -271,7 +271,7 @@ class ExecutiveSummary {
         }
 
         this.data.channels.forEach(channel => {
-            const achievement = (channel.current / channel.target) * 100;
+            const achievement = channel.target > 0 ? (channel.current / channel.target) * 100 : null;
             const row = document.createElement('tr');
 
             // Channel name
@@ -328,6 +328,7 @@ class ExecutiveSummary {
 
     renderRegionalPerformance() {
         const tbody = document.getElementById('regionalTableBody');
+        if (!tbody) return;
         tbody.innerHTML = '';
 
         if (this.data.regions.length === 0) {
@@ -637,6 +638,9 @@ window.addEventListener('dashboardDataUpdated', async (event) => {
 // Listen for month changes from parent frame
 window.addEventListener('message', async function(event) {
     if (event.data && event.data.type === 'monthChange') {
+        await executiveSummary.render();
+    }
+    if (event.data && event.data.type === 'dashboardDataUpdated') {
         await executiveSummary.render();
     }
 });

@@ -537,24 +537,113 @@ class PerformanceRecap {
         };
 
         const header = parseLine(lines[0]);
-        // Expected columns: Month, gwp_segment, "2. First Transacting Agent", "3. Retained Agent", "5. Resurrected Agent", "Row totals"
+        const normalizedHeader = header.map(h => h.toLowerCase().trim());
+        // Supports both:
+        // Wide: Month, gwp_segment, "2. First Transacting Agent", "3. Retained Agent", "5. Resurrected Agent", "Row totals"
+        // Long: Month, gwp_segment, cohort/type, value, unit
         const colMonth = header.findIndex(h => h.toLowerCase().includes('month'));
         const colSeg   = header.findIndex(h => h.toLowerCase().includes('gwp_segment') || h.toLowerCase().includes('segment'));
         const colFirst = header.findIndex(h => h.includes('First'));
         const colRet   = header.findIndex(h => h.includes('Retained'));
         const colRes   = header.findIndex(h => h.includes('Resurrect'));
         const colTotal = header.findIndex(h => h.toLowerCase().includes('row total') || h.toLowerCase() === 'row totals');
+        const colCohort = header.findIndex(h => /cohort|agent|type|category|status/i.test(h) && h !== header[colSeg]);
+        const colValue = normalizedHeader.findIndex((h, idx) =>
+            idx !== colMonth &&
+            idx !== colSeg &&
+            idx !== colCohort &&
+            (
+                ['value', 'amount', 'gwp', 'net_premium', 'premium'].includes(h) ||
+                h.includes('value') ||
+                h.includes('amount') ||
+                h.includes('gwp') ||
+                h.includes('diff') ||
+                h.includes('sum')
+            )
+        );
+        const colUnit = normalizedHeader.findIndex(h => h === 'unit' || h.includes('unit'));
+        const isLongFormat = colMonth >= 0 && colSeg >= 0 && colCohort >= 0 && colValue >= 0 &&
+            (colFirst < 0 || colRet < 0 || colRes < 0);
 
-        // Helper: parse "2.6    MB" → number in THB (MB * 1,000,000)
-        const parseMB = (val) => {
+        // Helper: parse "2.6 MB" or value + unit columns into THB
+        const parseValue = (val, unit = '') => {
             if (!val || val.trim() === '' || val.trim() === 'NaN') return 0;
-            const num = parseFloat(val.replace(/[^0-9.\-]/g, ''));
+            const raw = String(val).trim();
+            const unitText = `${unit || ''} ${raw}`.toLowerCase();
+            const num = parseFloat(raw.replace(/[^0-9.\-]/g, ''));
             if (isNaN(num)) return 0;
-            return num * 1000000; // convert MB → THB
+            if (unitText.includes('mb') || unitText.includes('million')) return num * 1000000;
+            if (unitText.includes('k')) return num * 1000;
+            return num;
+        };
+
+        const normalizeMonthKey = (monthRaw) => {
+            const raw = String(monthRaw || '').trim();
+            if (!raw) return null;
+
+            const dmy = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (dmy) return `${parseInt(dmy[1], 10)}/1/${dmy[3]}`;
+
+            const ymd = raw.match(/^(\d{4})-(\d{1,2})(?:-\d{1,2})?$/);
+            if (ymd) return `${parseInt(ymd[2], 10)}/1/${ymd[1]}`;
+
+            const parsed = new Date(raw);
+            if (!isNaN(parsed)) return `${parsed.getMonth() + 1}/1/${parsed.getFullYear()}`;
+
+            return raw;
+        };
+
+        const metricKey = (label) => {
+            const text = String(label || '').toLowerCase();
+            if (text.includes('first')) return 'first';
+            if (text.includes('retain')) return 'retained';
+            if (text.includes('resurrect')) return 'resurrected';
+            if (text.includes('total')) return 'total';
+            return null;
         };
 
         this.cohortData = {};
         this.cohortMonths = [];
+
+        if (isLongFormat) {
+            for (let i = 1; i < lines.length; i++) {
+                const vals = parseLine(lines[i]);
+                const monthKey = normalizeMonthKey(vals[colMonth]);
+                const segRaw = vals[colSeg]?.trim();
+                const metric = metricKey(vals[colCohort]);
+                if (!monthKey || !segRaw || !metric) continue;
+
+                if (!this.cohortData[monthKey]) {
+                    this.cohortData[monthKey] = {};
+                    this.cohortMonths.push(monthKey);
+                }
+                if (!this.cohortData[monthKey][segRaw]) {
+                    this.cohortData[monthKey][segRaw] = { first: 0, retained: 0, resurrected: 0, total: 0 };
+                }
+
+                const value = parseValue(vals[colValue], colUnit >= 0 ? vals[colUnit] : '');
+                this.cohortData[monthKey][segRaw][metric] += value;
+                if (metric !== 'total') {
+                    this.cohortData[monthKey][segRaw].total += value;
+                }
+            }
+
+            Object.keys(this.cohortData).forEach(monthKey => {
+                const totals = { first: 0, retained: 0, resurrected: 0, total: 0 };
+                Object.keys(this.cohortData[monthKey]).forEach(segment => {
+                    const row = this.cohortData[monthKey][segment];
+                    totals.first += row.first || 0;
+                    totals.retained += row.retained || 0;
+                    totals.resurrected += row.resurrected || 0;
+                    totals.total += row.total || 0;
+                });
+                this.cohortData[monthKey].__totals = totals;
+            });
+
+            this.cohortMonths = Array.from(new Set(this.cohortMonths)).sort((a, b) => new Date(a) - new Date(b));
+            console.log('Long-format cohort data parsed for months:', this.cohortMonths);
+            return;
+        }
 
         for (let i = 1; i < lines.length; i++) {
             const vals = parseLine(lines[i]);
@@ -573,10 +662,10 @@ class PerformanceRecap {
                 const mKey = monthRaw.replace(/totals for /i, '').trim();
                 if (this.cohortData[mKey]) {
                     this.cohortData[mKey].__totals = {
-                        first:       parseMB(vals[colFirst]),
-                        retained:    parseMB(vals[colRet]),
-                        resurrected: parseMB(vals[colRes]),
-                        total:       parseMB(vals[colTotal])
+                        first:       parseValue(vals[colFirst]),
+                        retained:    parseValue(vals[colRet]),
+                        resurrected: parseValue(vals[colRes]),
+                        total:       parseValue(vals[colTotal])
                     };
                 }
                 continue;
@@ -589,10 +678,10 @@ class PerformanceRecap {
 
             if (segRaw) {
                 this.cohortData[monthRaw][segRaw] = {
-                    first:       parseMB(vals[colFirst]),
-                    retained:    parseMB(vals[colRet]),
-                    resurrected: parseMB(vals[colRes]),
-                    total:       parseMB(vals[colTotal])
+                    first:       parseValue(vals[colFirst]),
+                    retained:    parseValue(vals[colRet]),
+                    resurrected: parseValue(vals[colRes]),
+                    total:       parseValue(vals[colTotal])
                 };
             }
         }

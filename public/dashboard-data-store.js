@@ -8,19 +8,7 @@ class DashboardDataStore {
         this.data = this.loadFromStorage();
     }
 
-    loadFromStorage() {
-        try {
-            const stored = localStorage.getItem(this.STORAGE_KEY);
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                console.log('✅ Data loaded from localStorage');
-                return parsed;
-            }
-        } catch (error) {
-            console.error('Error loading from storage:', error);
-        }
-
-        // Default empty structure
+    getEmptyData() {
         return {
             channel: null,
             mlm: null,
@@ -34,15 +22,45 @@ class DashboardDataStore {
         };
     }
 
+    loadFromStorage() {
+        try {
+            const stored = localStorage.getItem(this.STORAGE_KEY);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                console.log('✅ Data loaded from localStorage');
+                return parsed;
+            }
+        } catch (error) {
+            console.error('Error loading from storage:', error);
+        }
+
+        return this.getEmptyData();
+    }
+
+    notifyDataUpdated() {
+        const event = new CustomEvent('dashboardDataUpdated', {
+            detail: this.data
+        });
+
+        window.dispatchEvent(event);
+
+        if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'dashboardDataUpdated' }, '*');
+        }
+    }
+
+    refreshBeforeUpdate() {
+        this.data = this.loadFromStorage();
+        if (!this.data.lastUpdated) {
+            this.data.lastUpdated = {};
+        }
+    }
+
     saveToStorage() {
         try {
             localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.data));
             console.log('✅ Data saved to localStorage');
-            
-            // Dispatch event to notify other dashboards
-            window.dispatchEvent(new CustomEvent('dashboardDataUpdated', { 
-                detail: this.data 
-            }));
+            this.notifyDataUpdated();
         } catch (error) {
             console.error('Error saving to storage:', error);
         }
@@ -50,6 +68,7 @@ class DashboardDataStore {
 
     // Channel data
     updateChannelData(channelData, months) {
+        this.refreshBeforeUpdate();
         this.data.channel = { data: channelData, months };
         this.data.lastUpdated.channel = new Date().toISOString();
         this.saveToStorage();
@@ -57,6 +76,7 @@ class DashboardDataStore {
 
     // MLM data
     updateMLMData(mlmData, months) {
+        this.refreshBeforeUpdate();
         this.data.mlm = { teams: mlmData, months };
         this.data.lastUpdated.mlm = new Date().toISOString();
         this.saveToStorage();
@@ -64,6 +84,7 @@ class DashboardDataStore {
 
     // Regional data
     updateRegionalData(regionalData, months) {
+        this.refreshBeforeUpdate();
         this.data.regional = { regions: regionalData, months };
         this.data.lastUpdated.regional = new Date().toISOString();
         this.saveToStorage();
@@ -71,6 +92,7 @@ class DashboardDataStore {
 
     // Segment data
     updateSegmentData(segmentData, months) {
+        this.refreshBeforeUpdate();
         this.data.segment = { segments: segmentData, months };
         this.data.lastUpdated.segment = new Date().toISOString();
         this.saveToStorage();
@@ -78,6 +100,7 @@ class DashboardDataStore {
 
     // Agency data
     updateAgencyData(agencyData, months) {
+        this.refreshBeforeUpdate();
         this.data.agency = { metrics: agencyData, months };
         this.data.lastUpdated.agency = new Date().toISOString();
         this.saveToStorage();
@@ -85,6 +108,7 @@ class DashboardDataStore {
 
     // Renewal data
     updateRenewalData(renewalData, months) {
+        this.refreshBeforeUpdate();
         this.data.renewal = { channels: renewalData, months };
         this.data.lastUpdated.renewal = new Date().toISOString();
         this.saveToStorage();
@@ -92,6 +116,7 @@ class DashboardDataStore {
 
     // Focus Team data
     updateFocusTeamData(teamData, months, teamList) {
+        this.refreshBeforeUpdate();
         this.data.focusTeam = { teams: teamData, months, teamList };
         this.data.lastUpdated.focusTeam = new Date().toISOString();
         this.saveToStorage();
@@ -99,6 +124,7 @@ class DashboardDataStore {
 
     // MoM Cohort CSV (raw text)
     updateCohortCsvData(csvText) {
+        this.refreshBeforeUpdate();
         this.data.cohortCsv = { text: csvText };
         this.data.lastUpdated.cohortCsv = new Date().toISOString();
         this.saveToStorage();
@@ -106,11 +132,13 @@ class DashboardDataStore {
 
     // Get all data
     getAllData() {
+        this.data = this.loadFromStorage();
         return this.data;
     }
 
     // Get all available months across all datasets (sorted ascending)
     getAvailableMonths() {
+        this.data = this.loadFromStorage();
         const monthSet = new Set();
         ['mlm', 'regional', 'segment', 'agency', 'renewal', 'focusTeam'].forEach(key => {
             if (this.data[key] && this.data[key].months) {
@@ -137,17 +165,7 @@ class DashboardDataStore {
 
     // Clear all data
     clearData() {
-        this.data = {
-            channel: null,
-            mlm: null,
-            regional: null,
-            segment: null,
-            agency: null,
-            renewal: null,
-            focusTeam: null,
-            cohortCsv: null,
-            lastUpdated: {}
-        };
+        this.data = this.getEmptyData();
         this.saveToStorage();
     }
 }
@@ -155,6 +173,12 @@ class DashboardDataStore {
 // Create global instance
 window.dashboardDataStore = new DashboardDataStore();
 console.log('📊 Dashboard Data Store initialized');
+
+window.addEventListener('storage', function(event) {
+    if (event.key !== window.dashboardDataStore.STORAGE_KEY) return;
+    window.dashboardDataStore.data = window.dashboardDataStore.loadFromStorage();
+    window.dashboardDataStore.notifyDataUpdated();
+});
 
 // Global utility: resolve the effective (selected) month from an array of available months
 window.getEffectiveMonth = function(availableMonths) {

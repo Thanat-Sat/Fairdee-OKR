@@ -47,6 +47,73 @@ function initializeApp() {
 initializeApp();
 
 // ============================================================================
+// GOOGLE SHEETS SYNC INDICATOR
+// ============================================================================
+
+const GOOGLE_SHEET_DATASETS = [
+    { key: 'channel', label: 'Channel' },
+    { key: 'mlm', label: 'MLM' },
+    { key: 'focusTeam', label: 'Focus Team' },
+    { key: 'agency', label: 'Agency' },
+    { key: 'segment', label: 'Segment' },
+    { key: 'renewal', label: 'Renewal' },
+    { key: 'cohortCsv', label: 'Performance Recap' }
+];
+
+function formatSyncTime(isoString) {
+    const date = isoString ? new Date(isoString) : null;
+    if (!date || Number.isNaN(date.getTime())) return '';
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function setGoogleSheetSyncStatus(status, text) {
+    const statusEl = document.getElementById('googleSheetSyncStatus');
+    if (!statusEl) return;
+
+    statusEl.classList.remove('sheet-sync-loading', 'sheet-sync-success', 'sheet-sync-warning');
+    statusEl.classList.add(`sheet-sync-${status}`);
+    statusEl.innerHTML = `<span class="sheet-sync-dot"></span><span>${text}</span>`;
+}
+
+function hasDataset(data, key) {
+    const value = data && data[key];
+    if (!value) return false;
+    if (key === 'cohortCsv') return Boolean(value.text);
+    return true;
+}
+
+function updateGoogleSheetSyncIndicator() {
+    if (!window.dashboardDataStore) {
+        setGoogleSheetSyncStatus('loading', 'Checking Google Sheets...');
+        setTimeout(updateGoogleSheetSyncIndicator, 200);
+        return;
+    }
+
+    const data = window.dashboardDataStore.getAllData();
+    const loadedKeys = GOOGLE_SHEET_DATASETS.filter(item => hasDataset(data, item.key));
+    const total = GOOGLE_SHEET_DATASETS.length;
+
+    if (loadedKeys.length === total) {
+        const latestUpdate = Object.values(data.lastUpdated || {})
+            .filter(Boolean)
+            .sort()
+            .pop();
+        const timeText = formatSyncTime(latestUpdate);
+        setGoogleSheetSyncStatus('success', 'Google Sheets synced' + (timeText ? ` at ${timeText}` : ''));
+        return;
+    }
+
+    if (loadedKeys.length > 0) {
+        setGoogleSheetSyncStatus('warning', `Google Sheets ${loadedKeys.length} / ${total}`);
+        return;
+    }
+
+    setGoogleSheetSyncStatus('loading', 'Fetching Google Sheets...');
+}
+
+updateGoogleSheetSyncIndicator();
+
+// ============================================================================
 // MONTH SELECTOR
 // ============================================================================
 
@@ -164,6 +231,19 @@ function initMonthSelector() {
 // Re-populate when data is uploaded
 window.addEventListener('dashboardDataUpdated', function() {
     populateMonthSelector();
+    updateGoogleSheetSyncIndicator();
+});
+
+window.addEventListener('message', function(event) {
+    if (!event.data || event.data.type !== 'dashboardDataUpdated') return;
+    populateMonthSelector();
+    updateGoogleSheetSyncIndicator();
+    document.querySelectorAll('iframe').forEach(iframe => {
+        if (iframe.contentWindow === event.source) return;
+        try {
+            iframe.contentWindow.postMessage({ type: 'dashboardDataUpdated' }, '*');
+        } catch (e) {}
+    });
 });
 
 initMonthSelector();
@@ -175,6 +255,7 @@ initMonthSelector();
 function refreshAllDashboards() {
     const refreshBtn = document.getElementById('refreshBtn');
     const svg = refreshBtn.querySelector('svg');
+    setGoogleSheetSyncStatus('loading', 'Refreshing Google Sheets...');
     
     // Add spinning animation
     svg.style.animation = 'spin 1s linear infinite';
@@ -207,6 +288,7 @@ function refreshAllDashboards() {
         svg.style.animation = '';
         refreshBtn.disabled = false;
         refreshBtn.style.opacity = '1';
+        updateGoogleSheetSyncIndicator();
         
         // Optional: Show a brief success indicator
         const originalText = refreshBtn.innerHTML;

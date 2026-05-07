@@ -223,55 +223,28 @@
                 </table>
             </div>
 
-            <div class="two-column-layout">
-                
-                <!-- Region Summary -->
-                <div class="section-card">
-                    <div class="section-title">
-                        <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
-                            <circle cx="12" cy="10" r="3"/>
-                        </svg>
-                        Top Performing Regions
-                    </div>
-                    <table class="mini-table" id="regionalTable">
-                        <thead>
-                            <tr>
-                                <th>Region</th>
-                                <th style="text-align: right;">YTD GWP</th>
-                                <th style="text-align: center;">%</th>
-                            </tr>
-                        </thead>
-                        <tbody id="regionalTableBody">
-                            <!-- Will be populated by JavaScript -->
-                        </tbody>
-                    </table>
+            <!-- Focus Team Performance -->
+            <div class="section-card">
+                <div class="section-title">
+                    <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+                    </svg>
+                    Top Performing Teams
                 </div>
-
-                <!-- Focus Team Performance -->
-                <div class="section-card">
-                    <div class="section-title">
-                        <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-                            <circle cx="9" cy="7" r="4"/>
-                            <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
-                        </svg>
-                        Top Performing Teams
-                    </div>
-                    <table class="mini-table" id="focusTeamTable">
-                        <thead>
-                            <tr>
-                                <th>Team</th>
-                                <th style="text-align: right;">YTD GWP</th>
-                                <th style="text-align: center;">%</th>
-                            </tr>
-                        </thead>
-                        <tbody id="focusTeamTableBody">
-                            <!-- Will be populated by JavaScript -->
-                        </tbody>
-                    </table>
-                </div>
-
+                <table class="mini-table" id="focusTeamTable">
+                    <thead>
+                        <tr>
+                            <th>Team</th>
+                            <th style="text-align: right;">YTD GWP</th>
+                            <th style="text-align: center;">%</th>
+                        </tr>
+                    </thead>
+                    <tbody id="focusTeamTableBody">
+                        <!-- Will be populated by JavaScript -->
+                    </tbody>
+                </table>
             </div>
 
             <!-- Monthly Trend -->
@@ -354,6 +327,7 @@
     <!-- Centralized Data Store -->
     <script src="dashboard-data-store.js?v=1778059239583"></script>
 
+    <script src="dashboard-copy.js?v=1778064200000"></script>
     <script src="executive-summary.js?v=1778059239583"></script>
 </body>
 </html>

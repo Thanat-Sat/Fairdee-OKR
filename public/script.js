@@ -96,17 +96,52 @@ let selectedMonth = ''; // Currently selected month
 // ========================================
 let _loadedCount = 0;
 const _totalSources = 5;
+const _sheetFetchStatusIds = [
+    'dataFileStatus',
+    'firstTransactingStatus',
+    'earlyRetentionStatus',
+    'teamPerfFileStatusMain',
+    'fleetFetchStatus'
+];
+
+function _formatSyncTime(date) {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function _setOkrSheetSyncStatus(status, text) {
+    var statusEl = document.getElementById('okrSheetSyncStatus');
+    if (!statusEl) return;
+
+    statusEl.classList.remove('sheet-sync-loading', 'sheet-sync-success', 'sheet-sync-warning');
+    statusEl.classList.add('sheet-sync-' + status);
+    statusEl.innerHTML = '<span class="sheet-sync-dot"></span><span>' + text + '</span>';
+}
+
+function _getOkrFetchErrorCount() {
+    return _sheetFetchStatusIds.reduce(function(count, id) {
+        var el = document.getElementById(id);
+        return count + (el && el.classList.contains('error') ? 1 : 0);
+    }, 0);
+}
 
 function _markSourceLoaded() {
-    _loadedCount++;
+    _loadedCount = Math.min(_loadedCount + 1, _totalSources);
     var pct = Math.round((_loadedCount / _totalSources) * 100);
     var fill = document.getElementById('dataLoadingFill');
     var countEl = document.getElementById('dataLoadingCount');
     var textEl = document.getElementById('dataLoadingText');
     if (fill) fill.style.width = pct + '%';
     if (countEl) countEl.textContent = _loadedCount + ' / ' + _totalSources;
+    if (_loadedCount < _totalSources) {
+        _setOkrSheetSyncStatus('loading', 'Fetching Google Sheets ' + _loadedCount + ' / ' + _totalSources);
+    }
     if (_loadedCount >= _totalSources) {
-        if (textEl) textEl.textContent = 'All data loaded';
+        var errorCount = _getOkrFetchErrorCount();
+        var syncText = errorCount
+            ? 'Google Sheets fetch complete with ' + errorCount + ' issue' + (errorCount === 1 ? '' : 's')
+            : 'Google Sheets synced at ' + _formatSyncTime(new Date());
+        if (textEl) textEl.textContent = syncText;
+        _setOkrSheetSyncStatus(errorCount ? 'warning' : 'success', syncText);
         setTimeout(function() {
             var bar = document.getElementById('dataLoadingBar');
             if (bar) bar.style.display = 'none';
@@ -608,27 +643,7 @@ function renderAll() {
 
 // Update stats
 function updateStats() {
-    const dataWithTargets = filteredData.filter(row => {
-        const target = getTarget(row);
-        return target > 0;
-    });
-    
-    let totalProgress = 0;
-    let onTrackCount = 0;
-    
-    dataWithTargets.forEach(row => {
-        const current = getLatestValue(row);
-        const target = getTarget(row);
-        const progress = calculateProgress(row.kr_name, current, target);
-        totalProgress += progress;
-        if (progress >= 75) onTrackCount++;
-    });
-    
-    const avgProgress = dataWithTargets.length > 0 ? totalProgress / dataWithTargets.length : 0;
-    
-    document.getElementById('totalOKRs').textContent = filteredData.length;
-    document.getElementById('avgProgress').textContent = avgProgress.toFixed(1) + '%';
-    document.getElementById('onTrack').textContent = onTrackCount;
+    // Header summary counters were removed; keep this hook for existing filter flow.
 }
 
 // Get latest value (respects selected month filter)
@@ -2034,7 +2049,7 @@ function resetDashboard() {
     if (tp2) tp2.value = '';
     
     // Reset status indicators
-    ['dataFileStatus', 'targetsFileStatus', 'firstTransactingStatus', 'earlyRetentionStatus', 'teamPerfFileStatus', 'teamPerfFileStatusMain'].forEach(id => {
+    ['dataFileStatus', 'targetsFileStatus', 'firstTransactingStatus', 'earlyRetentionStatus', 'teamPerfFileStatus', 'teamPerfFileStatusMain', 'fleetFetchStatus'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.classList.remove('success', 'error', 'loading');
@@ -2086,6 +2101,7 @@ function resetDashboard() {
     if (fill) fill.style.width = '0%';
     if (countEl) countEl.textContent = '0 / 5';
     if (textEl) textEl.textContent = 'Fetching data from Google Sheets...';
+    _setOkrSheetSyncStatus('loading', 'Fetching Google Sheets...');
 
     // Re-fetch all data from Google Sheets
     fetchOKRSheetData();
@@ -3054,10 +3070,16 @@ function fetchTeamPerfData() {
                 header: true, skipEmptyLines: true,
                 transformHeader: function(h) { return h.trim(); },
                 complete: function(results) { _processTeamPerfResults(results); },
-                error: function(err) { showUploadStatus('teamPerfFileStatusMain', 'error', '✗ ' + err.message); }
+                error: function(err) {
+                    showUploadStatus('teamPerfFileStatusMain', 'error', '✗ ' + err.message);
+                    _markSourceLoaded();
+                }
             });
         })
-        .catch(function(err) { showUploadStatus('teamPerfFileStatusMain', 'error', '✗ ' + err.message); });
+        .catch(function(err) {
+            showUploadStatus('teamPerfFileStatusMain', 'error', '✗ ' + err.message);
+            _markSourceLoaded();
+        });
 }
 function _processTeamPerfResults(results) {
         console.log('=== TEAM PERFORMANCE PARSING ===', results.data.length, 'rows');

@@ -33,9 +33,11 @@ let editingTargetId = null;
 // ============================================================================
 
 function formatNumber(num) {
+    const value = Number(num);
+    if (!Number.isFinite(value)) return '—';
     return new Intl.NumberFormat('en-US', {
         maximumFractionDigits: 2
-    }).toLocaleString();
+    }).format(value);
 }
 
 function formatDate(timestamp) {

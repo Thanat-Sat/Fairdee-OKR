@@ -20,12 +20,12 @@ class FocusTeamDataProcessor {
         this.teamNames = {
             'FM-19867': 'ทรงวุฒิ',
             'FM-19729': 'Jack',
-            'FM-19710': 'ถาวร',
+            'FM-21975': 'ถาวร',
             'FM-21511': 'ตาล',
             'FM-23437': 'คนอง',
             'FM-19134': 'ประวิทย์',
             'FM-23277': 'ปัน',
-            'FM-19192': 'เมธิชัย',
+            'FM-23273': 'เมธิชัย',
             'FM-19119': 'คมกฤษณ์',
             'FM-42800': 'บ๊วย',
             'FM-28595': 'พิมพาภรณ์',
@@ -39,12 +39,12 @@ class FocusTeamDataProcessor {
         this.teamTiers = {
             'FM-19867': 'focus',
             'FM-19729': 'focus',
-            'FM-19710': 'focus',
+            'FM-21975': 'focus',
             'FM-21511': 'focus',
             'FM-23437': 'focus',
             'FM-19134': 'focus',
             'FM-23277': 'focus',
-            'FM-19192': 'focus',
+            'FM-23273': 'focus',
             'FM-19119': 'focus',
             'FM-42800': 'focus',
             'FM-28595': 'mid',
@@ -59,11 +59,23 @@ class FocusTeamDataProcessor {
         this.teams = this.teams
             .filter(t => t.code.toLowerCase() !== 'non focus team')
             .sort((a, b) => {
-                const tierA = this.teamTiers[a.code] === 'mid' ? 1 : 0;
-                const tierB = this.teamTiers[b.code] === 'mid' ? 1 : 0;
+                const tierA = this.getTeamTier(a.code) === 'mid' ? 1 : 0;
+                const tierB = this.getTeamTier(b.code) === 'mid' ? 1 : 0;
                 if (tierA !== tierB) return tierA - tierB;
                 return a.code.localeCompare(b.code);
             });
+    }
+
+    getTeamTier(code) {
+        const trimmedCode = (code || '').trim();
+        return this.teamTiers[trimmedCode] || 'focus';
+    }
+
+    inferTeamTier(teamName) {
+        const normalized = (teamName || '').toLowerCase().replace(/[\s-]+/g, '_');
+        if (normalized === 'focus_team') return 'focus';
+        if (normalized === 'mid_tier_team' || normalized === 'midtier_team') return 'mid';
+        return null;
     }
 
     getTeamDisplayName(code) {
@@ -87,6 +99,7 @@ class FocusTeamDataProcessor {
         
         // Parse header to find column indices
         const header = this.parseCSVLine(lines[0]);
+        const teamNameIdx = header.indexOf('team_name');
         const anchorCodeIdx = header.indexOf('team_anchor_code');
         const agentRegionIdx = header.indexOf('agent_region'); // Use agent_region for team name
         const monthIdx = header.indexOf('month');
@@ -107,6 +120,7 @@ class FocusTeamDataProcessor {
             if (values.length >= Math.max(anchorCodeIdx, monthIdx, gwpIdx) + 1) {
                 const row = {
                     anchorCode: values[anchorCodeIdx],
+                    teamName: teamNameIdx >= 0 ? values[teamNameIdx] : '',
                     agentName: agentRegionIdx >= 0 ? values[agentRegionIdx] : '',
                     month: values[monthIdx],
                     gwp: values[gwpIdx]
@@ -200,6 +214,10 @@ class FocusTeamDataProcessor {
         const teamsMap = new Map();
         data.forEach(row => {
             const anchorCode = row.anchorCode.trim();
+            const inferredTier = this.inferTeamTier(row.teamName);
+            if (anchorCode && inferredTier) {
+                this.teamTiers[anchorCode] = inferredTier;
+            }
             if (anchorCode && !teamsMap.has(anchorCode)) {
                 // Use getTeamDisplayName for correct name lookup
                 const displayName = this.getTeamDisplayName(anchorCode);
@@ -211,8 +229,8 @@ class FocusTeamDataProcessor {
             .filter(([code]) => code.toLowerCase() !== 'non focus team')
             .map(([code, name]) => ({ code, name }))
             .sort((a, b) => {
-                const tierA = this.teamTiers[a.code] === 'mid' ? 1 : 0;
-                const tierB = this.teamTiers[b.code] === 'mid' ? 1 : 0;
+                const tierA = this.getTeamTier(a.code) === 'mid' ? 1 : 0;
+                const tierB = this.getTeamTier(b.code) === 'mid' ? 1 : 0;
                 if (tierA !== tierB) return tierA - tierB;
                 return a.code.localeCompare(b.code);
             });
@@ -591,8 +609,8 @@ class FocusTeamUI {
         const showRunRate = document.getElementById('ftShowRunRate')?.checked || false;
         const runRateDay  = parseInt(document.getElementById('ftRunRateDay')?.value || '22', 10);
 
-        const focusTeams = this.dataProcessor.teams.filter(t => this.dataProcessor.teamTiers[t.code] === 'focus');
-        const midTeams   = this.dataProcessor.teams.filter(t => this.dataProcessor.teamTiers[t.code] === 'mid');
+        const focusTeams = this.dataProcessor.teams.filter(t => this.dataProcessor.getTeamTier(t.code) === 'focus');
+        const midTeams   = this.dataProcessor.teams.filter(t => this.dataProcessor.getTeamTier(t.code) === 'mid');
 
         this.buildTierChart('focusTeamChart', focusTeams, month,
             document.getElementById('focusChartTitle'),
@@ -779,7 +797,7 @@ class FocusTeamUI {
             tdName.style.padding = '10px 12px';
             tdName.style.borderRight = '1px solid #e2e8f0';
 
-            const tier = this.dataProcessor.teamTiers[team.code];
+            const tier = this.dataProcessor.getTeamTier(team.code);
             const isFocus = tier === 'focus';
             const badgeColor  = isFocus ? '#6366f1' : '#f59e0b';
             const badgeBg     = isFocus ? '#ede9fe' : '#fef3c7';

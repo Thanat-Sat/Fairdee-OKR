@@ -29,15 +29,10 @@
         .hub-logo {
             width: 64px;
             height: 64px;
-            background: linear-gradient(135deg, #FF6B35 0%, #E85A2B 100%);
             border-radius: 16px;
             margin: 0 auto 1.25rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.75rem;
-            font-weight: 800;
+            display: block;
+            object-fit: cover;
             box-shadow: 0 8px 24px rgba(255, 107, 53, 0.35);
         }
 
@@ -94,8 +89,19 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2rem;
             margin-bottom: 1.5rem;
+            color: #fff;
+        }
+
+        .hub-card-icon svg {
+            width: 34px;
+            height: 34px;
+            display: block;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
         }
 
         .hub-card-icon.okr {
@@ -131,8 +137,18 @@
             align-items: center;
             justify-content: center;
             color: rgba(255, 255, 255, 0.6);
-            font-size: 1.1rem;
             transition: all 0.2s ease;
+        }
+
+        .hub-card-arrow svg {
+            width: 18px;
+            height: 18px;
+            display: block;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.25;
+            stroke-linecap: round;
+            stroke-linejoin: round;
         }
 
         .hub-card:hover .hub-card-arrow {
@@ -204,24 +220,50 @@
     </div>
 
     <div class="hub-header">
-        <div class="hub-logo">F</div>
+        <img src="assets/fairdee-logo.png" alt="Fairdee" class="hub-logo">
         <h1 class="hub-title">Fairdee Dashboards</h1>
         <p class="hub-subtitle">Choose a dashboard to open</p>
     </div>
 
     <div class="hub-cards">
         <a class="hub-card" href="index.html">
-            <div class="hub-card-icon okr">๐ฏ</div>
+            <div class="hub-card-icon okr" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <circle cx="12" cy="12" r="1.5"></circle>
+                    <path d="M12 3v3"></path>
+                    <path d="M21 12h-3"></path>
+                </svg>
+            </div>
             <div class="hub-card-title">OKR Dashboard</div>
             <p class="hub-card-desc">Track objectives and key results, KAM performance, fleet analysis, and monthly targets.</p>
-            <div class="hub-card-arrow">โ’</div>
+            <div class="hub-card-arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <path d="M5 12h14"></path>
+                    <path d="m13 6 6 6-6 6"></path>
+                </svg>
+            </div>
         </a>
 
         <a class="hub-card mm" href="mm.html">
-            <div class="hub-card-icon mm">๐“</div>
+            <div class="hub-card-icon mm" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <path d="M4 19V5"></path>
+                    <path d="M4 19h16"></path>
+                    <rect x="7" y="11" width="3" height="5" rx="1"></rect>
+                    <rect x="12" y="8" width="3" height="8" rx="1"></rect>
+                    <rect x="17" y="4" width="3" height="12" rx="1"></rect>
+                </svg>
+            </div>
             <div class="hub-card-title">Monthly Metrics</div>
             <p class="hub-card-desc">Executive summary, channel overview, MLM, focus team, agency, segment, and renewal dashboards.</p>
-            <div class="hub-card-arrow">โ’</div>
+            <div class="hub-card-arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <path d="M5 12h14"></path>
+                    <path d="m13 6 6 6-6 6"></path>
+                </svg>
+            </div>
         </a>
     </div>
 

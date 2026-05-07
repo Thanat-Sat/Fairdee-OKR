@@ -15,10 +15,14 @@
         <header class="dashboard-header">
             <div class="header-content">
                 <div class="brand">
-                    <div class="brand-icon"></div>
+                    <img src="assets/fairdee-logo.png" alt="Fairdee" class="brand-logo">
                     <h1>Monthly Metrics Dashboard</h1>
                 </div>
                 <div class="user-menu">
+                    <div id="googleSheetSyncStatus" class="sheet-sync-status sheet-sync-loading">
+                        <span class="sheet-sync-dot"></span>
+                        <span>Checking Google Sheets...</span>
+                    </div>
                     <a href="home.html" class="home-btn">← Home</a>
                     <div class="month-selector-wrapper">
                         <label for="globalMonthSelect" class="month-selector-label">Month:</label>
@@ -92,7 +96,7 @@
 
         <!-- Agency Dashboard (loaded in iframe) -->
         <div class="iframe-container" id="agencyContainer" style="display: none;">
-            <iframe id="agencyFrame" src=" agency-dashboard.html" frameborder="0"></iframe>
+            <iframe id="agencyFrame" src="agency-dashboard.html" frameborder="0"></iframe>
         </div>
 
         <!-- Segment Dashboard (loaded in iframe) -->

@@ -65,16 +65,33 @@
         .user-bar {
             background: var(--card-bg, #fff);
             border-bottom: 1px solid var(--border, #E5E7EB);
-            padding: 0.625rem 1.5rem;
+            padding: 0.75rem 1.5rem;
             display: flex;
             align-items: center;
-            justify-content: flex-end;
-            gap: 1rem;
+            justify-content: space-between;
+            gap: 0.75rem;
+            flex-wrap: wrap;
             font-family: 'Google Sans Text', sans-serif;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             position: sticky;
             top: 0;
             z-index: 1000;
+        }
+        .user-bar-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .user-bar .okr-header-brand h1 {
+            font-size: 1.25rem;
+        }
+        .user-bar .brand-logo {
+            width: 34px;
+            height: 34px;
+            border-radius: 7px;
+            object-fit: cover;
+            flex-shrink: 0;
         }
         .user-bar-info {
             display: flex;
@@ -83,37 +100,8 @@
             color: var(--text-secondary, #64748B);
             font-size: 0.875rem;
         }
-        .user-bar-avatar {
-            width: 32px; height: 32px;
-            background: linear-gradient(135deg, #FF6B35 0%, #E85A2B 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 700;
-            font-size: 0.8rem;
-        }
         .user-bar-name {
-            font-weight: 600;
-            color: var(--text-primary, #1E293B);
-        }
-        .user-bar-signout {
-            background: none;
-            border: 1px solid var(--border, #E5E7EB);
-            padding: 0.375rem 0.875rem;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            font-weight: 600;
             color: var(--text-secondary, #64748B);
-            cursor: pointer;
-            font-family: 'Google Sans Text', sans-serif;
-            transition: all 0.2s ease;
-        }
-        .user-bar-signout:hover {
-            background: #FEE2E2;
-            border-color: #FECACA;
-            color: #DC2626;
         }
     </style>
     <style>
@@ -356,12 +344,21 @@
 
     <!-- User Bar - shown after login confirmed -->
     <div id="userBar" class="user-bar" style="display: none;">
-        <a href="home.html" style="display:flex;align-items:center;gap:0.375rem;text-decoration:none;font-size:0.8rem;font-weight:600;color:var(--text-secondary,#64748B);border:1px solid var(--border,#E5E7EB);padding:0.375rem 0.875rem;border-radius:6px;transition:all 0.2s ease;font-family:'Google Sans Text',sans-serif;" onmouseover="this.style.background='#F1F5F9'" onmouseout="this.style.background='none'">← Home</a>
-        <div class="user-bar-info">
-            <div class="user-bar-avatar" id="userAvatar">?</div>
-            <span class="user-bar-name" id="userName">User</span>
+        <div class="okr-header-brand">
+            <img src="assets/fairdee-logo.png" alt="Fairdee" class="brand-logo">
+            <h1>OKR Performance Dashboard</h1>
         </div>
-        <button class="user-bar-signout" id="signOutBtn" onclick="handleSignOut()">Sign Out</button>
+        <div class="user-bar-actions">
+            <div id="okrSheetSyncStatus" class="sheet-sync-status sheet-sync-loading">
+                <span class="sheet-sync-dot"></span>
+                <span>Fetching Google Sheets...</span>
+            </div>
+            <a href="home.html" class="home-btn">← Home</a>
+            <div class="user-bar-info">
+                <span class="user-bar-name user-email" id="userName">User</span>
+            </div>
+            <button class="sign-out-btn" id="signOutBtn" onclick="handleSignOut()">Sign Out</button>
+        </div>
     </div>
 
     <div class="container">
@@ -430,39 +427,6 @@
 
         <!-- Dashboard Section -->
         <div class="dashboard" id="dashboard">
-            <!-- Loading Progress Bar -->
-            <div id="dataLoadingBar" style="background: #F0F4FF; border: 1px solid #C7D2FE; border-radius: 12px; padding: 1rem 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem;">
-                <div style="flex: 1;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                        <span id="dataLoadingText" style="font-size: 0.875rem; font-weight: 600; color: #4338CA;">Fetching data from Google Sheets...</span>
-                        <span id="dataLoadingCount" style="font-size: 0.8rem; color: #6366F1; font-weight: 600;">0 / 5</span>
-                    </div>
-                    <div style="background: #C7D2FE; border-radius: 999px; height: 6px; overflow: hidden;">
-                        <div id="dataLoadingFill" style="height: 100%; width: 0%; background: linear-gradient(90deg, #4F46E5, #7C3AED); border-radius: 999px; transition: width 0.4s ease;"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Header with Stats -->
-            <div class="header">
-                <h1>OKR Performance Dashboard</h1>
-                <div class="subtitle">Track progress across all goals and key results</div>
-                <div class="stats-bar">
-                    <div class="stat-item">
-                        <div class="stat-value" id="totalOKRs">0</div>
-                        <div class="stat-label">Total OKRs</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="avgProgress">0%</div>
-                        <div class="stat-label">Avg Progress</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="onTrack">0</div>
-                        <div class="stat-label">On Track</div>
-                    </div>
-                </div>
-            </div>
-            
             <!-- Filters -->
             <div class="filter-section">
                 <div class="filter-row">
@@ -651,7 +615,6 @@
             var overlay = document.getElementById('authLoadingOverlay');
             var userBar = document.getElementById('userBar');
             var userName = document.getElementById('userName');
-            var userAvatar = document.getElementById('userAvatar');
 
             auth.onAuthStateChanged(function(user) {
                 if (!user) {
@@ -660,10 +623,8 @@
                 } else {
                     // Logged in — show dashboard
                     var displayName = user.displayName || user.email || 'User';
-                    var initials = displayName.split(' ').map(function(n) { return n[0]; }).join('').toUpperCase().slice(0, 2);
 
                     userName.textContent = displayName;
-                    userAvatar.textContent = initials;
 
                     // Fade out overlay
                     overlay.classList.add('fade-out');
@@ -689,6 +650,7 @@
     </script>
 
     <!-- External JavaScript -->
+    <script src="dashboard-copy.js?v=1778064200000"></script>
     <script src="script.js"></script>
 </body>
 </html>
