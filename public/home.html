@@ -49,11 +49,10 @@
         }
 
         .hub-cards {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 1.5rem;
-            flex-wrap: wrap;
-            justify-content: center;
-            max-width: 760px;
+            max-width: 1080px;
             width: 100%;
         }
 
@@ -62,9 +61,6 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 20px;
             padding: 2.5rem 2rem;
-            flex: 1;
-            min-width: 280px;
-            max-width: 340px;
             text-decoration: none;
             cursor: pointer;
             transition: all 0.25s ease;
@@ -73,6 +69,13 @@
             align-items: center;
             text-align: center;
             backdrop-filter: blur(12px);
+        }
+
+        @media (max-width: 980px) {
+            .hub-cards {
+                grid-template-columns: 1fr;
+                max-width: 360px;
+            }
         }
 
         .hub-card:hover {
@@ -112,6 +115,11 @@
         .hub-card-icon.mm {
             background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
             box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+        }
+
+        .hub-card-icon.crm {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
         }
 
         .hub-card-title {
@@ -159,6 +167,11 @@
         .hub-card.mm:hover .hub-card-arrow {
             background: rgba(99, 102, 241, 0.25);
             color: #818CF8;
+        }
+
+        .hub-card.crm:hover .hub-card-arrow {
+            background: rgba(16, 185, 129, 0.25);
+            color: #34D399;
         }
 
         .hub-footer {
@@ -221,8 +234,8 @@
 
     <div class="hub-header">
         <img src="assets/fairdee-logo.png" alt="Fairdee" class="hub-logo">
-        <h1 class="hub-title">Fairdee Dashboards</h1>
-        <p class="hub-subtitle">Choose a dashboard to open</p>
+        <h1 class="hub-title">Fairdee Central Hub</h1>
+        <p class="hub-subtitle">Choose a workspace to open</p>
     </div>
 
     <div class="hub-cards">
@@ -258,6 +271,27 @@
             </div>
             <div class="hub-card-title">Monthly Metrics</div>
             <p class="hub-card-desc">Executive summary, channel overview, MLM, focus team, agency, segment, and renewal dashboards.</p>
+            <div class="hub-card-arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <path d="M5 12h14"></path>
+                    <path d="m13 6 6 6-6 6"></path>
+                </svg>
+            </div>
+        </a>
+
+        <a class="hub-card crm" href="http://143.14.9.55:8090/">
+            <div class="hub-card-icon crm" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <path d="M3 21V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v16"></path>
+                    <path d="M16 8h3a2 2 0 0 1 2 2v11"></path>
+                    <path d="M7 7h4"></path>
+                    <path d="M7 11h4"></path>
+                    <path d="M7 15h4"></path>
+                    <path d="M10 21v-3"></path>
+                </svg>
+            </div>
+            <div class="hub-card-title">Fairdee CRM</div>
+            <p class="hub-card-desc">Open the Fairdee CRM workspace for customer and sales operations.</p>
             <div class="hub-card-arrow" aria-hidden="true">
                 <svg viewBox="0 0 24 24">
                     <path d="M5 12h14"></path>
