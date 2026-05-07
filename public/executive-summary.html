@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Executive Summary Dashboard</title>
+
+
+    <link rel="icon" type="image/png" href="assets/fairdee-favicon.png">
+    <link rel="apple-touch-icon" href="assets/fairdee-apple-touch-icon.png">
+<title>Executive Summary Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Text:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
@@ -12,14 +16,16 @@
         .executive-summary {
             padding: 1.5rem;
         }
-        
+
+
         .kpi-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 1.5rem;
             margin-bottom: 2rem;
         }
-        
+
+
         .kpi-card {
             background: white;
             border-radius: 12px;
@@ -27,11 +33,13 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             border-left: 4px solid #FF6B35;
         }
-        
+
+
         .kpi-card.success { border-left-color: #10b981; }
         .kpi-card.warning { border-left-color: #f59e0b; }
         .kpi-card.danger { border-left-color: #ef4444; }
-        
+
+
         .kpi-label {
             font-size: 0.875rem;
             color: #64748b;
@@ -40,7 +48,8 @@
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
-        
+
+
         .kpi-value {
             font-size: 2rem;
             font-weight: 800;
@@ -48,15 +57,18 @@
             margin-bottom: 0.25rem;
             font-family: 'Google Sans Text', monospace;
         }
-        
+
+
         .kpi-trend {
             font-size: 0.875rem;
             font-weight: 600;
         }
-        
+
+
         .kpi-trend.up { color: #10b981; }
         .kpi-trend.down { color: #ef4444; }
-        
+
+
         .section-card {
             background: white;
             border-radius: 12px;
@@ -64,7 +76,8 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             margin-bottom: 1.5rem;
         }
-        
+
+
         .section-title {
             font-size: 1.25rem;
             font-weight: 700;
@@ -74,18 +87,21 @@
             align-items: center;
             gap: 0.5rem;
         }
-        
+
+
         .section-icon {
             width: 24px;
             height: 24px;
             color: #FF6B35;
         }
-        
+
+
         .mini-table {
             width: 100%;
             border-collapse: collapse;
         }
-        
+
+
         .mini-table th {
             background: #f8fafc;
             padding: 0.75rem;
@@ -97,17 +113,20 @@
             letter-spacing: 0.05em;
             border-bottom: 2px solid #e2e8f0;
         }
-        
+
+
         .mini-table td {
             padding: 0.75rem;
             border-bottom: 1px solid #e2e8f0;
             font-size: 0.875rem;
         }
-        
+
+
         .mini-table tr:hover {
             background: #f8fafc;
         }
-        
+
+
         .performance-bar {
             height: 8px;
             background: #e2e8f0;
@@ -115,29 +134,34 @@
             overflow: hidden;
             margin-top: 0.25rem;
         }
-        
+
+
         .performance-fill {
             height: 100%;
             border-radius: 4px;
             transition: width 0.3s ease;
         }
-        
+
+
         .performance-fill.success { background: #10b981; }
         .performance-fill.warning { background: #f59e0b; }
         .performance-fill.danger { background: #ef4444; }
-        
+
+
         .two-column-layout {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 1.5rem;
         }
-        
+
+
         .section-divider {
             margin: 3rem 0 2rem 0;
             border: none;
             border-top: 2px solid #e2e8f0;
         }
-        
+
+
         .section-header-large {
             font-size: 1.75rem;
             font-weight: 800;
@@ -146,7 +170,8 @@
             padding-bottom: 0.75rem;
             border-bottom: 3px solid #FF6B35;
         }
-        
+
+
         @media (max-width: 1024px) {
             .two-column-layout {
                 grid-template-columns: 1fr;
@@ -168,10 +193,12 @@
         </header>
 
         <div class="executive-summary">
-            
+
+
             <!-- ========== OVERVIEW SECTION ========== -->
             <h2 class="section-header-large">Overview</h2>
-            
+
+
             <!-- KPI Cards -->
             <div class="kpi-grid">
                 <div class="kpi-card" id="totalGWPCard">
@@ -179,19 +206,22 @@
                     <div class="kpi-value" id="totalGWP">—</div>
                     <div class="kpi-trend" id="totalGWPTrend">—</div>
                 </div>
-                
+
+
                 <div class="kpi-card" id="targetAchievementCard">
                     <div class="kpi-label">Target Achievement</div>
                     <div class="kpi-value" id="targetAchievement">—</div>
                     <div class="kpi-trend" id="targetAchievementTrend">of Annual Target</div>
                 </div>
-                
+
+
                 <div class="kpi-card" id="monthlyGrowthCard">
                     <div class="kpi-label">Monthly Growth</div>
                     <div class="kpi-value" id="monthlyGrowth">—</div>
                     <div class="kpi-trend" id="monthlyGrowthTrend">—</div>
                 </div>
-                
+
+
                 <div class="kpi-card" id="activeAgentsCard">
                     <div class="kpi-label">Active Focus Teams</div>
                     <div class="kpi-value" id="activeAgents">—</div>
@@ -263,7 +293,8 @@
             <!-- ========== AGENCY PERFORMANCE SECTION ========== -->
             <hr class="section-divider">
             <h2 class="section-header-large">Agency Performance</h2>
-            
+
+
             <div class="section-card">
                 <div class="section-title">
                     <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -281,7 +312,8 @@
             <!-- ========== SEGMENT ACTIVATION SECTION ========== -->
             <hr class="section-divider">
             <h2 class="section-header-large">Segment Activation</h2>
-            
+
+
             <div class="section-card">
                 <div class="section-title">
                     <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -297,7 +329,8 @@
             <!-- ========== RENEWAL RATE SECTION ========== -->
             <hr class="section-divider">
             <h2 class="section-header-large">Renewal Rate</h2>
-            
+
+
             <div class="section-card">
                 <div class="section-title">
                     <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -320,7 +353,8 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    
+
+
     <!-- Your Firebase config MUST be after SDK -->
     <script src="mm-firebase-config.js?v=1778063100000"></script>
 

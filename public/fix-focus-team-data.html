@@ -2,6 +2,8 @@
 <html>
 <head>
     <title>Focus Team Data Fixer</title>
+    <link rel="icon" type="image/png" href="assets/fairdee-favicon.png">
+    <link rel="apple-touch-icon" href="assets/fairdee-apple-touch-icon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Text:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
@@ -70,7 +72,8 @@
 <body>
     <div class="container">
         <h1>🔧 Focus Team Data Fixer</h1>
-        
+
+
         <div class="info">
             <strong>What this does:</strong>
             <ul>
@@ -82,10 +85,12 @@
 
         <button onclick="checkData()">1. Check Current Data</button>
         <button onclick="clearAndReload()">2. Clear & Reload Dashboard</button>
-        
+
+
         <div id="success" class="success"></div>
         <div id="error" class="error"></div>
-        
+
+
         <div id="output"></div>
     </div>
 
@@ -106,7 +111,8 @@
         function checkData() {
             const output = document.getElementById('output');
             const stored = localStorage.getItem('dashboard_data_v1');
-            
+
+
             if (!stored) {
                 output.innerHTML = '<h3 style="color: #EF4444;">❌ No data found in localStorage!</h3><p>No Focus Team data was found.</p>';
                 return;
@@ -114,9 +120,11 @@
 
             try {
                 const data = JSON.parse(stored);
-                
+
+
                 let html = '<h3>📊 Data Analysis:</h3>';
-                
+
+
                 // Check what data types are available
                 html += '<h4>Available Data Types:</h4><ul>';
                 for (let key in data) {
@@ -135,7 +143,8 @@
                     html += `<li>Months: ${data.focusTeam.months ? data.focusTeam.months.length + ' months' : 'No ❌'}</li>`;
                     html += `<li>Team List: ${data.focusTeam.teamList ? data.focusTeam.teamList.length + ' teams' : 'No ❌'}</li>`;
                     html += '</ul>';
-                    
+
+
                     if (data.focusTeam.teamList && data.focusTeam.teamList.length > 0) {
                         html += '<h4>Teams Found:</h4><pre>';
                         data.focusTeam.teamList.forEach(team => {
