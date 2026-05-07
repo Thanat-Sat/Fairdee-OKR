@@ -55,6 +55,12 @@
                         <span id="dataStatus" style="font-size: 0.875rem; color: #10b981;">
                             ✓ Data loaded from storage
                         </span>
+                        <button class="upload-button" onclick="openRenewalTargetsModal()" style="padding: 0.625rem 1.25rem;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: middle;">
+                                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                            </svg>
+                            Set Targets
+                        </button>
                     </div>
                 </div>
 
@@ -158,6 +164,53 @@
 
         </div>
     </div>
+
+    <!-- Renewal Targets Modal -->
+    <div id="renewalTargetsModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>Set Renewal Rate Targets</h2>
+                <button class="modal-close" onclick="closeRenewalTargetsModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Month *</label>
+                    <input type="month" id="renewalTargetMonth" class="form-input" required>
+                </div>
+
+                <h3 style="margin: 1.5rem 0 1rem 0; color: var(--text-primary);">Channel Targets (%)</h3>
+
+                <div class="form-group">
+                    <label class="form-label">MLM Agent (%)</label>
+                    <input type="number" id="renewalTarget_mlm_agent" class="form-input" placeholder="e.g., 75" step="0.1" min="0" max="100">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Direct Agent (%)</label>
+                    <input type="number" id="renewalTarget_direct_agent" class="form-input" placeholder="e.g., 80" step="0.1" min="0" max="100">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">AO Agent (%)</label>
+                    <input type="number" id="renewalTarget_ao_agent" class="form-input" placeholder="e.g., 70" step="0.1" min="0" max="100">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Inspection Garage (%)</label>
+                    <input type="number" id="renewalTarget_inspection_garage" class="form-input" placeholder="e.g., 65" step="0.1" min="0" max="100">
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="button-secondary" onclick="closeRenewalTargetsModal()">Cancel</button>
+                    <button type="button" class="upload-button" onclick="saveRenewalTargets()">Save Targets</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK (COMPAT - REQUIRED) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script src="mm-firebase-config.js?v=1778063100000"></script>
 
     <!-- Centralized Data Store -->
     <script src="dashboard-data-store.js?v=1778059031137"></script>

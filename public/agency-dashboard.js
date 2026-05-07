@@ -473,10 +473,62 @@ window.addEventListener('message', function(event) {
 window.addEventListener('dashboardDataUpdated', function(event) {
     console.log('ðŸ“Š Agency data updated, reloading...');
     const allData = event.detail;
-    
+
     if (allData.agency && allData.agency.metrics && allData.agency.months) {
         agencyDataProcessor.processedData = allData.agency.metrics;
         agencyDataProcessor.months = allData.agency.months;
         agencyUI.render();
     }
 });
+
+// ============================================================================
+// TARGETS MODAL
+// ============================================================================
+
+const AGENCY_METRICS = [
+    { key: 'totalAgents',     unit: 'count' },
+    { key: 'newAgents',       unit: 'count' },
+    { key: 'acquisitionRate', unit: 'percent' },
+    { key: 'activeAgents',    unit: 'count' }
+];
+
+async function openAgencyTargetsModal() {
+    const months = agencyDataProcessor.months || [];
+    const latest = (window.getEffectiveMonth ? window.getEffectiveMonth(months) : null) || months[months.length - 1] || '';
+    document.getElementById('agencyTargetMonth').value = latest;
+
+    if (window.targetsDB) {
+        const result = await targetsDB.getAllTargets();
+        if (result.success) {
+            const existing = {};
+            result.targets
+                .filter(t => t.type === 'agency' && t.month === latest)
+                .forEach(t => { existing[t.name] = t.value; });
+            AGENCY_METRICS.forEach(m => {
+                const el = document.getElementById('agencyTarget_' + m.key);
+                if (el) el.value = existing[m.key] != null ? existing[m.key] : '';
+            });
+        }
+    }
+
+    document.getElementById('agencyTargetsModal').style.display = 'flex';
+}
+
+function closeAgencyTargetsModal() {
+    document.getElementById('agencyTargetsModal').style.display = 'none';
+}
+
+async function saveAgencyTargets() {
+    const month = document.getElementById('agencyTargetMonth').value;
+    if (!month) { alert('Please select a month'); return; }
+    if (!window.targetsDB) { alert('Targets DB not ready'); return; }
+
+    for (const m of AGENCY_METRICS) {
+        const raw = document.getElementById('agencyTarget_' + m.key).value;
+        const val = parseFloat(raw);
+        if (raw !== '' && !isNaN(val)) {
+            await targetsDB.saveTarget({ type: 'agency', name: m.key, month, value: val, unit: m.unit });
+        }
+    }
+    closeAgencyTargetsModal();
+}

@@ -51,6 +51,12 @@
                         <span id="dataStatus" style="font-size: 0.875rem; color: #10b981;">
                             ✓ Data loaded from storage
                         </span>
+                        <button class="upload-button" onclick="openSegmentTargetsModal()" style="padding: 0.625rem 1.25rem;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: middle;">
+                                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                            </svg>
+                            Set Targets
+                        </button>
                     </div>
                 </div>
 
@@ -70,6 +76,40 @@
 
         </div>
     </div>
+
+    <!-- Segment Targets Modal -->
+    <div id="segmentTargetsModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>Set Segment Activation Targets</h2>
+                <button class="modal-close" onclick="closeSegmentTargetsModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Month *</label>
+                    <input type="month" id="segmentTargetMonth" class="form-input" required>
+                </div>
+
+                <h3 style="margin: 1.5rem 0 1rem 0; color: var(--text-primary);">Segment Targets (count)</h3>
+
+                <div id="segmentTargetsContainer">
+                    <!-- Dynamic segment input fields will be added here -->
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="button-secondary" onclick="closeSegmentTargetsModal()">Cancel</button>
+                    <button type="button" class="upload-button" onclick="saveSegmentTargets()">Save Targets</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK (COMPAT - REQUIRED) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script src="mm-firebase-config.js?v=1778063100000"></script>
 
     <!-- Centralized Data Store -->
     <script src="dashboard-data-store.js?v=1778059031137"></script>

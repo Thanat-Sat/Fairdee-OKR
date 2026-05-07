@@ -510,10 +510,57 @@ window.addEventListener('message', function(event) {
 window.addEventListener('dashboardDataUpdated', function(event) {
     console.log('📊 Renewal data updated, reloading...');
     const allData = event.detail;
-    
+
     if (allData.renewal && allData.renewal.channels && allData.renewal.months) {
         renewalDataProcessor.channelData = allData.renewal.channels;
         renewalDataProcessor.months = allData.renewal.months;
         renewalUI.render();
     }
 });
+
+// ============================================================================
+// TARGETS MODAL
+// ============================================================================
+
+const RENEWAL_CHANNELS = ['mlm_agent', 'direct_agent', 'ao_agent', 'inspection_garage'];
+
+async function openRenewalTargetsModal() {
+    const months = renewalDataProcessor.months || [];
+    const latest = (window.getEffectiveMonth ? window.getEffectiveMonth(months) : null) || months[months.length - 1] || '';
+    document.getElementById('renewalTargetMonth').value = latest;
+
+    if (window.targetsDB) {
+        const result = await targetsDB.getAllTargets();
+        if (result.success) {
+            const existing = {};
+            result.targets
+                .filter(t => t.type === 'renewal' && t.month === latest)
+                .forEach(t => { existing[t.name] = t.value; });
+            RENEWAL_CHANNELS.forEach(ch => {
+                const el = document.getElementById('renewalTarget_' + ch);
+                if (el) el.value = existing[ch] != null ? existing[ch] : '';
+            });
+        }
+    }
+
+    document.getElementById('renewalTargetsModal').style.display = 'flex';
+}
+
+function closeRenewalTargetsModal() {
+    document.getElementById('renewalTargetsModal').style.display = 'none';
+}
+
+async function saveRenewalTargets() {
+    const month = document.getElementById('renewalTargetMonth').value;
+    if (!month) { alert('Please select a month'); return; }
+    if (!window.targetsDB) { alert('Targets DB not ready'); return; }
+
+    for (const ch of RENEWAL_CHANNELS) {
+        const raw = document.getElementById('renewalTarget_' + ch).value;
+        const val = parseFloat(raw);
+        if (raw !== '' && !isNaN(val)) {
+            await targetsDB.saveTarget({ type: 'renewal', name: ch, month, value: val, unit: 'percent' });
+        }
+    }
+    closeRenewalTargetsModal();
+}

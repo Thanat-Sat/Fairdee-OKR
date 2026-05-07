@@ -475,10 +475,70 @@ window.addEventListener('message', function(event) {
 window.addEventListener('dashboardDataUpdated', function(event) {
     console.log('📊 Segment data updated, reloading...');
     const allData = event.detail;
-    
+
     if (allData.segment && allData.segment.segments && allData.segment.months) {
         segmentDataProcessor.segmentData = allData.segment.segments;
         segmentDataProcessor.months = allData.segment.months;
         segmentUI.render();
     }
 });
+
+// ============================================================================
+// TARGETS MODAL
+// ============================================================================
+
+const SEGMENT_NAMES = ['1. Enterprise', '2. Extra Large', '3. Large', '4. Medium', '5. Small', '6. Micro'];
+
+async function openSegmentTargetsModal() {
+    const months = segmentDataProcessor.months || [];
+    const latest = (window.getEffectiveMonth ? window.getEffectiveMonth(months) : null) || months[months.length - 1] || '';
+    document.getElementById('segmentTargetMonth').value = latest;
+
+    const container = document.getElementById('segmentTargetsContainer');
+    container.innerHTML = '';
+
+    let existing = {};
+    if (window.targetsDB) {
+        const result = await targetsDB.getAllTargets();
+        if (result.success) {
+            result.targets
+                .filter(t => t.type === 'segment' && t.month === latest)
+                .forEach(t => { existing[t.name] = t.value; });
+        }
+    }
+
+    SEGMENT_NAMES.forEach((seg, idx) => {
+        const inputId = 'segmentTarget_' + idx;
+        const safeLabel = seg.replace(/"/g, '&quot;');
+        const valueAttr = existing[seg] != null ? `value="${existing[seg]}"` : '';
+        container.insertAdjacentHTML('beforeend', `
+            <div class="form-group">
+                <label class="form-label">${safeLabel}</label>
+                <input type="number" id="${inputId}" data-segment="${safeLabel}" class="form-input" placeholder="e.g., 50" step="1" min="0" ${valueAttr}>
+            </div>
+        `);
+    });
+
+    document.getElementById('segmentTargetsModal').style.display = 'flex';
+}
+
+function closeSegmentTargetsModal() {
+    document.getElementById('segmentTargetsModal').style.display = 'none';
+}
+
+async function saveSegmentTargets() {
+    const month = document.getElementById('segmentTargetMonth').value;
+    if (!month) { alert('Please select a month'); return; }
+    if (!window.targetsDB) { alert('Targets DB not ready'); return; }
+
+    const inputs = document.querySelectorAll('#segmentTargetsContainer input[type="number"]');
+    for (const input of inputs) {
+        const raw = input.value;
+        const val = parseFloat(raw);
+        const name = input.dataset.segment;
+        if (raw !== '' && !isNaN(val) && name) {
+            await targetsDB.saveTarget({ type: 'segment', name, month, value: val, unit: 'count' });
+        }
+    }
+    closeSegmentTargetsModal();
+}
