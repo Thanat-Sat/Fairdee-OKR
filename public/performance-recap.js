@@ -1050,29 +1050,24 @@ window.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        var storeData = window.dashboardDataStore.getAllData();
-        if (!storeData.cohortCsv || !storeData.cohortCsv.text) {
-            console.log('No cohort CSV in storage — fetching from Google Sheets...');
-            var SHEET_ID = '1M51L7xRu_Y8MRO5ziDVZ4pbWtqi0Mxb1-oJ6WyfwKU0';
-            var GID = '374336501';
-            var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&gid=' + GID;
-            showLoadingBar();
-            fetch(url)
-                .then(function(r) { return r.text(); })
-                .then(function(csv) {
-                    window.dashboardDataStore.updateCohortCsvData(csv);
-                    hideLoadingBar();
-                    performanceRecap.render();
-                    console.log('Cohort CSV fetched and recap rendered from Google Sheets');
-                })
-                .catch(function(err) {
-                    hideLoadingBar();
-                    console.error('Failed to fetch cohort CSV:', err);
-                    performanceRecap.render();
-                });
-        } else {
-            performanceRecap.render();
-        }
+        console.log('Fetching fresh cohort CSV from Google Sheets...');
+        var SHEET_ID = '1M51L7xRu_Y8MRO5ziDVZ4pbWtqi0Mxb1-oJ6WyfwKU0';
+        var GID = '374336501';
+        var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&gid=' + GID;
+        showLoadingBar();
+        fetch(url)
+            .then(function(r) { return r.text(); })
+            .then(function(csv) {
+                window.dashboardDataStore.updateCohortCsvData(csv);
+                hideLoadingBar();
+                performanceRecap.render();
+                console.log('Cohort CSV fetched and recap rendered from Google Sheets');
+            })
+            .catch(function(err) {
+                hideLoadingBar();
+                console.error('Failed to fetch cohort CSV:', err);
+                performanceRecap.render();
+            });
         console.log('Performance Recap Dashboard ready');
     }
 

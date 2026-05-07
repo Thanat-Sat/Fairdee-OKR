@@ -462,23 +462,8 @@ window.addEventListener('load', function() {
             return;
         }
         
-        const allData = window.dashboardDataStore.getAllData();
-        
-        if (allData.renewal && allData.renewal.channels && allData.renewal.months) {
-            console.log('✓ Loading renewal data from storage');
-            
-            // Load data into processor
-            renewalDataProcessor.channelData = allData.renewal.channels;
-            renewalDataProcessor.months = allData.renewal.months;
-            
-            // Render the dashboard
-            renewalUI.render();
-            
-            console.log('✓ Renewal dashboard rendered with stored data');
-        } else {
-            console.log('No renewal data in storage — fetching from Google Sheets...');
-            fetchRenewalSheetData();
-        }
+        console.log('Fetching fresh renewal data from Google Sheets...');
+        fetchRenewalSheetData();
     }
 
         function showLoadingBar() {

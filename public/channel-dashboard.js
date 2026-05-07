@@ -99,6 +99,109 @@ class DataProcessor {
         return ((current - previous) / previous) * 100;
     }
 
+    getSelectedYear() {
+        const m = this.getLatestMonth();
+        return m ? m.split('-')[0] : null;
+    }
+
+    getYTDMonths() {
+        const year = this.getSelectedYear();
+        const latest = this.getLatestMonth();
+        if (!year || !latest) return [];
+        const lastNum = parseInt(latest.split('-')[1], 10);
+        const out = [];
+        for (let i = 1; i <= lastNum; i++) {
+            out.push(`${year}-${String(i).padStart(2, '0')}`);
+        }
+        return out;
+    }
+
+    getQuarterMonths(year, quarter) {
+        const start = (quarter - 1) * 3 + 1;
+        const out = [];
+        for (let i = 0; i < 3; i++) {
+            out.push(`${year}-${String(start + i).padStart(2, '0')}`);
+        }
+        return out;
+    }
+
+    getCurrentQuarter() {
+        const m = this.getLatestMonth();
+        if (!m) return null;
+        return Math.ceil(parseInt(m.split('-')[1], 10) / 3);
+    }
+
+    getYearMonths(year) {
+        const out = [];
+        for (let i = 1; i <= 12; i++) {
+            out.push(`${year}-${String(i).padStart(2, '0')}`);
+        }
+        return out;
+    }
+
+    getActualForChannel(month, channel) {
+        const data = this.monthlyData[month];
+        if (!data) return null;
+        if (channel === 'All') return data['Total'] || 0;
+        return data[channel] != null ? data[channel] : null;
+    }
+
+    getTargetForChannel(month, channel) {
+        if (channel === 'All') {
+            const subs = ['Team Agent', 'IG', 'FD/AO'];
+            let sum = 0, has = false;
+            subs.forEach(s => {
+                const t = this.getTarget(month, s);
+                if (t) { sum += t; has = true; }
+            });
+            return has ? sum : null;
+        }
+        return this.getTarget(month, channel);
+    }
+
+    // Linear projection run rate: average × period length
+    calculateQuarterRunRate(year, quarter, channel) {
+        const months = this.getQuarterMonths(year, quarter);
+        const ytd = this.getYTDMonths();
+
+        let tSum = 0, tHas = false;
+        months.forEach(m => {
+            const t = this.getTargetForChannel(m, channel);
+            if (t != null) { tSum += t; tHas = true; }
+        });
+
+        const completed = months.filter(m => ytd.includes(m));
+        let aSum = 0, aCount = 0;
+        completed.forEach(m => {
+            const a = this.getActualForChannel(m, channel);
+            if (a != null) { aSum += a; aCount++; }
+        });
+        let actual = null;
+        if (aCount > 0) actual = (aSum / aCount) * 3;
+
+        return { target: tHas ? tSum : null, actual };
+    }
+
+    calculateEOYRunRate(year, channel) {
+        const yearMonths = this.getYearMonths(year);
+        const ytd = this.getYTDMonths();
+
+        let tSum = 0, tHas = false;
+        yearMonths.forEach(m => {
+            const t = this.getTargetForChannel(m, channel);
+            if (t != null) { tSum += t; tHas = true; }
+        });
+
+        let aSum = 0, aCount = 0;
+        ytd.forEach(m => {
+            const a = this.getActualForChannel(m, channel);
+            if (a != null) { aSum += a; aCount++; }
+        });
+        const actual = aCount > 0 ? (aSum / aCount) * 12 : null;
+
+        return { target: tHas ? tSum : null, actual };
+    }
+
     formatMonthLabel(monthStr) {
         const [year, month] = monthStr.split('-');
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
@@ -351,65 +454,100 @@ class DashboardUI {
         });
     }
 
-    renderTable() {
-        const months = this.dataProcessor.getLastNMonths(7);
-        const channels = ['Team Agent', 'IG', 'FD/AO'];
-        const channelColors = { 'Team Agent': '#6366F1', 'IG': '#EC4899', 'FD/AO': '#10B981' };
+    formatMB(num) {
+        if (num == null || !Number.isFinite(num)) return '—';
+        return (num / 1000000).toFixed(1) + 'MB';
+    }
 
+    formatPctCell(actual, target) {
+        if (actual == null || !target || target === 0) return { text: '—', color: '#94A3B8' };
+        const pct = (actual / target) * 100;
+        return { text: pct.toFixed(1) + '%', color: pct >= 100 ? '#10B981' : '#EF4444' };
+    }
+
+    buildGwpSectionHeader(label, colCount) {
+        return `<tr><td colspan="${colCount}" style="background: #1E3A5F; color: #fff; text-align: center; font-weight: 700; padding: 0.625rem; font-size: 0.95rem; font-style: italic;">${label}</td></tr>`;
+    }
+
+    buildGwpChannelBlock(label, channelKey, ytdMonths, year, quarter) {
+        const dp = this.dataProcessor;
+        const cellPad = 'padding: 0.5rem 1rem;';
+        const numAlign = 'text-align: right;';
+        const labelStyle = `${cellPad} text-align: left; color: #0A0E27; font-weight: 600;`;
+        const numStyle = `${cellPad} ${numAlign} color: #0A0E27; font-family: 'Google Sans Text', monospace; font-size: 0.8125rem;`;
+
+        // Channel header row: light blue band + month/run-rate column titles in gray
+        let html = `<tr>
+            <th style="${cellPad} text-align: left; background: #DBEAFE; color: #0A0E27; font-weight: 700;">${label}</th>`;
+        ytdMonths.forEach(m => {
+            html += `<th style="${cellPad} ${numAlign} background: #E5E7EB; color: #0A0E27; font-weight: 600; font-size: 0.8125rem;">${dp.formatMonthLabel(m)}</th>`;
+        });
+        html += `<th style="${cellPad} ${numAlign} background: #E5E7EB; color: #0A0E27; font-weight: 600; font-size: 0.8125rem;">Q${quarter} run rate</th>`;
+        html += `<th style="${cellPad} ${numAlign} background: #E5E7EB; color: #0A0E27; font-weight: 600; font-size: 0.8125rem;">EOY run rate</th>`;
+        html += `</tr>`;
+
+        const qRR = dp.calculateQuarterRunRate(year, quarter, channelKey);
+        const eRR = dp.calculateEOYRunRate(year, channelKey);
+
+        // Target row
+        html += `<tr><td style="${labelStyle}">Target</td>`;
+        ytdMonths.forEach(m => {
+            html += `<td style="${numStyle}">${this.formatMB(dp.getTargetForChannel(m, channelKey))}</td>`;
+        });
+        html += `<td style="${numStyle}">${this.formatMB(qRR.target)}</td>`;
+        html += `<td style="${numStyle}">${this.formatMB(eRR.target)}</td></tr>`;
+
+        // Actual row
+        html += `<tr><td style="${labelStyle}">Actual</td>`;
+        ytdMonths.forEach(m => {
+            html += `<td style="${numStyle}">${this.formatMB(dp.getActualForChannel(m, channelKey))}</td>`;
+        });
+        html += `<td style="${numStyle}">${this.formatMB(qRR.actual)}</td>`;
+        html += `<td style="${numStyle}">${this.formatMB(eRR.actual)}</td></tr>`;
+
+        // % row (italic, colored)
+        html += `<tr><td style="${cellPad}"></td>`;
+        ytdMonths.forEach(m => {
+            const p = this.formatPctCell(dp.getActualForChannel(m, channelKey), dp.getTargetForChannel(m, channelKey));
+            html += `<td style="${cellPad} ${numAlign} font-style: italic; color: ${p.color}; font-weight: 600;">${p.text}</td>`;
+        });
+        const pq = this.formatPctCell(qRR.actual, qRR.target);
+        html += `<td style="${cellPad} ${numAlign} font-style: italic; color: ${pq.color}; font-weight: 600;">${pq.text}</td>`;
+        const pe = this.formatPctCell(eRR.actual, eRR.target);
+        html += `<td style="${cellPad} ${numAlign} font-style: italic; color: ${pe.color}; font-weight: 600;">${pe.text}</td></tr>`;
+
+        // Spacer row
+        html += `<tr><td colspan="${ytdMonths.length + 3}" style="height: 0.5rem;"></td></tr>`;
+
+        return html;
+    }
+
+    renderTable() {
+        const dp = this.dataProcessor;
         const thead = document.getElementById('channelTableHead');
         const tbody = document.getElementById('channelTableBody');
         if (!thead || !tbody) return;
 
-        const headerStyle = 'padding: 0.625rem 1rem; text-align: left; font-size: 0.75rem; font-weight: 600; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #E8ECF0; white-space: nowrap;';
-        const cellStyle = 'padding: 0.75rem 1rem; border-bottom: 1px solid #F1F5F9; vertical-align: middle;';
-        const monoStyle = 'font-family: "Google Sans Text", monospace; font-size: 0.8125rem;';
-
-        // Build header
-        let headerRow = `<tr>
-            <th style="${headerStyle}">Month</th>`;
-        for (const ch of channels) {
-            headerRow += `<th style="${headerStyle} color: ${channelColors[ch]};">${ch}</th>`;
+        const year = dp.getSelectedYear();
+        const ytdMonths = dp.getYTDMonths();
+        const quarter = dp.getCurrentQuarter();
+        if (!year || ytdMonths.length === 0) {
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+            return;
         }
-        headerRow += `<th style="${headerStyle}">Total</th><th style="${headerStyle}">MoM %</th></tr>`;
-        thead.innerHTML = headerRow;
 
-        // Build rows
-        let rows = '';
-        months.forEach((month, idx) => {
-            const data = this.dataProcessor.monthlyData[month];
-            if (!data) return;
+        const colCount = ytdMonths.length + 3; // label + months + Q + EOY
 
-            const prevMonth = idx > 0 ? months[idx - 1] : null;
-            const prevData = prevMonth ? this.dataProcessor.monthlyData[prevMonth] : null;
-            const total = data['Total'] || (data['Team Agent'] + data['IG'] + data['FD/AO']);
-            const prevTotal = prevData ? (prevData['Total'] || (prevData['Team Agent'] + prevData['IG'] + prevData['FD/AO'])) : null;
-            const mom = this.dataProcessor.calculateMoMGrowth(total, prevTotal);
-
-            const rowBg = idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC';
-
-            let row = `<tr style="background: ${rowBg};">
-                <td style="${cellStyle} font-weight: 600; color: #0A0E27;">${this.dataProcessor.formatMonthLabel(month)}</td>`;
-
-            for (const ch of channels) {
-                const val = data[ch] || 0;
-                const target = this.dataProcessor.getTarget(month, ch);
-                const targetPct = target ? ((val / target) * 100).toFixed(1) : null;
-                const color = channelColors[ch];
-                row += `<td style="${cellStyle}">
-                    <div style="${monoStyle} color: #0A0E27;">${this.formatNumber(val)}</div>
-                    ${target ? `<div style="font-size: 0.7rem; color: #94A3B8; margin-top: 2px;">vs ${this.formatNumber(target)} (${targetPct}%)</div>` : ''}
-                </td>`;
-            }
-
-            const momColor = mom === null ? '#94A3B8' : mom > 0 ? '#10B981' : mom < 0 ? '#EF4444' : '#94A3B8';
-            const momSign = mom !== null && mom > 0 ? '+' : '';
-            row += `<td style="${cellStyle} ${monoStyle} font-weight: 600; color: #0A0E27;">${this.formatNumber(total)}</td>
-                <td style="${cellStyle} ${monoStyle} font-weight: 600; color: ${momColor};">${mom !== null ? momSign + mom.toFixed(1) + '%' : '—'}</td>
-            </tr>`;
-            rows += row;
-        });
-
-        tbody.innerHTML = rows;
+        thead.innerHTML = '';
+        let html = '';
+        html += this.buildGwpSectionHeader('Agency channel', colCount);
+        html += this.buildGwpChannelBlock('All account', 'All', ytdMonths, year, quarter);
+        html += this.buildGwpSectionHeader('Sub channel', colCount);
+        html += this.buildGwpChannelBlock('Team Agent', 'Team Agent', ytdMonths, year, quarter);
+        html += this.buildGwpChannelBlock('FD/AO', 'FD/AO', ytdMonths, year, quarter);
+        html += this.buildGwpChannelBlock('IG', 'IG', ytdMonths, year, quarter);
+        tbody.innerHTML = html;
     }
 
     openTargetsModal() {
@@ -533,24 +671,8 @@ function autoLoadData() {
             return;
         }
         
-        const allData = window.dashboardDataStore.getAllData();
-        
-        if (allData.channel && allData.channel.data && allData.channel.months) {
-            console.log('✓ Loading channel data from storage');
-            
-            // Load data into processor
-            dataProcessor.monthlyData = allData.channel.data;
-            
-            // Load targets
-            dataProcessor.loadTargets().then(() => {
-                // Render the dashboard
-                dashboardUI.render();
-                console.log('✓ Channel dashboard rendered with stored data');
-            });
-        } else {
-            console.log('No channel data in storage — fetching from Google Sheets...');
-            fetchChannelSheetData();
-        }
+        console.log('Fetching fresh channel data from Google Sheets...');
+        fetchChannelSheetData();
     }
 
         function showLoadingBar() {

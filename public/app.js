@@ -75,40 +75,38 @@ function setGoogleSheetSyncStatus(status, text) {
     statusEl.innerHTML = `<span class="sheet-sync-dot"></span><span>${text}</span>`;
 }
 
-function hasDataset(data, key) {
-    const value = data && data[key];
-    if (!value) return false;
-    if (key === 'cohortCsv') return Boolean(value.text);
-    return true;
-}
+// Track which datasets have completed a fresh fetch in THIS session
+const sessionFetchedKeys = new Set();
+let sessionSyncedAt = null;
 
 function updateGoogleSheetSyncIndicator() {
-    if (!window.dashboardDataStore) {
-        setGoogleSheetSyncStatus('loading', 'Checking Google Sheets...');
-        setTimeout(updateGoogleSheetSyncIndicator, 200);
-        return;
-    }
-
-    const data = window.dashboardDataStore.getAllData();
-    const loadedKeys = GOOGLE_SHEET_DATASETS.filter(item => hasDataset(data, item.key));
     const total = GOOGLE_SHEET_DATASETS.length;
+    const done = sessionFetchedKeys.size;
 
-    if (loadedKeys.length === total) {
-        const latestUpdate = Object.values(data.lastUpdated || {})
-            .filter(Boolean)
-            .sort()
-            .pop();
-        const timeText = formatSyncTime(latestUpdate);
-        setGoogleSheetSyncStatus('success', 'Google Sheets synced' + (timeText ? ` at ${timeText}` : ''));
+    if (done >= total) {
+        const t = formatSyncTime(sessionSyncedAt);
+        setGoogleSheetSyncStatus('success', 'Google Sheets synced' + (t ? ` at ${t}` : ''));
         return;
     }
 
-    if (loadedKeys.length > 0) {
-        setGoogleSheetSyncStatus('warning', `Google Sheets ${loadedKeys.length} / ${total}`);
-        return;
-    }
+    setGoogleSheetSyncStatus('loading', `Fetching Google Sheets ${done}/${total}...`);
+}
 
-    setGoogleSheetSyncStatus('loading', 'Fetching Google Sheets...');
+function recordFetchedKey(key) {
+    if (!key) return;
+    const known = GOOGLE_SHEET_DATASETS.find(d => d.key === key);
+    if (!known) return;
+    sessionFetchedKeys.add(key);
+    if (sessionFetchedKeys.size >= GOOGLE_SHEET_DATASETS.length) {
+        sessionSyncedAt = new Date().toISOString();
+    }
+    updateGoogleSheetSyncIndicator();
+}
+
+function resetSyncTracking() {
+    sessionFetchedKeys.clear();
+    sessionSyncedAt = null;
+    updateGoogleSheetSyncIndicator();
 }
 
 updateGoogleSheetSyncIndicator();
@@ -231,17 +229,16 @@ function initMonthSelector() {
 // Re-populate when data is uploaded
 window.addEventListener('dashboardDataUpdated', function() {
     populateMonthSelector();
-    updateGoogleSheetSyncIndicator();
 });
 
 window.addEventListener('message', function(event) {
     if (!event.data || event.data.type !== 'dashboardDataUpdated') return;
+    recordFetchedKey(event.data.key);
     populateMonthSelector();
-    updateGoogleSheetSyncIndicator();
     document.querySelectorAll('iframe').forEach(iframe => {
         if (iframe.contentWindow === event.source) return;
         try {
-            iframe.contentWindow.postMessage({ type: 'dashboardDataUpdated' }, '*');
+            iframe.contentWindow.postMessage({ type: 'dashboardDataUpdated', key: event.data.key }, '*');
         } catch (e) {}
     });
 });
@@ -255,8 +252,8 @@ initMonthSelector();
 function refreshAllDashboards() {
     const refreshBtn = document.getElementById('refreshBtn');
     const svg = refreshBtn.querySelector('svg');
-    setGoogleSheetSyncStatus('loading', 'Refreshing Google Sheets...');
-    
+    resetSyncTracking();
+
     // Add spinning animation
     svg.style.animation = 'spin 1s linear infinite';
     refreshBtn.disabled = true;

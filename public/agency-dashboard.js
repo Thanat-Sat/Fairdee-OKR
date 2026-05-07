@@ -423,23 +423,8 @@ window.addEventListener('load', function() {
             return;
         }
         
-        const allData = window.dashboardDataStore.getAllData();
-        
-        if (allData.agency && allData.agency.metrics && allData.agency.months) {
-            console.log('âœ“ Loading agency data from storage');
-            
-            // Load data into processor
-            agencyDataProcessor.processedData = allData.agency.metrics;
-            agencyDataProcessor.months = allData.agency.months;
-            
-            // Render the dashboard
-            agencyUI.render();
-            
-            console.log('âœ“ Agency dashboard rendered with stored data');
-        } else {
-            console.log('No agency data in storage -- fetching from Google Sheets...');
-            fetchAgencySheetData();
-        }
+        console.log('Fetching fresh agency data from Google Sheets...');
+        fetchAgencySheetData();
     }
 
         function showLoadingBar() {

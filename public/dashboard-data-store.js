@@ -37,7 +37,7 @@ class DashboardDataStore {
         return this.getEmptyData();
     }
 
-    notifyDataUpdated() {
+    notifyDataUpdated(key) {
         const event = new CustomEvent('dashboardDataUpdated', {
             detail: this.data
         });
@@ -45,7 +45,7 @@ class DashboardDataStore {
         window.dispatchEvent(event);
 
         if (window.parent && window.parent !== window) {
-            window.parent.postMessage({ type: 'dashboardDataUpdated' }, '*');
+            window.parent.postMessage({ type: 'dashboardDataUpdated', key }, '*');
         }
     }
 
@@ -56,11 +56,11 @@ class DashboardDataStore {
         }
     }
 
-    saveToStorage() {
+    saveToStorage(key) {
         try {
             localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.data));
             console.log('✅ Data saved to localStorage');
-            this.notifyDataUpdated();
+            this.notifyDataUpdated(key);
         } catch (error) {
             console.error('Error saving to storage:', error);
         }
@@ -71,7 +71,7 @@ class DashboardDataStore {
         this.refreshBeforeUpdate();
         this.data.channel = { data: channelData, months };
         this.data.lastUpdated.channel = new Date().toISOString();
-        this.saveToStorage();
+        this.saveToStorage('channel');
     }
 
     // MLM data
@@ -79,7 +79,7 @@ class DashboardDataStore {
         this.refreshBeforeUpdate();
         this.data.mlm = { teams: mlmData, months };
         this.data.lastUpdated.mlm = new Date().toISOString();
-        this.saveToStorage();
+        this.saveToStorage('mlm');
     }
 
     // Regional data
@@ -87,7 +87,7 @@ class DashboardDataStore {
         this.refreshBeforeUpdate();
         this.data.regional = { regions: regionalData, months };
         this.data.lastUpdated.regional = new Date().toISOString();
-        this.saveToStorage();
+        this.saveToStorage('regional');
     }
 
     // Segment data
@@ -95,7 +95,7 @@ class DashboardDataStore {
         this.refreshBeforeUpdate();
         this.data.segment = { segments: segmentData, months };
         this.data.lastUpdated.segment = new Date().toISOString();
-        this.saveToStorage();
+        this.saveToStorage('segment');
     }
 
     // Agency data
@@ -103,7 +103,7 @@ class DashboardDataStore {
         this.refreshBeforeUpdate();
         this.data.agency = { metrics: agencyData, months };
         this.data.lastUpdated.agency = new Date().toISOString();
-        this.saveToStorage();
+        this.saveToStorage('agency');
     }
 
     // Renewal data
@@ -111,7 +111,7 @@ class DashboardDataStore {
         this.refreshBeforeUpdate();
         this.data.renewal = { channels: renewalData, months };
         this.data.lastUpdated.renewal = new Date().toISOString();
-        this.saveToStorage();
+        this.saveToStorage('renewal');
     }
 
     // Focus Team data
@@ -119,7 +119,7 @@ class DashboardDataStore {
         this.refreshBeforeUpdate();
         this.data.focusTeam = { teams: teamData, months, teamList };
         this.data.lastUpdated.focusTeam = new Date().toISOString();
-        this.saveToStorage();
+        this.saveToStorage('focusTeam');
     }
 
     // MoM Cohort CSV (raw text)
@@ -127,7 +127,7 @@ class DashboardDataStore {
         this.refreshBeforeUpdate();
         this.data.cohortCsv = { text: csvText };
         this.data.lastUpdated.cohortCsv = new Date().toISOString();
-        this.saveToStorage();
+        this.saveToStorage('cohortCsv');
     }
 
     // Get all data

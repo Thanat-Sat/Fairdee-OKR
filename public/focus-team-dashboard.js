@@ -1090,26 +1090,8 @@ function autoLoadData() {
             return;
         }
         
-        const allData = window.dashboardDataStore.getAllData();
-        
-        if (allData.focusTeam && allData.focusTeam.teams && allData.focusTeam.months && allData.focusTeam.teamList) {
-            console.log('âœ“ Loading focus team data from storage');
-            
-            // Load data into processor
-            focusTeamDataProcessor.teamData = allData.focusTeam.teams;
-            focusTeamDataProcessor.months = allData.focusTeam.months;
-            focusTeamDataProcessor.teams = allData.focusTeam.teamList;
-            focusTeamDataProcessor.sortTeams();
-
-            // Render immediately, then re-render with targets when ready
-            focusTeamUI.render();
-            focusTeamDataProcessor.loadTargets().then(() => {
-                focusTeamUI.render();
-            });
-                } else {
-            console.log('No focus team data in storage — fetching from Google Sheets...');
-            fetchFocusTeamSheetData();
-        }
+        console.log('Fetching fresh focus team data from Google Sheets...');
+        fetchFocusTeamSheetData();
     }
 
     checkDataStore();

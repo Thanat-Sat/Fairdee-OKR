@@ -359,23 +359,8 @@ window.addEventListener('load', function() {
             return;
         }
         
-        const allData = window.dashboardDataStore.getAllData();
-        
-        if (allData.segment && allData.segment.segments && allData.segment.months) {
-            console.log('✓ Loading segment data from storage');
-            
-            // Load data into processor
-            segmentDataProcessor.segmentData = allData.segment.segments;
-            segmentDataProcessor.months = allData.segment.months;
-            
-            // Render the dashboard
-            segmentUI.render();
-            
-            console.log('✓ Segment dashboard rendered with stored data');
-        } else {
-            console.log('No segment data in storage — fetching from Google Sheets...');
-            fetchSegmentSheetData();
-        }
+        console.log('Fetching fresh segment data from Google Sheets...');
+        fetchSegmentSheetData();
     }
 
         function showLoadingBar() {

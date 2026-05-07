@@ -822,27 +822,8 @@ function autoLoadData() {
             return;
         }
         
-        const allData = window.dashboardDataStore.getAllData();
-        
-        if (allData.mlm && allData.mlm.teams && allData.mlm.months) {
-            console.log('âœ“ Loading MLM data from storage');
-            
-            // Load data into processor
-            mlmDataProcessor.mlmData = allData.mlm.teams;
-            mlmDataProcessor.months = allData.mlm.months;
-            
-            // Extract teams from the loaded data
-            mlmDataProcessor.teams = Object.keys(allData.mlm.teams).sort();
-            
-            // Render immediately, then re-render with targets when ready
-            mlmUI.render();
-            mlmDataProcessor.loadTargets().then(() => {
-                mlmUI.render();
-            });
-                } else {
-            console.log('No MLM data in storage — fetching from Google Sheets...');
-            fetchMLMSheetData();
-        }
+        console.log('Fetching fresh MLM data from Google Sheets...');
+        fetchMLMSheetData();
     }
 
     checkDataStore();
