@@ -85,7 +85,7 @@ function initializeAuthHandlers() {
         if (result.success) {
             showSuccess('Sign in successful! Redirecting...');
             setTimeout(() => {
-                window.location.href = 'home.html';
+                window.location.href = 'index.html';
             }, 1000);
         } else {
             showError(result.error);
@@ -125,7 +125,7 @@ function initializeAuthHandlers() {
         if (result.success) {
             showSuccess('Account created successfully! Redirecting...');
             setTimeout(() => {
-                window.location.href = 'home.html';
+                window.location.href = 'index.html';
             }, 1000);
         } else {
             showError(result.error);
@@ -137,7 +137,7 @@ function initializeAuthHandlers() {
     // Check if user is already logged in
     authManager.onAuthStateChanged((user) => {
         if (user) {
-            window.location.href = 'home.html';
+            window.location.href = 'index.html';
         }
     });
 }

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -7,707 +7,334 @@
 
     <link rel="icon" type="image/png" href="assets/fairdee-favicon.png">
     <link rel="apple-touch-icon" href="assets/fairdee-apple-touch-icon.png">
-<title>OKR Dashboard - Monthly Metrics</title>
-
-
-    <!-- Preconnect for Performance -->
+<title>Fairdee Dashboard Hub</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Text:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
-
-
-    <!-- CSV Parser -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-
-
-    <!-- Chart.js for visualizations -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
-
-    <!-- jsPDF for PDF export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-
-
-    <!-- External CSS -->
-    <link rel="stylesheet" href="styles.css">
-
-
     <style>
-        /* Auth Gate - blocks page until login verified */
-        .auth-loading-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: linear-gradient(135deg, var(--primary, #0F172A) 0%, var(--primary-light, #1E293B) 100%);
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Google Sans Text', sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .hub-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .hub-logo {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            margin: 0 auto 1.25rem;
+            display: block;
+            object-fit: cover;
+            box-shadow: 0 8px 24px rgba(255, 107, 53, 0.35);
+        }
+
+        .hub-title {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 0.5rem;
+        }
+
+        .hub-subtitle {
+            color: rgba(255, 255, 255, 0.55);
+            font-size: 0.95rem;
+        }
+
+        .hub-cards {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 1.5rem;
+            max-width: 1080px;
+            width: 100%;
+        }
+
+        .hub-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2.5rem 2rem;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            backdrop-filter: blur(12px);
+        }
+
+        @media (max-width: 980px) {
+            .hub-cards {
+                grid-template-columns: 1fr;
+                max-width: 360px;
+            }
+        }
+
+        .hub-card:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 107, 53, 0.5);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 48px rgba(0, 0, 0, 0.3);
+        }
+
+        .hub-card-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 18px;
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 99999;
-            transition: opacity 0.4s ease;
-        }
-        .auth-loading-overlay.fade-out {
-            opacity: 0;
-            pointer-events: none;
-        }
-        .auth-loading-content {
-            text-align: center;
-            color: white;
-        }
-        .auth-loading-spinner {
-            width: 48px; height: 48px;
-            border: 4px solid rgba(255,255,255,0.2);
-            border-top-color: #FF6B35;
-            border-radius: 50%;
-            animation: authSpin 0.8s linear infinite;
-            margin: 0 auto 1.5rem;
-        }
-        @keyframes authSpin { to { transform: rotate(360deg); } }
-        .auth-loading-text {
-            font-family: 'Google Sans Text', sans-serif;
-            font-size: 1.1rem;
-            font-weight: 600;
-            opacity: 0.9;
+            margin-bottom: 1.5rem;
+            color: #fff;
         }
 
-        /* User bar at top of page */
-        .user-bar {
-            background: var(--card-bg, #fff);
-            border-bottom: 1px solid var(--border, #E5E7EB);
-            padding: 0.75rem 1.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-            font-family: 'Google Sans Text', sans-serif;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-        .user-bar-actions {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-        }
-        .user-bar .okr-header-brand h1 {
-            font-size: 1.25rem;
-        }
-        .user-bar .brand-logo {
+        .hub-card-icon svg {
             width: 34px;
             height: 34px;
-            border-radius: 7px;
-            object-fit: cover;
-            flex-shrink: 0;
+            display: block;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
         }
-        .user-bar-info {
+
+        .hub-card-icon.okr {
+            background: linear-gradient(135deg, #FF6B35 0%, #E85A2B 100%);
+            box-shadow: 0 8px 24px rgba(255, 107, 53, 0.3);
+        }
+
+        .hub-card-icon.mm {
+            background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+        }
+
+        .hub-card-icon.crm {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
+        }
+
+        .hub-card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 0.75rem;
+        }
+
+        .hub-card-desc {
+            font-size: 0.875rem;
+            color: rgba(255, 255, 255, 0.55);
+            line-height: 1.6;
+        }
+
+        .hub-card-arrow {
+            margin-top: 1.75rem;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            color: var(--text-secondary, #64748B);
-            font-size: 0.875rem;
-        }
-        .user-bar-name {
-            color: var(--text-secondary, #64748B);
-        }
-    </style>
-    <style>
-        /* Additional styles for target upload */
-        .upload-zone.secondary {
-            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
-            border: 2px dashed #667eea;
-        }
-
-
-        .upload-zone.secondary:hover {
-            background: linear-gradient(135deg, #667eea25 0%, #764ba225 100%);
-            border-color: #764ba2;
-        }
-
-
-        .btn-secondary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-
-        .btn-secondary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-        }
-
-
-        /* Hide all file input elements */
-        input[type="file"] {
-            display: none !important;
-            visibility: hidden !important;
-            width: 0 !important;
-            height: 0 !important;
-            opacity: 0 !important;
-            position: absolute !important;
-            pointer-events: none !important;
-        }
-
-
-        .btn-danger {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-
-        .btn-danger:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-        }
-
-
-        /* Monthly Progress Styles */
-        .monthly-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-
-        .monthly-kr-card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: var(--shadow-md);
-            border: 1px solid var(--border);
-            transition: all 0.3s ease;
-        }
-
-
-        .monthly-kr-card:hover {
-            box-shadow: var(--shadow-lg);
-            transform: translateY(-2px);
-        }
-
-
-        .monthly-kr-header {
-            margin-bottom: 1rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid var(--border);
-        }
-
-
-        .monthly-kr-name {
-            font-size: 1.125rem;
-            font-weight: 700;
-            color: var(--primary);
-            margin-bottom: 0.5rem;
-        }
-
-
-        .monthly-kr-title {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-        }
-
-
-        .monthly-progress-bar {
-            margin: 1rem 0;
-        }
-
-
-        .monthly-progress-label {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 0.5rem;
-            font-size: 0.875rem;
-        }
-
-
-        .monthly-progress-label-month {
-            color: var(--text-muted);
-            font-weight: 600;
-        }
-
-
-        .monthly-progress-label-value {
-            font-family: 'Google Sans Text', sans-serif;
-            font-weight: 700;
-        }
-
-
-        .monthly-progress-label-value.over-target {
-            color: var(--success);
-        }
-
-
-        .monthly-progress-label-value.under-target {
-            color: var(--accent);
-        }
-
-
-        .monthly-bar-container {
-            background: var(--bg);
-            border-radius: 8px;
-            height: 12px;
-            overflow: hidden;
-            position: relative;
-        }
-
-
-        .monthly-bar-fill {
-            height: 100%;
-            border-radius: 8px;
-            transition: width 0.6s ease;
-            position: relative;
-        }
-
-
-        .monthly-bar-fill.excellent {
-            background: linear-gradient(90deg, var(--success), #00f5c4);
-        }
-
-
-        .monthly-bar-fill.good {
-            background: linear-gradient(90deg, #F59E0B, #D97706);  /* Yellow/Orange for 90-99% */
-        }
-
-
-        .monthly-bar-fill.fair {
-            background: linear-gradient(90deg, #fbbf24, #f59e0b);
-        }
-
-
-        .monthly-bar-fill.poor {
-            background: linear-gradient(90deg, #ef4444, #dc2626);
-        }
-
-
-        .monthly-stats-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-
-        .monthly-stat-box {
-            text-align: center;
-            padding: 0.75rem;
-            background: var(--bg);
-            border-radius: 8px;
-        }
-
-
-        .monthly-stat-label {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 0.25rem;
-        }
-
-
-        .monthly-stat-value {
-            font-size: 1.125rem;
-            font-weight: 700;
-            font-family: 'Google Sans Text', sans-serif;
-            color: var(--primary);
-        }
-
-
-        .chart-container {
-            margin-top: 1.5rem;
-            height: 200px;
-            position: relative;
-        }
-
-
-        .no-monthly-data {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-muted);
-            font-style: italic;
-            background: var(--bg);
-            border-radius: 8px;
-        }
-
-
-        /* PDF Export Button */
-        .btn-export-pdf {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.6rem 1.25rem;
-            background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            font-family: 'Google Sans Text', sans-serif;
-            cursor: pointer;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.6);
             transition: all 0.2s ease;
-            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.25);
         }
-        .btn-export-pdf:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
+
+        .hub-card-arrow svg {
+            width: 18px;
+            height: 18px;
+            display: block;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.25;
+            stroke-linecap: round;
+            stroke-linejoin: round;
         }
-        .btn-export-pdf:active {
-            transform: translateY(0);
+
+        .hub-card:hover .hub-card-arrow {
+            background: rgba(255, 107, 53, 0.25);
+            color: #FF6B35;
         }
-        .btn-export-pdf:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
+
+        .hub-card.mm:hover .hub-card-arrow {
+            background: rgba(99, 102, 241, 0.25);
+            color: #818CF8;
         }
+
+        .hub-card.crm:hover .hub-card-arrow {
+            background: rgba(16, 185, 129, 0.25);
+            color: #34D399;
+        }
+
+        .hub-footer {
+            margin-top: 3rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .hub-user {
+            color: rgba(255, 255, 255, 0.45);
+            font-size: 0.85rem;
+        }
+
+        .hub-signout {
+            background: none;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 0.4rem 0.9rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            font-family: 'Google Sans Text', sans-serif;
+            transition: all 0.2s ease;
+        }
+
+        .hub-signout:hover {
+            border-color: rgba(239, 68, 68, 0.5);
+            color: #F87171;
+        }
+
+        /* Auth loading overlay */
+        .auth-overlay {
+            position: fixed;
+            inset: 0;
+            background: #0F172A;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+        .auth-overlay.hidden { opacity: 0; pointer-events: none; }
+        .auth-spinner {
+            width: 40px; height: 40px;
+            border: 3px solid rgba(255,255,255,0.15);
+            border-top-color: #FF6B35;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-    <!-- Auth Loading Overlay - shown until Firebase confirms login -->
-    <div id="authLoadingOverlay" class="auth-loading-overlay">
-        <div class="auth-loading-content">
-            <div class="auth-loading-spinner"></div>
-            <div class="auth-loading-text">Verifying access...</div>
-        </div>
+
+    <div class="auth-overlay" id="authOverlay">
+        <div class="auth-spinner"></div>
     </div>
 
-    <!-- User Bar - shown after login confirmed -->
-    <div id="userBar" class="user-bar" style="display: none;">
-        <div class="okr-header-brand">
-            <img src="assets/fairdee-logo.png" alt="Fairdee" class="brand-logo">
-            <h1>OKR Performance Dashboard</h1>
-        </div>
-        <div class="user-bar-actions">
-            <div id="okrSheetSyncStatus" class="sheet-sync-status sheet-sync-loading">
-                <span class="sheet-sync-dot"></span>
-                <span>Fetching Google Sheets...</span>
-            </div>
-            <a href="home.html" class="home-btn">← Home</a>
-            <div class="user-bar-info">
-                <span class="user-bar-name user-email" id="userName">User</span>
-            </div>
-            <button class="sign-out-btn" id="signOutBtn" onclick="handleSignOut()">Sign Out</button>
-        </div>
+    <div class="hub-header">
+        <img src="assets/fairdee-logo.png" alt="Fairdee" class="hub-logo">
+        <h1 class="hub-title">Fairdee Central Hub</h1>
+        <p class="hub-subtitle">Choose a workspace to open</p>
     </div>
 
-    <div class="container">
-        <!-- Upload Section (hidden - data loads automatically) -->
-        <div id="uploadSection" class="upload-section" style="display: none;">
-            <h1 class="upload-title">OKR Dashboard</h1>
-            <p class="upload-subtitle">OKR data loads automatically. Optionally upload Hunter Analysis and Team Performance files.</p>
-
-
-            <!-- OKR Data Source -->
-            <div style="border: 2px solid var(--border); border-radius: 12px; padding: 2rem; background: #FAFBFC; text-align: center;">
-                <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📊</div>
-                <div style="font-weight: 600; font-size: 1rem; margin-bottom: 0.5rem; color: var(--text-primary);">OKR Data</div>
-                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">Auto-loaded from Google Sheets</div>
-                <div id="dataFileStatus" class="upload-status"></div>
+    <div class="hub-cards">
+        <a class="hub-card" href="okr-dashboard.html">
+            <div class="hub-card-icon okr" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <circle cx="12" cy="12" r="1.5"></circle>
+                    <path d="M12 3v3"></path>
+                    <path d="M21 12h-3"></path>
+                </svg>
             </div>
-
-
-            <!-- Hunter Analysis Auto-load -->
-            <div style="margin-top: 3rem;">
-                <h3 style="text-align: center; color: var(--primary); margin-bottom: 1rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                    <span style="font-size: 1.2rem;">🎯</span> Hunter Analysis
-                </h3>
-
-                <div style="border: 2px solid var(--border); border-radius: 12px; padding: 1.5rem; background: #FAFBFC;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-                        <div style="text-align: center; padding: 1rem;">
-                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📈</div>
-                            <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem; color: var(--text-primary);">First Transacting</div>
-                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem;">Auto-loaded from Google Sheets</div>
-                            <div id="firstTransactingStatus" class="upload-status"></div>
-                        </div>
-                        <div style="text-align: center; padding: 1rem;">
-                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📊</div>
-                            <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem; color: var(--text-primary);">Early Retention</div>
-                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem;">Auto-loaded from Google Sheets</div>
-                            <div id="earlyRetentionStatus" class="upload-status"></div>
-                        </div>
-                    </div>
-                </div>
+            <div class="hub-card-title">OKR Dashboard</div>
+            <p class="hub-card-desc">Track objectives and key results, KAM performance, fleet analysis, and monthly targets.</p>
+            <div class="hub-card-arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <path d="M5 12h14"></path>
+                    <path d="m13 6 6 6-6 6"></path>
+                </svg>
             </div>
+        </a>
 
-
-            <!-- Team Performance Auto-load -->
-            <div style="margin-top: 3rem;">
-                <h3 style="text-align: center; color: var(--primary); margin-bottom: 1rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                    <span style="font-size: 1.2rem;">📊</span> Team Performance Data
-                </h3>
-
-                <div style="border: 2px solid var(--border); border-radius: 12px; padding: 2rem; background: #FAFBFC; text-align: center;">
-                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">📊</div>
-                    <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem; color: var(--text-primary);">MLM Key Funnel</div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem;">Auto-loaded from Google Sheets</div>
-                    <div id="teamPerfFileStatusMain" class="upload-status"></div>
-                </div>
+        <a class="hub-card mm" href="mm.html">
+            <div class="hub-card-icon mm" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <path d="M4 19V5"></path>
+                    <path d="M4 19h16"></path>
+                    <rect x="7" y="11" width="3" height="5" rx="1"></rect>
+                    <rect x="12" y="8" width="3" height="8" rx="1"></rect>
+                    <rect x="17" y="4" width="3" height="12" rx="1"></rect>
+                </svg>
             </div>
-
-
-            <!-- View Dashboard Button -->
-            <div id="viewDashboardSection" style="margin-top: 3rem; text-align: center; display: none;">
-                <button class="btn-view-dashboard" onclick="showDashboard()">
-                    View Dashboard →
-                </button>
-                <p style="margin-top: 0.75rem; color: var(--text-muted); font-size: 0.875rem;">
-                    You can upload more files or proceed to view your dashboard
-                </p>
+            <div class="hub-card-title">Monthly Metrics</div>
+            <p class="hub-card-desc">Executive summary, channel overview, MLM, focus team, agency, segment, and renewal dashboards.</p>
+            <div class="hub-card-arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <path d="M5 12h14"></path>
+                    <path d="m13 6 6 6-6 6"></path>
+                </svg>
             </div>
+        </a>
 
-        </div>
-
-        <!-- Dashboard Section -->
-        <div class="dashboard" id="dashboard">
-            <!-- Filters -->
-            <div class="filter-section">
-                <div class="filter-row">
-                    <div class="filter-group">
-                        <label class="filter-label">📅 View Month</label>
-                        <select class="filter-select month-select" id="monthFilter" onchange="applyFilters()">
-                            <option value="">Latest Month</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label class="filter-label">Goal</label>
-                        <select class="filter-select" id="goalFilter" onchange="applyFilters()">
-                            <option value="">All Goals</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label class="filter-label">Objective</label>
-                        <select class="filter-select" id="objectiveFilter" onchange="applyFilters()">
-                            <option value="">All Objectives</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label class="filter-label">Topic</label>
-                        <select class="filter-select" id="topicFilter" onchange="applyFilters()">
-                            <option value="">All Topics</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label class="filter-label">Owner</label>
-                        <select class="filter-select" id="ownerFilter" onchange="applyFilters()">
-                            <option value="">All Owners</option>
-                        </select>
-                    </div>
-                    <button class="btn-reset" onclick="resetFilters()">Reset Filters</button>
-                </div>
+        <a class="hub-card crm" href="http://143.14.9.55:8090/">
+            <div class="hub-card-icon crm" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <path d="M3 21V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v16"></path>
+                    <path d="M16 8h3a2 2 0 0 1 2 2v11"></path>
+                    <path d="M7 7h4"></path>
+                    <path d="M7 11h4"></path>
+                    <path d="M7 15h4"></path>
+                    <path d="M10 21v-3"></path>
+                </svg>
             </div>
-
-
-            <!-- Tabs -->
-            <div class="tabs">
-                <button class="tab active" onclick="switchTab(this, 'cardsView')">Card View</button>
-                <button class="tab" onclick="switchTab(this, 'tableView')">Table View</button>
-                <button class="tab" onclick="switchTab(this, 'topMovers')">Top Movers</button>
-                <button class="tab" onclick="switchTab(this, 'monthlyProgress')">Monthly Progress</button>
-                <button class="tab" onclick="switchTab(this, 'hunterAnalysis')">Hunter Analysis</button>
-                <button class="tab" onclick="switchTab(this, 'teamPerformance')">KAM Analysis</button>
-                <button class="tab" onclick="switchTab(this, 'fleetAnalysis')">Fleet Analysis</button>
-                <button class="tab" onclick="switchTab(this, 'actionItems')">Action Items</button>
+            <div class="hub-card-title">Fairdee CRM</div>
+            <p class="hub-card-desc">Open the Fairdee CRM workspace for customer and sales operations.</p>
+            <div class="hub-card-arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <path d="M5 12h14"></path>
+                    <path d="m13 6 6 6-6 6"></path>
+                </svg>
             </div>
-
-
-            <!-- Goal Highlights (shown on main views) -->
-            <div class="goal-highlights-section" id="goalHighlights">
-                <h2 style="margin: 0 0 1.5rem 0; color: var(--primary); font-size: 1.5rem; font-weight: 800;">📊 Goal Performance Highlights</h2>
-                <div id="goalHighlightsContainer"></div>
-            </div>
-
-
-            <!-- Cards View -->
-            <div class="tab-content active" id="cardsView">
-                <div class="okr-grid" id="okrGrid"></div>
-            </div>
-
-
-            <!-- Table View -->
-            <div class="tab-content" id="tableView">
-                <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
-                    <button class="btn-export-pdf" onclick="exportTableToPDF()">
-                        <span style="margin-right: 0.4rem;">📄</span> Export to PDF
-                    </button>
-                </div>
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th class="col-kr">Key Result</th>
-                                <th class="col-topic">Topic</th>
-                                <th class="col-owner">Owner</th>
-                                <th class="col-current">Current</th>
-                                <th class="col-target">Target</th>
-                                <th class="col-change">Change</th>
-                                <th class="col-progress">Progress</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-
-
-            <!-- Top Movers View -->
-            <div class="tab-content" id="topMovers">
-                <div class="top-movers-page">
-                    <div class="top-movers-header">
-                        <h2>📈 KR Performance Trends</h2>
-                        <p>Track the biggest month-over-month changes in your Key Results</p>
-                    </div>
-                    <div class="top-movers-section">
-                        <div class="mover-card growth">
-                            <h2 class="mover-title">
-                                <span class="mover-icon">📈</span>
-                                Top 5 KR Growth
-                            </h2>
-                            <div id="topGrowth"></div>
-                        </div>
-
-
-                        <div class="mover-card drop">
-                            <h2 class="mover-title">
-                                <span class="mover-icon">📉</span>
-                                Top 5 KR Drop
-                            </h2>
-                            <div id="topDrop"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-
-            <!-- Monthly Progress View -->
-            <div class="tab-content" id="monthlyProgress">
-                <div id="monthlyProgressContainer">
-                    <div class="no-monthly-data">
-                        Upload monthly targets CSV to see monthly progress tracking
-                    </div>
-                </div>
-            </div>
-
-
-            <!-- Hunter Analysis View -->
-            <div class="tab-content" id="hunterAnalysis">
-                <div id="hunterAnalysisContainer">
-                    <div class="no-monthly-data">
-                        Upload Hunter Analysis CSV files to see activation and retention trends
-                    </div>
-                </div>
-            </div>
-
-
-            <!-- Team Performance View -->
-            <div class="tab-content" id="teamPerformance">
-                <div id="teamPerformanceContainer">
-                    <!-- Upload zone shown when no data loaded -->
-                    <div id="teamPerfUploadSection">
-                        <div style="border: 2px dashed var(--border); border-radius: 12px; padding: 3rem; background: #FAFBFC; text-align: center;">
-                            <div class="upload-icon" style="background: linear-gradient(135deg, #FF6B35 0%, #E85A2B 100%); margin: 0 auto 1.5rem; font-size: 2.5rem;">📊</div>
-                            <h3 style="color: var(--primary); margin-bottom: 0.5rem; font-weight: 700;">Upload Team Performance Data</h3>
-                            <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">Upload a CSV file with columns: team_name, team_anchor_code, agent_province, month, gwp, active_agent, sales</p>
-                            <div class="upload-zone" id="teamPerfUploadZone" style="border: none; background: transparent; padding: 2rem 1rem;">
-                                <div class="upload-text" style="font-size: 1rem;">Drop your team performance CSV here or click to browse</div>
-                                <div class="upload-hint">Supports .csv files</div>
-                                <input type="file" id="teamPerfFileInput" accept=".csv">
-                            </div>
-                            <button class="btn-upload" onclick="document.getElementById('teamPerfFileInput').click()">
-                                Choose Team Performance File
-                            </button>
-                            <div id="teamPerfFileStatus" class="upload-status"></div>
-                        </div>
-                    </div>
-                    <!-- Dynamic content rendered here after upload -->
-                    <div id="teamPerfDynamicContent" style="display: none;"></div>
-                </div>
-            </div>
-            <div class="tab-content" id="actionItems">
-                <div class="action-items-container" id="actionItemsContainer"></div>
-            </div>
-
-
-            <!-- Fleet Analysis View -->
-            <div class="tab-content" id="fleetAnalysis">
-                <div id="fleetAnalysisContainer">
-                    <div id="fleetFetchStatus" class="upload-status" style="margin-bottom: 1rem;"></div>
-
-
-                    <!-- Dynamic fleet content -->
-                    <div id="fleetDynamicContent"></div>
-                </div>
-            </div>
-
-
-            <!-- Reset Button -->
-            <div style="text-align: center; margin-top: 2rem;">
-                <button class="btn-reset" onclick="resetDashboard()">Upload New Files</button>
-            </div>
-        </div>
+        </a>
     </div>
 
-    <!-- Firebase SDK (COMPAT) -->
+    <div class="hub-footer">
+        <span class="hub-user" id="hubUserEmail"></span>
+        <button class="hub-signout" id="hubSignOut">Sign Out</button>
+    </div>
+
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="firebase-config.js"></script>
 
-    <!-- Auth Gate: must login before using dashboard -->
     <script>
-        (function() {
-            var overlay = document.getElementById('authLoadingOverlay');
-            var userBar = document.getElementById('userBar');
-            var userName = document.getElementById('userName');
+        function waitForAuth() {
+            if (!window.authManager) { setTimeout(waitForAuth, 100); return; }
 
-            auth.onAuthStateChanged(function(user) {
+            authManager.onAuthStateChanged((user) => {
                 if (!user) {
-                    // Not logged in — redirect to login
                     window.location.href = 'login.html';
-                } else {
-                    // Logged in — show dashboard
-                    var displayName = user.displayName || user.email || 'User';
-
-                    userName.textContent = displayName;
-
-                    // Fade out overlay
-                    overlay.classList.add('fade-out');
-                    setTimeout(function() {
-                        overlay.style.display = 'none';
-                    }, 400);
-
-                    // Show user bar
-                    userBar.style.display = 'flex';
+                    return;
                 }
+                document.getElementById('hubUserEmail').textContent = user.email;
+                document.getElementById('authOverlay').classList.add('hidden');
             });
-        })();
 
-        function handleSignOut() {
-            if (window.authManager) {
-                authManager.signOut();
-            } else {
-                auth.signOut().then(function() {
-                    window.location.href = 'login.html';
-                });
-            }
+            document.getElementById('hubSignOut').addEventListener('click', async () => {
+                await authManager.signOut();
+                window.location.href = 'login.html';
+            });
         }
+        waitForAuth();
     </script>
-
-    <!-- External JavaScript -->
-    <script src="dashboard-copy.js?v=1778064200000"></script>
-    <script src="script.js"></script>
 </body>
 </html>
