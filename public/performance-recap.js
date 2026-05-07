@@ -775,7 +775,7 @@ class PerformanceRecap {
         const cohortData = this.generateCohortSegmentData();
         
         if (!cohortData) {
-            tableTitle.textContent = 'Insufficient data for MoM analysis';
+            (tableTitle.querySelector('.table-title-text') || tableTitle).textContent = 'Insufficient data for MoM analysis';
             thead.innerHTML = '';
             tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: #64748b;">Need at least 2 months of data</td></tr>';
             return;
@@ -785,7 +785,8 @@ class PerformanceRecap {
             ? '<span style="font-size:0.7rem;font-weight:600;background:#dcfce7;color:#16a34a;border-radius:4px;padding:2px 7px;margin-left:8px;vertical-align:middle;">✓ CSV Data</span>'
             : '<span style="font-size:0.7rem;font-weight:600;background:#fef3c7;color:#92400e;border-radius:4px;padding:2px 7px;margin-left:8px;vertical-align:middle;">⚠ Estimated</span>';
 
-        tableTitle.innerHTML = `Identifying MoM growth without seasonality ${this.formatCurrency(cohortData.totalChange)} THB by Cohort and Segment${badge}`;
+        const titleTextEl = tableTitle.querySelector('.table-title-text') || tableTitle;
+        titleTextEl.innerHTML = `Identifying MoM growth without seasonality ${this.formatCurrency(cohortData.totalChange)} THB by Cohort and Segment${badge}`;
         
         // Build header
         thead.innerHTML = `

@@ -33,14 +33,10 @@
         .recap-header .logo {
             width: 52px;
             height: 52px;
-            background: linear-gradient(135deg, #FF6B35 0%, #E85A2B 100%);
             border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 800;
-            font-size: 1.5rem;
+            display: block;
+            object-fit: cover;
+            flex-shrink: 0;
         }
 
         .recap-header h1 {
@@ -310,7 +306,7 @@
 
             <!-- Header with Logo and Month Selector -->
             <div class="recap-header">
-                <div class="logo">FD</div>
+                <img src="assets/fairdee-logo.png" alt="Fairdee" class="logo">
                 <h1 id="recapTitle">Dec Performance Recap</h1>
                 <select id="monthSelect" style="display:none;"></select>
             </div>
@@ -342,7 +338,7 @@
 
                 <!-- Table Card -->
                 <div class="table-card">
-                    <div class="table-title" id="tableTitle">Identifying MoM growth without seasonality by Cohort and Segment</div>
+                    <div class="table-title" id="tableTitle"><span class="table-title-text">Identifying MoM growth without seasonality by Cohort and Segment</span></div>
                     <div class="table-wrapper">
                         <table class="recap-table">
                             <thead id="recapTableHead">

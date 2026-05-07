@@ -27,6 +27,10 @@
         return Boolean(el.closest('.modal'));
     }
 
+    function isOptedOut(el) {
+        return Boolean(el.closest('[data-no-copy]'));
+    }
+
     function isVisible(el) {
         const style = window.getComputedStyle(el);
         const rect = el.getBoundingClientRect();
@@ -90,12 +94,16 @@
     }
 
     function ensureButton(target) {
-        if (!target || target.dataset.copySnapshotReady === 'true' || isInModal(target) || !isVisible(target)) return;
+        if (!target || isInModal(target) || isOptedOut(target) || !isVisible(target)) return;
+
+        const existing = target._copySnapshotButton;
+        if (existing && existing.isConnected) return;
 
         const mount = getButtonMount(target);
         if (!mount) return;
 
         const button = createButton(target);
+        target._copySnapshotButton = button;
         target.dataset.copySnapshotReady = 'true';
 
         if (mount === target) {

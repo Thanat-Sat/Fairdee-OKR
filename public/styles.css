@@ -251,7 +251,25 @@
             border-color: var(--accent);
             box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
         }
-        
+
+        .filter-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-family: 'Google Sans Text', sans-serif;
+            background: var(--bg);
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+        }
+
         .btn-reset {
             padding: 0.75rem 1.5rem;
             background: transparent;
@@ -1960,6 +1978,24 @@
     font-weight: 800;
     color: var(--text-primary);
     font-family: 'Google Sans Text', sans-serif;
+}
+
+.focus-team-header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-left: auto;
+    flex-wrap: wrap;
+}
+
+.section-header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-left: auto;
+    flex-wrap: wrap;
 }
 
 /* ---- Dashboard content wrapper ---- */

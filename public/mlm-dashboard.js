@@ -418,9 +418,7 @@ class MLMUI {
 
     getPercentageClass(percentage) {
         if (percentage === null) return '';
-        if (percentage >= 100) return 'success';
-        if (percentage >= 80) return 'warning';
-        return 'danger';
+        return percentage >= 100 ? 'positive' : 'negative';
     }
 
     async render() {
