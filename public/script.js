@@ -1158,7 +1158,7 @@ function renderGoalHighlights() {
             statusColor = '#10B981';
             statusBg = '#F0FDF4';
             statusText = 'Achieved Target';
-        } else if (successRate >= 90) {
+        } else if (successRate >= 90 || (totalKRs - achievedKRs) <= 1) {
             statusColor = '#F59E0B';
             statusBg = '#FFFBEB';
             statusText = 'Slightly Under Target';
@@ -1747,7 +1747,7 @@ function exportTableToPDF() {
             // Status colors
             var statusText, statusR, statusG, statusB, bgR, bgG, bgB;
             if (successRate >= 100) { statusText = 'Achieved'; statusR = 16; statusG = 185; statusB = 129; bgR = 240; bgG = 253; bgB = 244; }
-            else if (successRate >= 90) { statusText = 'Slightly Under'; statusR = 245; statusG = 158; statusB = 11; bgR = 255; bgG = 251; bgB = 235; }
+            else if (successRate >= 90 || (totalKRs - achievedKRs) <= 1) { statusText = 'Slightly Under'; statusR = 245; statusG = 158; statusB = 11; bgR = 255; bgG = 251; bgB = 235; }
             else { statusText = 'Under Target'; statusR = 239; statusG = 68; statusB = 68; bgR = 254; bgG = 242; bgB = 242; }
             
             // Check if we need a new page (each goal card ~48mm)
