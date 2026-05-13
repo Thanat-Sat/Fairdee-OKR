@@ -385,8 +385,8 @@ function handleCsvFile(file) {
                 <td style="padding:0.4rem 0.75rem;border-bottom:1px solid #f1f5f9;">${row.unit}</td>
                 <td style="padding:0.4rem 0.75rem;border-bottom:1px solid #f1f5f9;color:#64748b;">${row.notes}</td>
                 <td style="padding:0.4rem 0.75rem;border-bottom:1px solid #f1f5f9;text-align:center;">
-                    ${ok ? '<span style="color:#059669;font-weight:600;">✓ OK</span>'
-                         : `<span style="color:#dc2626;font-size:0.72rem;" title="${row.errors.join(', ')}">✗ ${row.errors[0]}</span>`}
+                    ${ok ? '<span style="color:#059669;font-weight:600;display:inline-flex;align-items:center;gap:0.25rem;">' + ((window.ICONS && window.ICONS.check) || '') + ' OK</span>'
+                         : `<span style="color:#dc2626;font-size:0.72rem;display:inline-flex;align-items:center;gap:0.25rem;" title="${row.errors.join(', ')}">${(window.ICONS && window.ICONS.x) || ''} ${row.errors[0]}</span>`}
                 </td>
             </tr>`;
         }).join('');

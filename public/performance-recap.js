@@ -782,8 +782,8 @@ class PerformanceRecap {
         }
         
         const badge = cohortData.isRealData
-            ? '<span style="font-size:0.7rem;font-weight:600;background:#dcfce7;color:#16a34a;border-radius:4px;padding:2px 7px;margin-left:8px;vertical-align:middle;">✓ CSV Data</span>'
-            : '<span style="font-size:0.7rem;font-weight:600;background:#fef3c7;color:#92400e;border-radius:4px;padding:2px 7px;margin-left:8px;vertical-align:middle;">⚠ Estimated</span>';
+            ? '<span style="font-size:0.7rem;font-weight:600;background:#dcfce7;color:#16a34a;border-radius:4px;padding:2px 7px;margin-left:8px;vertical-align:middle;display:inline-flex;align-items:center;gap:0.25rem;">' + ((window.ICONS && window.ICONS.check) || '') + ' CSV Data</span>'
+            : '<span style="font-size:0.7rem;font-weight:600;background:#fef3c7;color:#92400e;border-radius:4px;padding:2px 7px;margin-left:8px;vertical-align:middle;display:inline-flex;align-items:center;gap:0.25rem;">' + ((window.ICONS && window.ICONS.alert) || '') + ' Estimated</span>';
 
         const titleTextEl = tableTitle.querySelector('.table-title-text') || tableTitle;
         titleTextEl.innerHTML = `Identifying MoM growth without seasonality ${this.formatCurrency(cohortData.totalChange)} THB by Cohort and Segment${badge}`;
@@ -955,7 +955,7 @@ function initCohortUpload() {
 
                 // Update UI to show success
                 uploadZone.classList.add('uploaded');
-                document.getElementById('cohortUploadIcon').textContent = '✓';
+                document.getElementById('cohortUploadIcon').innerHTML = (window.ICONS && window.ICONS.check) || '';
                 document.getElementById('cohortUploadIcon').classList.add('success');
                 document.getElementById('cohortUploadTitle').textContent = 'Cohort CSV Loaded';
                 document.getElementById('cohortUploadSub').textContent = file.name;

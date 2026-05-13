@@ -5,7 +5,9 @@
       "Bash(node -e \"const fs=require\\('fs'\\); const c=fs.readFileSync\\('public/script.js','utf8'\\); const idx=c.indexOf\\('View Month'\\); console.log\\(JSON.stringify\\(c.slice\\(idx-10,idx+20\\)\\)\\);\")",
       "Bash(node)",
       "Bash(node --check \"c:/Users/User/Documents/okr/Fairdee-OKR/public/mlm-dashboard.js\")",
-      "Bash(node --check \"c:/Users/User/Documents/okr/Fairdee-OKR/public/focus-team-dashboard.js\")"
+      "Bash(node --check \"c:/Users/User/Documents/okr/Fairdee-OKR/public/focus-team-dashboard.js\")",
+      "Bash(perl -i -pe \"s/'✓ /'/g; s/'✗ /'/g; s/'✔ /'/g; s/\\\\`✓ /\\\\`/g; s/\\\\`✗ /\\\\`/g; s/\\\\`✔ /\\\\`/g\" script.js)",
+      "Bash(node --check /Users/thanat77/Documents/OKR/Fairdee-OKR/public/script.js)"
     ]
   }
 }

@@ -157,13 +157,23 @@ function _markSourceLoaded() {
 function showUploadStatus(elementId, status, message) {
     const statusEl = document.getElementById(elementId);
     if (!statusEl) return;
-    
+
     // Remove all status classes
     statusEl.classList.remove('success', 'error', 'loading');
-    
+
     // Add the appropriate class
     statusEl.classList.add(status);
-    statusEl.innerHTML = message;
+
+    // Prepend a small icon based on status (matches the page's icon set)
+    const icons = window.ICONS || {};
+    let iconHtml = '';
+    if (status === 'success') iconHtml = icons.check || icons['check-circle'] || '';
+    else if (status === 'error') iconHtml = icons.x || icons['x-circle'] || '';
+    else if (status === 'loading') iconHtml = icons.refresh || '';
+
+    statusEl.innerHTML = iconHtml
+        ? '<span style="display: inline-flex; align-items: center; gap: 0.4rem;"><span style="display: inline-flex;">' + iconHtml + '</span>' + message + '</span>'
+        : message;
 }
 
 // Show dashboard — kept for compatibility but dashboard is now always visible
@@ -319,7 +329,7 @@ function processMonthlyTargetsFile(file) {
             console.log('✅ Monthly targets loaded for', monthlyTargets.size, 'KRs');
             
             // Show success status
-            showUploadStatus('targetsFileStatus', 'success', `✓ Loaded targets for ${monthlyTargets.size} KRs from ${file.name}`);
+            showUploadStatus('targetsFileStatus', 'success', `Loaded targets for ${monthlyTargets.size} KRs from ${file.name}`);
             const _tuz = document.getElementById('targetsUploadZone');
             if (_tuz) _tuz.classList.add('uploaded');
             
@@ -329,7 +339,7 @@ function processMonthlyTargetsFile(file) {
             }
         },
         error: function(error) {
-            showUploadStatus('targetsFileStatus', 'error', `✗ Error: ${error.message}`);
+            showUploadStatus('targetsFileStatus', 'error', `Error: ${error.message}`);
         }
     });
 }
@@ -379,7 +389,7 @@ function processOKRParsedData(results, sourceName) {
 
     if (!monthColumnName) {
         console.error('Headers received:', headers);
-        showUploadStatus('dataFileStatus', 'error', '✗ Cannot find month column. Headers: ' + headers.slice(0, 8).join(', '));
+        showUploadStatus('dataFileStatus', 'error', 'Cannot find month column. Headers: ' + headers.slice(0, 8).join(', '));
         return;
     }
 
@@ -473,8 +483,8 @@ function processOKRParsedData(results, sourceName) {
         }
     });
 
-    console.log('✓ Filtered rows:', filteredRowCount);
-    console.log('✓ Monthly targets loaded for', monthlyTargets.size, 'KRs');
+    console.log('Filtered rows:', filteredRowCount);
+    console.log('Monthly targets loaded for', monthlyTargets.size, 'KRs');
 
     allMonths = Array.from(monthSet).sort((a, b) => {
         const dateA = parseMonthString(a);
@@ -492,7 +502,7 @@ function processOKRParsedData(results, sourceName) {
     populateFilters();
     renderAll();
 
-    showUploadStatus('dataFileStatus', 'success', `✓ Loaded ${csvData.length} KRs from ${sourceName}`);
+    showUploadStatus('dataFileStatus', 'success', `Loaded ${csvData.length} KRs from ${sourceName}`);
     document.getElementById('viewDashboardSection').style.display = 'block';
     _markSourceLoaded();
 }
@@ -519,13 +529,13 @@ function fetchOKRSheetData() {
                     processOKRParsedData(results, 'Google Sheets');
                 },
                 error: function(error) {
-                    showUploadStatus('dataFileStatus', 'error', '✗ Parse error: ' + error.message);
+                    showUploadStatus('dataFileStatus', 'error', 'Parse error: ' + error.message);
                     _markSourceLoaded();
                 }
             });
         })
         .catch(function(err) {
-            showUploadStatus('dataFileStatus', 'error', '✗ ' + err.message);
+            showUploadStatus('dataFileStatus', 'error', '' + err.message);
             _markSourceLoaded();
         });
 }
@@ -627,6 +637,8 @@ function switchTab(button, tabId) {
 function renderAll() {
     updateStats();
     renderTopMovers();
+    renderExecutiveSummary();
+    renderKRStatusOverview();
     renderGoalHighlights();
     renderOKRCards();
     renderDataTable();
@@ -842,7 +854,7 @@ function renderMonthlyProgress() {
     if (monthlyTargets.size === 0) {
         container.innerHTML = `
             <div class="no-monthly-data">
-                <h3 style="margin-bottom: 1rem;">📅 Monthly Progress Tracking</h3>
+                <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;"><span style="display: inline-flex; color: var(--accent);">${(window.ICONS && window.ICONS.calendar) || ''}</span> Monthly Progress Tracking</h3>
                 <p>Upload a monthly targets CSV file to see detailed monthly progress tracking.</p>
                 <p style="margin-top: 0.5rem; font-size: 0.9rem;">
                     The CSV should have columns: <code>kr_name</code>, <code>month</code>, <code>monthly_target</code>
@@ -922,13 +934,13 @@ function createMonthlyProgressCard(row) {
             // Determine status badge and class - MUST MATCH
             if (progressPercent >= 100) {
                 progressClass = 'excellent';  // Green bar
-                statusBadge = '<span class="status-badge achieved">✓ Achieved Target</span>';
+                statusBadge = '<span class="status-badge achieved" style="display: inline-flex; align-items: center; gap: 0.25rem;">' + ((window.ICONS && window.ICONS.check) || '') + ' Achieved Target</span>';
             } else if (progressPercent >= 90) {
                 progressClass = 'good';  // Yellow bar
-                statusBadge = '<span class="status-badge slightly-under">⚠ Slightly Under Target</span>';
+                statusBadge = '<span class="status-badge slightly-under" style="display: inline-flex; align-items: center; gap: 0.25rem;">' + ((window.ICONS && window.ICONS.alert) || '') + ' Slightly Under Target</span>';
             } else {
                 progressClass = 'poor';  // Red bar
-                statusBadge = '<span class="status-badge under">✗ Under Target</span>';
+                statusBadge = '<span class="status-badge under" style="display: inline-flex; align-items: center; gap: 0.25rem;">' + ((window.ICONS && window.ICONS.x) || '') + ' Under Target</span>';
             }
             
             displayText = `${progressPercent.toFixed(1)}% (${formatNumber(actualValue)} / ${formatNumber(monthlyTarget)})`;
@@ -1086,6 +1098,217 @@ function renderTopMovers() {
     }
 }
 
+// Render Executive Summary (Agency = KR 1.1+1.2+1.3, IG = KR 1.4, EB = KR 2)
+function renderExecutiveSummary() {
+    const container = document.getElementById('executiveSummaryContainer');
+    if (!container) return;
+
+    const categories = [
+        { key: 'agency', label: 'Agency (MLM/FD/AO)', krNumbers: ['1.1', '1.2', '1.3'], color: '#2563EB' },
+        { key: 'ig',     label: 'IG',                 krNumbers: ['1.4'],                color: '#7C3AED' },
+        { key: 'eb',     label: 'Corporate (EB)',     krNumbers: ['2'],                  color: '#EA580C' }
+    ];
+
+    const matchKR = (row, numbers) => {
+        const info = parseKRLevel(row.kr_name);
+        return numbers.includes(info.number);
+    };
+
+    const buckets = categories.map(cat => {
+        const rows = filteredData.filter(r => matchKR(r, cat.krNumbers));
+        let totalCurrent = 0;
+        let totalTarget = 0;
+        let unit = '';
+        rows.forEach(r => {
+            const c = getLatestValue(r);
+            const t = getTarget(r);
+            if (typeof c === 'number' && !isNaN(c)) totalCurrent += c;
+            if (typeof t === 'number' && !isNaN(t)) totalTarget += t;
+            if (!unit && r.unit_name) unit = r.unit_name;
+        });
+        const pct = totalTarget > 0 ? (totalCurrent / totalTarget) * 100 : 0;
+        return { ...cat, rows, totalCurrent, totalTarget, pct, unit };
+    });
+
+    const validBuckets = buckets.filter(b => b.rows.length > 0);
+    if (validBuckets.length === 0) {
+        container.innerHTML = '<div class="no-data">No KR data available for the executive summary.</div>';
+        return;
+    }
+
+    const overallCurrent = validBuckets.reduce((s, b) => s + b.totalCurrent, 0);
+    const overallTarget  = validBuckets.reduce((s, b) => s + b.totalTarget,  0);
+    const overallPct = overallTarget > 0 ? (overallCurrent / overallTarget) * 100 : 0;
+    const overallUnit = validBuckets.find(b => b.unit)?.unit || '';
+
+    const overallColor = overallPct >= 100 ? '#10B981' : overallPct >= 90 ? '#F59E0B' : '#EF4444';
+    const overallLabel = overallPct >= 100
+        ? `Exceeding target by ${(overallPct - 100).toFixed(1)}%`
+        : overallPct >= 90
+            ? `Slightly under target (${overallPct.toFixed(1)}%)`
+            : `Under target (${overallPct.toFixed(1)}%)`;
+
+    const cards = validBuckets.map(b => {
+        const isAbove = b.pct >= 100;
+        const isSlight = b.pct >= 90 && b.pct < 100;
+        const badgeColor = isAbove ? '#10B981' : isSlight ? '#F59E0B' : '#EF4444';
+        const badgeBg    = isAbove ? '#F0FDF4' : isSlight ? '#FFFBEB' : '#FEF2F2';
+        const badgeText  = isAbove ? 'Above Target' : isSlight ? 'Near Target' : 'Below Target';
+        const barWidth = Math.max(0, Math.min(100, b.pct));
+
+        return `
+            <div style="background: white; border-radius: 16px; padding: 1.75rem 2rem; box-shadow: 0 2px 6px rgba(0,0,0,0.06); border: 1px solid #E5E7EB; display: flex; flex-direction: column; gap: 1rem;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
+                    <div style="font-weight: 800; font-size: 1.35rem; color: ${b.color}; letter-spacing: -0.01em;">${b.label}</div>
+                    <span style="display: inline-block; padding: 0.35rem 0.9rem; background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeColor}; border-radius: 999px; font-size: 0.8rem; font-weight: 700; white-space: nowrap;">
+                        ${badgeText}
+                    </span>
+                </div>
+                <div style="color: var(--text-secondary); font-size: 1rem; line-height: 1.4;">
+                    Achieved <strong style="color: ${badgeColor}; font-size: 1.1rem;">${b.pct.toFixed(1)}%</strong> of yearly target
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.15rem;">(${formatNumber(b.totalTarget)}${b.unit ? ' ' + b.unit : ''})</div>
+                </div>
+                <div style="background: ${b.color}; color: white; border-radius: 12px; padding: 1rem 1.25rem; font-weight: 700; display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; flex-wrap: wrap;">
+                    <span style="font-size: 1.05rem; opacity: 0.95;">GWP Total</span>
+                    <span style="font-family: 'Google Sans Text', sans-serif; font-size: 1.65rem; font-weight: 800; letter-spacing: -0.02em;">
+                        ${formatNumber(b.totalCurrent)}${b.unit ? ' <span style="font-size: 0.85rem; font-weight: 500; opacity: 0.85;">' + b.unit + '</span>' : ''}
+                    </span>
+                </div>
+                <div style="height: 8px; background: #F1F5F9; border-radius: 999px; overflow: hidden;">
+                    <div style="width: ${barWidth}%; height: 100%; background: ${badgeColor}; transition: width 0.4s ease;"></div>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">
+                    Includes ${b.rows.length} KR${b.rows.length === 1 ? '' : 's'}: ${b.krNumbers.map(n => 'KR ' + n).join(', ')}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = `
+        <div style="background: linear-gradient(135deg, #F8FAFC 0%, #EEF2FF 100%); border-radius: 20px; padding: 2rem 2.25rem; border: 1px solid #E5E7EB;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.75rem;">
+                <div style="flex: 1; min-width: 280px;">
+                    <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem;">GWP Total — All Channels</div>
+                    <div style="font-size: 2.75rem; font-weight: 800; color: var(--primary); font-family: 'Google Sans Text', sans-serif; line-height: 1.05; letter-spacing: -0.02em;">
+                        ${formatNumber(overallCurrent)}${overallUnit ? ' <span style="font-size: 1.25rem; color: var(--text-secondary); font-weight: 600;">' + overallUnit + '</span>' : ''}
+                    </div>
+                    <div style="font-size: 0.95rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                        Target: <strong style="color: var(--primary);">${formatNumber(overallTarget)}${overallUnit ? ' ' + overallUnit : ''}</strong>
+                    </div>
+                </div>
+                <span style="display: inline-block; padding: 0.6rem 1.25rem; background: ${overallColor}; color: white; border-radius: 999px; font-size: 0.95rem; font-weight: 700; white-space: nowrap;">
+                    ${overallLabel}
+                </span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(${validBuckets.length}, 1fr); gap: 1.25rem;">
+                ${cards}
+            </div>
+        </div>
+    `;
+}
+
+// Render KR Status Overview (counts of achieved / slightly under / under)
+function renderKRStatusOverview() {
+    const container = document.getElementById('krStatusContainer');
+    if (!container) return;
+
+    const krsWithTargets = filteredData
+        .map(row => ({
+            row,
+            progress: calculateProgress(row.kr_name, getLatestValue(row), getTarget(row)),
+            target: getTarget(row)
+        }))
+        .filter(item => item.target > 0);
+
+    const total = krsWithTargets.length;
+    if (total === 0) {
+        container.innerHTML = '<div class="no-data">No KR data available.</div>';
+        return;
+    }
+
+    const achieved = krsWithTargets.filter(k => k.progress >= 100);
+    const slightlyUnder = krsWithTargets.filter(k => k.progress >= 90 && k.progress < 100);
+    const under = krsWithTargets.filter(k => k.progress < 90);
+
+    const buckets = [
+        {
+            label: 'Achieved',
+            sublabel: '≥ 100% of target',
+            count: achieved.length,
+            color: '#10B981',
+            bg: '#F0FDF4',
+            icon: (window.ICONS && window.ICONS['check-circle']) || '',
+            krs: achieved
+        },
+        {
+            label: 'Slightly Under',
+            sublabel: '90% – 99% of target',
+            count: slightlyUnder.length,
+            color: '#F59E0B',
+            bg: '#FFFBEB',
+            icon: (window.ICONS && window.ICONS.alert) || '',
+            krs: slightlyUnder
+        },
+        {
+            label: 'Under Target',
+            sublabel: '< 90% of target',
+            count: under.length,
+            color: '#EF4444',
+            bg: '#FEF2F2',
+            icon: (window.ICONS && window.ICONS['alert-octagon']) || '',
+            krs: under
+        }
+    ];
+
+    const cards = buckets.map(b => {
+        const pctOfTotal = (b.count / total) * 100;
+        const krList = b.krs
+            .slice(0, 5)
+            .map(k => `<span style="display: inline-block; background: white; border: 1px solid ${b.color}; color: ${b.color}; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.7rem; font-weight: 600; margin: 0.15rem;">${k.row.kr_name} · ${k.progress.toFixed(0)}%</span>`)
+            .join('');
+        const moreText = b.krs.length > 5 ? `<span style="font-size: 0.7rem; color: var(--text-muted); margin-left: 0.25rem;">+${b.krs.length - 5} more</span>` : '';
+
+        return `
+            <div style="background: ${b.bg}; border-radius: 12px; padding: 1.25rem 1.5rem; border-left: 4px solid ${b.color};">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-size: 1.4rem; color: ${b.color}; display: inline-flex;">${b.icon}</span>
+                        <div>
+                            <div style="font-weight: 700; color: var(--primary); font-size: 1rem;">${b.label}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">${b.sublabel}</div>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 2rem; font-weight: 800; color: ${b.color}; font-family: 'Google Sans Text', sans-serif; line-height: 1;">${b.count}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.15rem;">${pctOfTotal.toFixed(1)}% of total</div>
+                    </div>
+                </div>
+                <div style="height: 6px; background: white; border-radius: 999px; overflow: hidden; margin: 0.75rem 0;">
+                    <div style="width: ${pctOfTotal}%; height: 100%; background: ${b.color}; transition: width 0.4s ease;"></div>
+                </div>
+                <div style="margin-top: 0.5rem;">
+                    ${krList || '<span style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">No KRs in this bucket</span>'}
+                    ${moreText}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = `
+        <div style="background: white; border-radius: 16px; padding: 1.5rem; border: 1px solid #E5E7EB; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+            <div style="display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.25rem;">
+                <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">Tracking ${total} KR${total === 1 ? '' : 's'} with targets</div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                    Success rate: <strong style="color: var(--primary);">${((achieved.length / total) * 100).toFixed(1)}%</strong>
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                ${cards}
+            </div>
+        </div>
+    `;
+}
+
 // Render Goal Highlights
 function renderGoalHighlights() {
     const container = document.getElementById('goalHighlightsContainer');
@@ -1204,7 +1427,7 @@ function renderGoalHighlights() {
                 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
                     <div style="background: white; padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
-                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">🏆 Best Performer</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem; display: inline-flex; align-items: center; gap: 0.35rem;"><span style="display: inline-flex; color: #10B981;">${(window.ICONS && window.ICONS.trophy) || ''}</span> Best Performer</div>
                         <div style="font-weight: 600; color: var(--primary); font-size: 0.9rem;">${bestKR.kr_name}</div>
                         <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.15rem; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${getShortTitle(bestKR.kr_title_name || '')}</div>
                         <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.75rem;">
@@ -1224,7 +1447,7 @@ function renderGoalHighlights() {
                     
                     ${worstKR.progress < 90 ? `
                         <div style="background: white; padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
-                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">⚠️ Needs Focus</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem; display: inline-flex; align-items: center; gap: 0.35rem;"><span style="display: inline-flex; color: #EF4444;">${(window.ICONS && window.ICONS.alert) || ''}</span> Needs Focus</div>
                             <div style="font-weight: 600; color: var(--primary); font-size: 0.9rem;">${worstKR.kr_name}</div>
                             <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.15rem; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${getShortTitle(worstKR.kr_title_name || '')}</div>
                             <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.75rem;">
@@ -1245,7 +1468,7 @@ function renderGoalHighlights() {
                     
                     ${biggestGrowth && biggestGrowth.change > 0 ? `
                         <div style="background: white; padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
-                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">📈 Biggest Growth</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem; display: inline-flex; align-items: center; gap: 0.35rem;"><span style="display: inline-flex; color: #10B981;">${(window.ICONS && window.ICONS['trending-up']) || ''}</span> Biggest Growth</div>
                             <div style="font-weight: 600; color: var(--primary); font-size: 0.9rem;">${biggestGrowth.kr_name}</div>
                             <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.15rem; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${getShortTitle(biggestGrowth.kr_title_name || '')}</div>
                             <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.75rem;">
@@ -1349,7 +1572,7 @@ function renderActionItems() {
                 <div class="action-description">${item.description}</div>
                 <div class="action-meta">
                     <div class="action-meta-item">
-                        <span class="action-meta-label">👤 Owner:</span>
+                        <span class="action-meta-label" style="display: inline-flex; align-items: center; gap: 0.3rem;"><span style="display: inline-flex;">${(window.ICONS && window.ICONS.user) || ''}</span> Owner:</span>
                         <span class="action-meta-value">${item.owner}</span>
                     </div>
                     <div class="action-meta-item">
@@ -1357,7 +1580,7 @@ function renderActionItems() {
                         <span class="action-meta-value">${item.timeline}</span>
                     </div>
                     <div class="action-meta-item">
-                        <span class="action-meta-label">📊 Impact:</span>
+                        <span class="action-meta-label" style="display: inline-flex; align-items: center; gap: 0.3rem;"><span style="display: inline-flex;">${(window.ICONS && window.ICONS['bar-chart']) || ''}</span> Impact:</span>
                         <span class="action-meta-value">${item.impact}</span>
                     </div>
                 </div>
@@ -1459,7 +1682,7 @@ function renderOKRCards() {
                     card.innerHTML = `
                         <div class="kr-header">
                             <div class="kr-name">${row.kr_name || 'N/A'}${krShortTitle ? ` <span style="color: var(--accent); font-weight: 700;">[${krShortTitle}]</span>` : ''}</div>
-                            ${row.kr_owner_name ? `<div class="kr-owner">👤 ${row.kr_owner_name}</div>` : ''}
+                            ${row.kr_owner_name ? `<div class="kr-owner" style="display: inline-flex; align-items: center; gap: 0.35rem;"><span style="display: inline-flex;">${(window.ICONS && window.ICONS.user) || ''}</span> ${row.kr_owner_name}</div>` : ''}
                         </div>
                         <div class="kr-metrics">
                             <div class="kr-metric">
@@ -1516,7 +1739,7 @@ function renderOKRCards() {
                                 childCard.innerHTML = `
                                     <div class="kr-header">
                                         <div class="kr-name">${childRow.kr_name || 'N/A'}${childKrTitle ? ` <span style="color: var(--accent); font-weight: 700;">[${childKrTitle}]</span>` : ''}</div>
-                                        ${childRow.kr_owner_name ? `<div class="kr-owner">👤 ${childRow.kr_owner_name}</div>` : ''}
+                                        ${childRow.kr_owner_name ? `<div class="kr-owner" style="display: inline-flex; align-items: center; gap: 0.35rem;"><span style="display: inline-flex;">${(window.ICONS && window.ICONS.user) || ''}</span> ${childRow.kr_owner_name}</div>` : ''}
                                     </div>
                                     <div class="kr-metrics">
                                         <div class="kr-metric">
@@ -1595,7 +1818,7 @@ function renderDataTable() {
             const objTitle = extractTitle(objData.krs[0]?.kr_title_name || '');
             const objRow = document.createElement('tr');
             objRow.className = 'objective-row';
-            objRow.innerHTML = `<td colspan="7"><strong>🎯 ${objName}</strong>${objTitle ? ` <span class="obj-title-text">- ${objTitle}</span>` : ''}</td>`;
+            objRow.innerHTML = `<td colspan="7"><strong style="display: inline-flex; align-items: center; gap: 0.4rem;"><span style="display: inline-flex; color: var(--accent);">${(window.ICONS && window.ICONS.target) || ''}</span> ${objName}</strong>${objTitle ? ` <span class="obj-title-text">- ${objTitle}</span>` : ''}</td>`;
             tbody.appendChild(objRow);
             
             const organizedKRs = organizeKRHierarchy(objData.krs);
@@ -1642,11 +1865,11 @@ function renderDataTable() {
                                     </div>
                                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                                         <span class="progress-text ${progress >= 100 ? 'complete' : progress >= 90 ? 'high' : 'low'}">${progress.toFixed(1)}%</span>
-                                        ${progress >= 100 ? 
-                                            '<span class="table-status-badge achieved" title="Achieved Target">✓</span>' : 
-                                         progress >= 90 ? 
-                                            '<span class="table-status-badge slightly-under" title="Slightly Under Target">⚠</span>' : 
-                                            '<span class="table-status-badge under" title="Under Target">✗</span>'}
+                                        ${progress >= 100 ?
+                                            '<span class="table-status-badge achieved" title="Achieved Target" style="display: inline-flex; align-items: center; justify-content: center;">' + ((window.ICONS && window.ICONS.check) || '') + '</span>' :
+                                         progress >= 90 ?
+                                            '<span class="table-status-badge slightly-under" title="Slightly Under Target" style="display: inline-flex; align-items: center; justify-content: center;">' + ((window.ICONS && window.ICONS.alert) || '') + '</span>' :
+                                            '<span class="table-status-badge under" title="Under Target" style="display: inline-flex; align-items: center; justify-content: center;">' + ((window.ICONS && window.ICONS.x) || '') + '</span>'}
                                     </div>
                                 </div>
                             ` : '<span class="na-text">N/A</span>'}
@@ -1700,10 +1923,252 @@ function exportTableToPDF() {
         }
         
         // =============================================
-        // PAGE 1+: Goal Performance Highlights
+        // PAGE 1: Executive Summary (Agency / IG / EB)
         // =============================================
+        drawPageHeader('OKR Dashboard - Executive Summary');
+
+        var execCategories = [
+            { label: 'Agency (MLM/FD/AO)', krs: ['1.1', '1.2', '1.3'], r: 37,  g: 99,  b: 235 },
+            { label: 'IG',                 krs: ['1.4'],                r: 124, g: 58,  b: 237 },
+            { label: 'Corporate (EB)',     krs: ['2'],                  r: 234, g: 88,  b: 12  }
+        ];
+
+        function matchKRPDF(row, numbers) {
+            var info = parseKRLevel(row.kr_name);
+            return numbers.indexOf(info.number) !== -1;
+        }
+
+        var execBuckets = execCategories.map(function(cat) {
+            var rows = filteredData.filter(function(r) { return matchKRPDF(r, cat.krs); });
+            var totalCurrent = 0, totalTarget = 0, unit = '';
+            rows.forEach(function(r) {
+                var c = getLatestValue(r);
+                var t = getTarget(r);
+                if (typeof c === 'number' && !isNaN(c)) totalCurrent += c;
+                if (typeof t === 'number' && !isNaN(t)) totalTarget += t;
+                if (!unit && r.unit_name) unit = r.unit_name;
+            });
+            return {
+                label: cat.label, r: cat.r, g: cat.g, b: cat.b,
+                rows: rows, totalCurrent: totalCurrent, totalTarget: totalTarget,
+                pct: totalTarget > 0 ? (totalCurrent / totalTarget) * 100 : 0,
+                unit: unit, krs: cat.krs
+            };
+        });
+
+        var validExecBuckets = execBuckets.filter(function(b) { return b.rows.length > 0; });
+
+        if (validExecBuckets.length === 0) {
+            doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(148, 163, 184);
+            doc.text('No KR data available for the executive summary.', pageWidth / 2, pageHeight / 2, { align: 'center' });
+        } else {
+            var overallCurrent = validExecBuckets.reduce(function(s, b) { return s + b.totalCurrent; }, 0);
+            var overallTarget  = validExecBuckets.reduce(function(s, b) { return s + b.totalTarget;  }, 0);
+            var overallPct = overallTarget > 0 ? (overallCurrent / overallTarget) * 100 : 0;
+            var overallUnit = '';
+            for (var ui = 0; ui < validExecBuckets.length; ui++) { if (validExecBuckets[ui].unit) { overallUnit = validExecBuckets[ui].unit; break; } }
+
+            var oR, oG, oB, oLabel;
+            if (overallPct >= 100)     { oR = 16;  oG = 185; oB = 129; oLabel = 'Exceeding target by ' + (overallPct - 100).toFixed(1) + '%'; }
+            else if (overallPct >= 90) { oR = 245; oG = 158; oB = 11;  oLabel = 'Slightly under target (' + overallPct.toFixed(1) + '%)'; }
+            else                       { oR = 239; oG = 68;  oB = 68;  oLabel = 'Under target (' + overallPct.toFixed(1) + '%)'; }
+
+            // Hero: overall total
+            var heroY = 32;
+            doc.setFillColor(248, 250, 252);
+            doc.roundedRect(14, heroY, pageWidth - 28, 30, 3, 3, 'F');
+            doc.setDrawColor(226, 232, 240);
+            doc.roundedRect(14, heroY, pageWidth - 28, 30, 3, 3, 'S');
+
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(100, 116, 139);
+            doc.text('GWP TOTAL - ALL CHANNELS', 20, heroY + 8);
+
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(15, 23, 42);
+            doc.text(formatNumber(overallCurrent) + (overallUnit ? '  ' + overallUnit : ''), 20, heroY + 18);
+
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(71, 85, 105);
+            doc.text('Target: ' + formatNumber(overallTarget) + (overallUnit ? ' ' + overallUnit : ''), 20, heroY + 25);
+
+            // Status pill on the right
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+            var pillW = doc.getTextWidth(oLabel) + 8;
+            var pillX = pageWidth - 14 - pillW - 6;
+            doc.setFillColor(oR, oG, oB);
+            doc.roundedRect(pillX, heroY + 12, pillW, 8, 4, 4, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.text(oLabel, pillX + pillW / 2, heroY + 17.5, { align: 'center' });
+
+            // Three category cards
+            var cardsY = heroY + 36;
+            var cardW = (pageWidth - 28 - 6 * (validExecBuckets.length - 1)) / validExecBuckets.length;
+            var cardH = 50;
+
+            validExecBuckets.forEach(function(b, i) {
+                var cx = 14 + i * (cardW + 6);
+
+                var badgeR, badgeG, badgeB, badgeTxt;
+                if (b.pct >= 100)     { badgeR = 16;  badgeG = 185; badgeB = 129; badgeTxt = 'Above Target'; }
+                else if (b.pct >= 90) { badgeR = 245; badgeG = 158; badgeB = 11;  badgeTxt = 'Near Target'; }
+                else                  { badgeR = 239; badgeG = 68;  badgeB = 68;  badgeTxt = 'Below Target'; }
+
+                doc.setFillColor(255, 255, 255);
+                doc.roundedRect(cx, cardsY, cardW, cardH, 2, 2, 'F');
+                doc.setDrawColor(226, 232, 240);
+                doc.roundedRect(cx, cardsY, cardW, cardH, 2, 2, 'S');
+
+                // Title
+                doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(b.r, b.g, b.b);
+                doc.text(b.label, cx + 4, cardsY + 7);
+
+                // Status badge
+                doc.setFontSize(6.5);
+                var badgeW = doc.getTextWidth(badgeTxt) + 4;
+                doc.setFillColor(badgeR, badgeG, badgeB);
+                doc.roundedRect(cx + cardW - badgeW - 4, cardsY + 3.5, badgeW, 5, 1.5, 1.5, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.text(badgeTxt, cx + cardW - badgeW / 2 - 4, cardsY + 7, { align: 'center' });
+
+                // Achievement line
+                doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(71, 85, 105);
+                doc.text('Achieved ' + b.pct.toFixed(1) + '% of yearly target', cx + 4, cardsY + 13);
+                doc.setTextColor(148, 163, 184); doc.setFontSize(6.5);
+                doc.text('(' + formatNumber(b.totalTarget) + (b.unit ? ' ' + b.unit : '') + ')', cx + 4, cardsY + 17);
+
+                // GWP Total bar
+                var barY = cardsY + 21;
+                doc.setFillColor(b.r, b.g, b.b);
+                doc.roundedRect(cx + 4, barY, cardW - 8, 10, 1.5, 1.5, 'F');
+                doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(255, 255, 255);
+                doc.text('GWP Total', cx + 6, barY + 6.5);
+                doc.setFontSize(10);
+                doc.text(formatNumber(b.totalCurrent) + (b.unit ? ' ' + b.unit : ''), cx + cardW - 6, barY + 6.5, { align: 'right' });
+
+                // Mini progress bar
+                var miniBarY = cardsY + 35;
+                doc.setFillColor(241, 245, 249);
+                doc.roundedRect(cx + 4, miniBarY, cardW - 8, 2, 1, 1, 'F');
+                var fillW = (cardW - 8) * Math.max(0, Math.min(100, b.pct)) / 100;
+                if (fillW > 0) {
+                    doc.setFillColor(badgeR, badgeG, badgeB);
+                    doc.roundedRect(cx + 4, miniBarY, fillW, 2, 1, 1, 'F');
+                }
+
+                // Footnote
+                doc.setFont('helvetica', 'normal'); doc.setFontSize(5.5); doc.setTextColor(148, 163, 184);
+                var krLabel = b.rows.length + ' KR' + (b.rows.length === 1 ? '' : 's') + ': ' + b.krs.map(function(n) { return 'KR ' + n; }).join(', ');
+                doc.text(krLabel, cx + 4, cardsY + cardH - 3);
+            });
+        }
+
+        // =============================================
+        // PAGE 2: KR Status Overview
+        // =============================================
+        doc.addPage();
+        drawPageHeader('OKR Dashboard - KR Status Overview');
+
+        var krsWithTargetsPDF = filteredData
+            .map(function(row) {
+                return {
+                    row: row,
+                    progress: calculateProgress(row.kr_name, getLatestValue(row), getTarget(row)),
+                    target: getTarget(row)
+                };
+            })
+            .filter(function(item) { return item.target > 0; });
+
+        var totalKRPDF = krsWithTargetsPDF.length;
+
+        if (totalKRPDF === 0) {
+            doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(148, 163, 184);
+            doc.text('No KR data available.', pageWidth / 2, pageHeight / 2, { align: 'center' });
+        } else {
+            var achievedList = krsWithTargetsPDF.filter(function(k) { return k.progress >= 100; });
+            var slightlyList = krsWithTargetsPDF.filter(function(k) { return k.progress >= 90 && k.progress < 100; });
+            var underList    = krsWithTargetsPDF.filter(function(k) { return k.progress < 90; });
+
+            var statusBuckets = [
+                { label: 'Achieved',        sublabel: '>= 100% of target', count: achievedList.length, r: 16,  g: 185, b: 129, bgR: 240, bgG: 253, bgB: 244, krs: achievedList },
+                { label: 'Slightly Under',  sublabel: '90% - 99% of target', count: slightlyList.length, r: 245, g: 158, b: 11,  bgR: 255, bgG: 251, bgB: 235, krs: slightlyList },
+                { label: 'Under Target',    sublabel: '< 90% of target',     count: underList.length,    r: 239, g: 68,  b: 68,  bgR: 254, bgG: 242, bgB: 242, krs: underList    }
+            ];
+
+            // Header summary line
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(100, 116, 139);
+            doc.text('TRACKING ' + totalKRPDF + ' KR' + (totalKRPDF === 1 ? '' : 's') + ' WITH TARGETS', 14, 36);
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(15, 23, 42);
+            doc.text('Success rate: ' + ((achievedList.length / totalKRPDF) * 100).toFixed(1) + '%', pageWidth - 14, 36, { align: 'right' });
+
+            var bucketY = 42;
+            var bucketW = (pageWidth - 28 - 12) / 3;
+            var bucketH = pageHeight - bucketY - 15;
+
+            statusBuckets.forEach(function(b, i) {
+                var bx = 14 + i * (bucketW + 6);
+
+                doc.setFillColor(b.bgR, b.bgG, b.bgB);
+                doc.roundedRect(bx, bucketY, bucketW, bucketH, 2, 2, 'F');
+                doc.setFillColor(b.r, b.g, b.b);
+                doc.rect(bx, bucketY, 1.8, bucketH, 'F');
+
+                // Label + sublabel
+                doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(15, 23, 42);
+                doc.text(b.label, bx + 6, bucketY + 8);
+                doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(100, 116, 139);
+                doc.text(b.sublabel, bx + 6, bucketY + 13);
+
+                // Count
+                var pctOfTotal = totalKRPDF > 0 ? (b.count / totalKRPDF) * 100 : 0;
+                doc.setFont('helvetica', 'bold'); doc.setFontSize(28); doc.setTextColor(b.r, b.g, b.b);
+                doc.text(String(b.count), bx + bucketW - 6, bucketY + 12, { align: 'right' });
+                doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(148, 163, 184);
+                doc.text(pctOfTotal.toFixed(1) + '% of total', bx + bucketW - 6, bucketY + 17, { align: 'right' });
+
+                // Progress bar
+                var pbY = bucketY + 22;
+                doc.setFillColor(255, 255, 255);
+                doc.roundedRect(bx + 6, pbY, bucketW - 12, 2.5, 1.25, 1.25, 'F');
+                var pbFillW = (bucketW - 12) * pctOfTotal / 100;
+                if (pbFillW > 0) {
+                    doc.setFillColor(b.r, b.g, b.b);
+                    doc.roundedRect(bx + 6, pbY, pbFillW, 2.5, 1.25, 1.25, 'F');
+                }
+
+                // KR list
+                var listY = bucketY + 31;
+                doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(b.r, b.g, b.b);
+                doc.text('KEY RESULTS', bx + 6, listY);
+
+                var krY = listY + 5;
+                if (b.krs.length === 0) {
+                    doc.setFont('helvetica', 'italic'); doc.setFontSize(7); doc.setTextColor(148, 163, 184);
+                    doc.text('No KRs in this bucket', bx + 6, krY);
+                } else {
+                    var maxRows = Math.floor((bucketY + bucketH - krY - 4) / 5);
+                    var shown = Math.min(b.krs.length, maxRows);
+                    for (var k = 0; k < shown; k++) {
+                        var krItem = b.krs[k];
+                        var krName = krItem.row.kr_name || '';
+                        var pctStr = krItem.progress.toFixed(0) + '%';
+                        doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(51, 65, 85);
+                        doc.text(krName.length > 22 ? krName.substring(0, 22) + '...' : krName, bx + 6, krY);
+                        doc.setFont('helvetica', 'bold'); doc.setTextColor(b.r, b.g, b.b);
+                        doc.text(pctStr, bx + bucketW - 6, krY, { align: 'right' });
+                        krY += 5;
+                    }
+                    if (b.krs.length > shown) {
+                        doc.setFont('helvetica', 'italic'); doc.setFontSize(6); doc.setTextColor(148, 163, 184);
+                        doc.text('+' + (b.krs.length - shown) + ' more', bx + 6, krY);
+                    }
+                }
+            });
+        }
+
+        // =============================================
+        // PAGE 3+: Goal Performance Highlights
+        // =============================================
+        doc.addPage();
         drawPageHeader('OKR Dashboard - Goal Performance Highlights');
-        
+
         // Build goal data (same logic as renderGoalHighlights)
         var goalData = {};
         filteredData.forEach(function(row) {
@@ -2023,16 +2488,891 @@ function exportTableToPDF() {
         }
         
         doc.save('OKR_Report_' + now.toISOString().slice(0, 10) + '.pdf');
-        
+
     } catch (err) {
         console.error('PDF export error:', err);
         alert('Error generating PDF: ' + err.message);
     } finally {
         if (btn) {
             btn.disabled = false;
-            btn.innerHTML = '<span style="margin-right: 0.4rem;">🔄</span> Export to PDF';
+            btn.innerHTML = '<span style="margin-right: 0.4rem; display: inline-flex;">' + ((window.ICONS && window.ICONS.refresh) || '') + '</span> Export to PDF';
         }
     }
+}
+
+// ============================================================================
+// SEND EMAIL — opens a modal, generates the PDF, opens user's email client
+// with a plain-text summary that mirrors the PDF content.
+// ============================================================================
+
+var EMAIL_RECIPIENTS_STORAGE_KEY = 'okrDashboard.recentEmailRecipients';
+var EMAIL_OPEN_IN_STORAGE_KEY    = 'okrDashboard.emailOpenIn'; // 'gmail' | 'mailto'
+
+function getCurrentSelectedMonthLabel() {
+    var monthFilter = document.getElementById('monthFilter');
+    if (monthFilter && monthFilter.selectedIndex >= 0) {
+        return monthFilter.options[monthFilter.selectedIndex].text || 'Latest';
+    }
+    return 'Latest';
+}
+
+function loadRecentEmailRecipients() {
+    try {
+        var raw = localStorage.getItem(EMAIL_RECIPIENTS_STORAGE_KEY);
+        if (!raw) return [];
+        var list = JSON.parse(raw);
+        return Array.isArray(list) ? list.slice(0, 8) : [];
+    } catch (e) { return []; }
+}
+
+function saveRecentEmailRecipients(emails) {
+    try {
+        var existing = loadRecentEmailRecipients();
+        var merged = emails.concat(existing.filter(function(e) { return emails.indexOf(e) === -1; })).slice(0, 8);
+        localStorage.setItem(EMAIL_RECIPIENTS_STORAGE_KEY, JSON.stringify(merged));
+    } catch (e) { /* localStorage unavailable, ignore */ }
+}
+
+function renderRecentEmailChips() {
+    var container = document.getElementById('emailRecentChips');
+    if (!container) return;
+    var recents = loadRecentEmailRecipients();
+    if (recents.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+    container.innerHTML = '<span style="font-size: 0.7rem; color: var(--text-muted); margin-right: 0.25rem; align-self: center;">RECENT:</span>' +
+        recents.map(function(e) {
+            return '<span class="email-recent-chip" onclick="addRecipientFromChip(this)">' + e + '</span>';
+        }).join('');
+}
+
+function addRecipientFromChip(el) {
+    var email = el.textContent.trim();
+    var ta = document.getElementById('emailRecipients');
+    var current = (ta.value || '').trim();
+    var separators = /[,;\n]/;
+    var existing = current.split(separators).map(function(s) { return s.trim(); }).filter(Boolean);
+    if (existing.indexOf(email) !== -1) return; // already there
+    ta.value = current ? (current.replace(/[\s,;]+$/, '') + ', ' + email) : email;
+    ta.focus();
+}
+
+function openEmailModal() {
+    var modal = document.getElementById('emailModal');
+    if (!modal) return;
+
+    // Pre-fill the subject with month + date
+    var subjectEl = document.getElementById('emailSubject');
+    var monthLabel = getCurrentSelectedMonthLabel();
+    var today = new Date();
+    var dateStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    subjectEl.value = 'OKR Dashboard Report — ' + monthLabel + ' — ' + dateStr;
+
+    // Restore saved "Open in" preference (defaults to gmail)
+    var openInEl = document.getElementById('emailOpenIn');
+    if (openInEl) {
+        var saved = null;
+        try { saved = localStorage.getItem(EMAIL_OPEN_IN_STORAGE_KEY); } catch (e) {}
+        openInEl.value = (saved === 'mailto' || saved === 'gmail') ? saved : 'gmail';
+    }
+
+    // Clear any prior error
+    var errEl = document.getElementById('emailModalError');
+    errEl.style.display = 'none';
+    errEl.textContent = '';
+
+    renderRecentEmailChips();
+
+    modal.style.display = 'flex';
+}
+
+function closeEmailModal() {
+    var modal = document.getElementById('emailModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function parseRecipients(raw) {
+    if (!raw) return { valid: [], invalid: [] };
+    var parts = raw.split(/[,;\n]/).map(function(s) { return s.trim(); }).filter(Boolean);
+    var emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    var valid = [];
+    var invalid = [];
+    parts.forEach(function(p) {
+        if (emailRe.test(p)) {
+            if (valid.indexOf(p) === -1) valid.push(p);
+        } else {
+            invalid.push(p);
+        }
+    });
+    return { valid: valid, invalid: invalid };
+}
+
+// Build the plain-text email body that mirrors the PDF content.
+function buildDashboardEmailBody(intro) {
+    var lines = [];
+    var monthLabel = getCurrentSelectedMonthLabel();
+    var today = new Date();
+    var dateStr = today.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+
+    if (intro && intro.trim()) {
+        lines.push(intro.trim());
+        lines.push('');
+        lines.push('---');
+        lines.push('');
+    }
+
+    lines.push('OKR DASHBOARD REPORT');
+    lines.push('Generated: ' + dateStr + '  |  Month: ' + monthLabel + '  |  KRs: ' + filteredData.length);
+    lines.push('');
+
+    // ---------- Executive Summary ----------
+    lines.push('==============================');
+    lines.push('EXECUTIVE SUMMARY');
+    lines.push('==============================');
+
+    var execCategories = [
+        { label: 'Agency (MLM/FD/AO)', krs: ['1.1', '1.2', '1.3'] },
+        { label: 'IG',                 krs: ['1.4'] },
+        { label: 'Corporate (EB)',     krs: ['2'] }
+    ];
+    function matchKREmail(row, numbers) {
+        var info = parseKRLevel(row.kr_name);
+        return numbers.indexOf(info.number) !== -1;
+    }
+    var execBuckets = execCategories.map(function(cat) {
+        var rows = filteredData.filter(function(r) { return matchKREmail(r, cat.krs); });
+        var totalCurrent = 0, totalTarget = 0, unit = '';
+        rows.forEach(function(r) {
+            var c = getLatestValue(r);
+            var t = getTarget(r);
+            if (typeof c === 'number' && !isNaN(c)) totalCurrent += c;
+            if (typeof t === 'number' && !isNaN(t)) totalTarget += t;
+            if (!unit && r.unit_name) unit = r.unit_name;
+        });
+        return {
+            label: cat.label, rows: rows, totalCurrent: totalCurrent, totalTarget: totalTarget,
+            pct: totalTarget > 0 ? (totalCurrent / totalTarget) * 100 : 0, unit: unit, krs: cat.krs
+        };
+    });
+    var validExec = execBuckets.filter(function(b) { return b.rows.length > 0; });
+
+    if (validExec.length === 0) {
+        lines.push('(No KR data available)');
+    } else {
+        var overallCurrent = validExec.reduce(function(s, b) { return s + b.totalCurrent; }, 0);
+        var overallTarget  = validExec.reduce(function(s, b) { return s + b.totalTarget;  }, 0);
+        var overallPct = overallTarget > 0 ? (overallCurrent / overallTarget) * 100 : 0;
+        var overallUnit = '';
+        for (var u = 0; u < validExec.length; u++) { if (validExec[u].unit) { overallUnit = validExec[u].unit; break; } }
+        var overallLabel = overallPct >= 100
+            ? 'Exceeding target by ' + (overallPct - 100).toFixed(1) + '%'
+            : overallPct >= 90 ? 'Slightly under target (' + overallPct.toFixed(1) + '%)'
+                               : 'Under target (' + overallPct.toFixed(1) + '%)';
+
+        lines.push('GWP Total - All Channels: ' + formatNumber(overallCurrent) + (overallUnit ? ' ' + overallUnit : ''));
+        lines.push('Target:                   ' + formatNumber(overallTarget)  + (overallUnit ? ' ' + overallUnit : ''));
+        lines.push('Status:                   ' + overallLabel);
+        lines.push('');
+
+        validExec.forEach(function(b) {
+            var status = b.pct >= 100 ? 'ABOVE TARGET' : b.pct >= 90 ? 'NEAR TARGET' : 'BELOW TARGET';
+            lines.push('- ' + b.label + '  [' + status + ']');
+            lines.push('    GWP Total:    ' + formatNumber(b.totalCurrent) + (b.unit ? ' ' + b.unit : ''));
+            lines.push('    Target:       ' + formatNumber(b.totalTarget)  + (b.unit ? ' ' + b.unit : ''));
+            lines.push('    Achievement:  ' + b.pct.toFixed(1) + '% of yearly target');
+            lines.push('    KRs:          ' + b.krs.map(function(n) { return 'KR ' + n; }).join(', '));
+            lines.push('');
+        });
+    }
+
+    // ---------- KR Status Overview ----------
+    lines.push('==============================');
+    lines.push('KR STATUS OVERVIEW');
+    lines.push('==============================');
+
+    var krsWithTargets = filteredData
+        .map(function(row) {
+            return {
+                row: row,
+                progress: calculateProgress(row.kr_name, getLatestValue(row), getTarget(row)),
+                target: getTarget(row)
+            };
+        })
+        .filter(function(item) { return item.target > 0; });
+
+    var totalKR = krsWithTargets.length;
+    if (totalKR === 0) {
+        lines.push('(No KR data available)');
+    } else {
+        var achievedList = krsWithTargets.filter(function(k) { return k.progress >= 100; });
+        var slightlyList = krsWithTargets.filter(function(k) { return k.progress >= 90 && k.progress < 100; });
+        var underList    = krsWithTargets.filter(function(k) { return k.progress < 90; });
+        var successRate  = ((achievedList.length / totalKR) * 100).toFixed(1);
+
+        lines.push('Tracking ' + totalKR + ' KR' + (totalKR === 1 ? '' : 's') + ' with targets  |  Success rate: ' + successRate + '%');
+        lines.push('');
+        lines.push('  Achieved        (>= 100%): ' + achievedList.length);
+        lines.push('  Slightly Under  (90-99%):  ' + slightlyList.length);
+        lines.push('  Under Target    (< 90%):   ' + underList.length);
+        lines.push('');
+
+        function listBucket(title, items) {
+            if (items.length === 0) return;
+            lines.push(title + ':');
+            items.slice(0, 15).forEach(function(k) {
+                lines.push('  - ' + (k.row.kr_name || '(unnamed)') + '  ' + k.progress.toFixed(0) + '%');
+            });
+            if (items.length > 15) lines.push('  ... +' + (items.length - 15) + ' more');
+            lines.push('');
+        }
+        listBucket('ACHIEVED',       achievedList);
+        listBucket('SLIGHTLY UNDER', slightlyList);
+        listBucket('UNDER TARGET',   underList);
+    }
+
+    // ---------- Goal Performance Highlights ----------
+    lines.push('==============================');
+    lines.push('GOAL PERFORMANCE HIGHLIGHTS');
+    lines.push('==============================');
+
+    var goalData = {};
+    filteredData.forEach(function(row) {
+        var goalName = row.goal_name || 'Uncategorized';
+        if (!goalData[goalName]) goalData[goalName] = { goalName: goalName, krs: [] };
+        var current = getLatestValue(row);
+        var target  = getTarget(row);
+        var progress = calculateProgress(row.kr_name, current, target);
+        goalData[goalName].krs.push({ kr_name: row.kr_name, current: current, target: target, progress: progress });
+    });
+
+    var sortedGoals = Object.keys(goalData).sort();
+    var hasAny = false;
+    sortedGoals.forEach(function(goalName) {
+        var goal = goalData[goalName];
+        var withTargets = goal.krs.filter(function(kr) { return kr.target > 0; });
+        if (withTargets.length === 0) return;
+        hasAny = true;
+
+        var achievedCount = withTargets.filter(function(kr) { return kr.progress >= 100; }).length;
+        var avgProgress   = withTargets.reduce(function(s, kr) { return s + kr.progress; }, 0) / withTargets.length;
+        var rate = (achievedCount / withTargets.length) * 100;
+        var status = rate >= 100 ? 'ACHIEVED' : (rate >= 90 || (withTargets.length - achievedCount) <= 1) ? 'SLIGHTLY UNDER' : 'UNDER TARGET';
+
+        lines.push('- ' + goalName + '  [' + status + ']');
+        lines.push('    ' + achievedCount + ' of ' + withTargets.length + ' KRs achieved (' + rate.toFixed(1) + '%). Avg progress: ' + avgProgress.toFixed(1) + '%.');
+        lines.push('');
+    });
+    if (!hasAny) lines.push('(No goals with targets)');
+
+    lines.push('');
+    lines.push('---');
+    lines.push('');
+    lines.push('For detailed interactive charts and comprehensive analysis, please refer to the full website attached to this email, logging in with your FairDee Google account.');
+    lines.push('');
+    lines.push('Supporting dashboard: https://fairdee-okr.web.app/index.html');
+    lines.push('');
+    lines.push('Best regards,');
+
+    return lines.join('\n');
+}
+
+// Build a rich-HTML version of the email body (mirrors the PDF's colored cards).
+// Uses inline styles + table layout so Gmail / Outlook / Apple Mail render it consistently.
+function buildDashboardEmailHTML(intro) {
+    function esc(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    var monthLabel = getCurrentSelectedMonthLabel();
+    var today = new Date();
+    var dateStr = today.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+
+    // ---------- Executive Summary data ----------
+    var execCategories = [
+        { label: 'Agency (MLM/FD/AO)', krs: ['1.1', '1.2', '1.3'], color: '#2563EB' },
+        { label: 'IG',                 krs: ['1.4'],                color: '#7C3AED' },
+        { label: 'Corporate (EB)',     krs: ['2'],                  color: '#EA580C' }
+    ];
+    function matchKREmail(row, numbers) {
+        var info = parseKRLevel(row.kr_name);
+        return numbers.indexOf(info.number) !== -1;
+    }
+    var execBuckets = execCategories.map(function(cat) {
+        var rows = filteredData.filter(function(r) { return matchKREmail(r, cat.krs); });
+        var totalCurrent = 0, totalTarget = 0, unit = '';
+        rows.forEach(function(r) {
+            var c = getLatestValue(r);
+            var t = getTarget(r);
+            if (typeof c === 'number' && !isNaN(c)) totalCurrent += c;
+            if (typeof t === 'number' && !isNaN(t)) totalTarget += t;
+            if (!unit && r.unit_name) unit = r.unit_name;
+        });
+        return {
+            label: cat.label, color: cat.color, rows: rows,
+            totalCurrent: totalCurrent, totalTarget: totalTarget,
+            pct: totalTarget > 0 ? (totalCurrent / totalTarget) * 100 : 0,
+            unit: unit, krs: cat.krs
+        };
+    });
+    var validExec = execBuckets.filter(function(b) { return b.rows.length > 0; });
+
+    // ---------- KR Status data ----------
+    var krsWithTargets = filteredData
+        .map(function(row) {
+            return {
+                row: row,
+                progress: calculateProgress(row.kr_name, getLatestValue(row), getTarget(row)),
+                target: getTarget(row)
+            };
+        })
+        .filter(function(item) { return item.target > 0; });
+    var totalKR = krsWithTargets.length;
+    var achievedList = krsWithTargets.filter(function(k) { return k.progress >= 100; });
+    var slightlyList = krsWithTargets.filter(function(k) { return k.progress >= 90 && k.progress < 100; });
+    var underList    = krsWithTargets.filter(function(k) { return k.progress < 90; });
+
+    // ---------- Goal data ----------
+    var goalData = {};
+    filteredData.forEach(function(row) {
+        var goalName = row.goal_name || 'Uncategorized';
+        if (!goalData[goalName]) goalData[goalName] = { goalName: goalName, krs: [] };
+        var current = getLatestValue(row);
+        var target  = getTarget(row);
+        var progress = calculateProgress(row.kr_name, current, target);
+        goalData[goalName].krs.push({ kr_name: row.kr_name, current: current, target: target, progress: progress });
+    });
+
+    // ---------- Build HTML ----------
+    var html = '';
+
+    // Resolve a presentable "Month Year" string for the salutation.
+    // Use the selected month from the filter; fall back to latest available month;
+    // last resort: current month/year.
+    function resolveMonthYear() {
+        if (monthLabel && monthLabel !== 'Latest') return monthLabel;
+        if (typeof allMonths !== 'undefined' && allMonths.length > 0) {
+            var raw = allMonths[allMonths.length - 1];
+            var m = /^(\d{4})-(\d{2})$/.exec(raw);
+            if (m) {
+                var names = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+                return names[parseInt(m[2], 10) - 1] + ' ' + m[1];
+            }
+            return raw;
+        }
+        return today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
+    var monthYear = resolveMonthYear();
+
+    // Reusable section banner (full-width, navy stripe with white uppercase title)
+    function sectionBanner(title) {
+        return '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; margin: 36px 0 16px;">' +
+            '<tr><td style="background: #1E3A8A; color: #ffffff; padding: 12px 18px; border-radius: 8px; ' +
+                'font-size: 13px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;">' +
+                esc(title) +
+            '</td></tr></table>';
+    }
+
+    // Wrapper
+    html += '<div style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Arial, sans-serif; color: #0F172A; max-width: 760px; margin: 0 auto; line-height: 1.5;">';
+
+    // ===== Salutation =====
+    html += '<div style="margin: 0 0 24px; font-size: 14px; color: #334155; line-height: 1.65;">' +
+        '<p style="margin: 0 0 12px;">Dear Leadership Team,</p>' +
+        '<p style="margin: 0 0 12px;">I&rsquo;m pleased to share the monthly update on the Company OKRs for <strong>' + esc(monthYear) + '</strong>.</p>' +
+        '<p style="margin: 0;">This report is intended to provide an overview of our performance against OKRs, highlight important business trends observed over the past period, and summarize key achievements and areas requiring attention across the organization.</p>' +
+    '</div>';
+
+    // Optional custom intro from the modal (shown after the salutation)
+    if (intro && intro.trim()) {
+        html += '<p style="margin: 0 0 24px; padding: 12px 16px; background: #F8FAFC; border-left: 3px solid #2563EB; border-radius: 6px; font-size: 14px; color: #334155;">' + esc(intro).replace(/\n/g, '<br>') + '</p>';
+    }
+
+    // Header banner
+    html += '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; margin-bottom: 20px;">' +
+        '<tr><td style="background: #1E3A8A; color: #ffffff; padding: 28px 32px; border-radius: 12px; text-align: center;">' +
+            '<div style="font-size: 22px; font-weight: 800; letter-spacing: -0.01em;">OKR Dashboard Report</div>' +
+            '<div style="margin-top: 8px; font-size: 13px; opacity: 0.85;">Generated: ' + esc(dateStr) + ' &nbsp;|&nbsp; Month: ' + esc(monthLabel) + ' &nbsp;|&nbsp; KRs tracked: ' + filteredData.length + '</div>' +
+        '</td></tr></table>';
+
+    // ===== Section: Business Performance Overview =====
+    html += sectionBanner('Business Performance Overview');
+
+    // =========================================
+    // Executive Summary
+    // =========================================
+    html += '<h2 style="margin: 28px 0 12px; font-size: 18px; color: #0F172A; border-left: 4px solid #2563EB; padding-left: 10px;">Executive Summary</h2>';
+
+    if (validExec.length === 0) {
+        html += '<p style="color: #64748B; font-style: italic;">No KR data available for the executive summary.</p>';
+    } else {
+        var overallCurrent = validExec.reduce(function(s, b) { return s + b.totalCurrent; }, 0);
+        var overallTarget  = validExec.reduce(function(s, b) { return s + b.totalTarget;  }, 0);
+        var overallPct = overallTarget > 0 ? (overallCurrent / overallTarget) * 100 : 0;
+        var overallUnit = '';
+        for (var u = 0; u < validExec.length; u++) { if (validExec[u].unit) { overallUnit = validExec[u].unit; break; } }
+
+        var oColor, oBg, oLabel;
+        if (overallPct >= 100) {
+            oColor = '#10B981'; oBg = '#ECFDF5';
+            oLabel = 'Exceeding target by ' + (overallPct - 100).toFixed(1) + '%';
+        } else if (overallPct >= 90) {
+            oColor = '#F59E0B'; oBg = '#FFFBEB';
+            oLabel = 'Slightly under target (' + overallPct.toFixed(1) + '%)';
+        } else {
+            oColor = '#EF4444'; oBg = '#FEF2F2';
+            oLabel = 'Under target (' + overallPct.toFixed(1) + '%)';
+        }
+
+        // Hero box
+        html += '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; background: #F8FAFC; border: 1px solid #E5E7EB; border-radius: 12px; margin-bottom: 16px;">' +
+            '<tr><td style="padding: 22px 26px;">' +
+                '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;"><tr>' +
+                    '<td style="vertical-align: top;">' +
+                        '<div style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: #64748B; text-transform: uppercase; margin-bottom: 6px;">GWP Total &mdash; All Channels</div>' +
+                        '<div style="font-size: 28px; font-weight: 800; color: #0F172A; letter-spacing: -0.02em; line-height: 1.1;">' + esc(formatNumber(overallCurrent)) + (overallUnit ? ' <span style="font-size: 14px; color: #64748B; font-weight: 600;">' + esc(overallUnit) + '</span>' : '') + '</div>' +
+                        '<div style="font-size: 13px; color: #475569; margin-top: 6px;">Target: <strong>' + esc(formatNumber(overallTarget)) + (overallUnit ? ' ' + esc(overallUnit) : '') + '</strong></div>' +
+                    '</td>' +
+                    '<td style="vertical-align: top; text-align: right; white-space: nowrap;">' +
+                        '<span style="display: inline-block; padding: 8px 16px; background: ' + oColor + '; color: #ffffff; border-radius: 999px; font-size: 13px; font-weight: 700;">' + esc(oLabel) + '</span>' +
+                    '</td>' +
+                '</tr></table>' +
+            '</td></tr>' +
+        '</table>';
+
+        // Category cards — table-based for email-client compatibility
+        html += '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: separate; border-spacing: 8px 0; margin-bottom: 20px;"><tr>';
+        validExec.forEach(function(b) {
+            var badgeColor, badgeBg, badgeTxt;
+            if (b.pct >= 100)     { badgeColor = '#10B981'; badgeBg = '#ECFDF5'; badgeTxt = 'Above Target'; }
+            else if (b.pct >= 90) { badgeColor = '#F59E0B'; badgeBg = '#FFFBEB'; badgeTxt = 'Near Target'; }
+            else                  { badgeColor = '#EF4444'; badgeBg = '#FEF2F2'; badgeTxt = 'Below Target'; }
+
+            html += '<td style="vertical-align: top; width: 33%; background: #ffffff; border: 1px solid #E5E7EB; border-radius: 12px; padding: 18px 20px;">' +
+                '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; margin-bottom: 10px;"><tr>' +
+                    '<td style="font-weight: 800; font-size: 15px; color: ' + b.color + ';">' + esc(b.label) + '</td>' +
+                    '<td style="text-align: right; white-space: nowrap;"><span style="display: inline-block; padding: 4px 10px; background: ' + badgeBg + '; color: ' + badgeColor + '; border: 1px solid ' + badgeColor + '; border-radius: 999px; font-size: 10px; font-weight: 700;">' + esc(badgeTxt) + '</span></td>' +
+                '</tr></table>' +
+                '<div style="font-size: 13px; color: #475569; margin-bottom: 4px;">Achieved <strong style="color: ' + badgeColor + ';">' + b.pct.toFixed(1) + '%</strong> of yearly target</div>' +
+                '<div style="font-size: 11px; color: #94A3B8; margin-bottom: 14px;">(' + esc(formatNumber(b.totalTarget)) + (b.unit ? ' ' + esc(b.unit) : '') + ')</div>' +
+                '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; background: ' + b.color + '; border-radius: 8px;"><tr>' +
+                    '<td style="padding: 12px 14px; color: #ffffff; font-size: 12px; font-weight: 700;">GWP Total</td>' +
+                    '<td style="padding: 12px 14px; color: #ffffff; font-size: 17px; font-weight: 800; text-align: right; letter-spacing: -0.02em;">' + esc(formatNumber(b.totalCurrent)) + (b.unit ? ' <span style="font-size: 11px; font-weight: 500; opacity: 0.85;">' + esc(b.unit) + '</span>' : '') + '</td>' +
+                '</tr></table>' +
+                '<div style="font-size: 10px; color: #94A3B8; margin-top: 10px;">' + b.rows.length + ' KR' + (b.rows.length === 1 ? '' : 's') + ': ' + b.krs.map(function(n) { return 'KR ' + esc(n); }).join(', ') + '</div>' +
+            '</td>';
+        });
+        html += '</tr></table>';
+    }
+
+    // =========================================
+    // KR Status Overview
+    // =========================================
+    html += '<h2 style="margin: 28px 0 12px; font-size: 18px; color: #0F172A; border-left: 4px solid #2563EB; padding-left: 10px;">KR Status Overview</h2>';
+
+    if (totalKR === 0) {
+        html += '<p style="color: #64748B; font-style: italic;">No KR data available.</p>';
+    } else {
+        var successRate = ((achievedList.length / totalKR) * 100).toFixed(1);
+        html += '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; margin-bottom: 12px;"><tr>' +
+            '<td style="font-size: 12px; color: #64748B; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;">Tracking ' + totalKR + ' KR' + (totalKR === 1 ? '' : 's') + ' with targets</td>' +
+            '<td style="font-size: 12px; color: #0F172A; text-align: right;">Success rate: <strong>' + successRate + '%</strong></td>' +
+        '</tr></table>';
+
+        var buckets = [
+            { label: 'Achieved',       sublabel: '&ge; 100% of target',   count: achievedList.length, color: '#10B981', bg: '#F0FDF4', krs: achievedList },
+            { label: 'Slightly Under', sublabel: '90% &ndash; 99% of target', count: slightlyList.length, color: '#F59E0B', bg: '#FFFBEB', krs: slightlyList },
+            { label: 'Under Target',   sublabel: '&lt; 90% of target',    count: underList.length,    color: '#EF4444', bg: '#FEF2F2', krs: underList    }
+        ];
+
+        html += '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: separate; border-spacing: 8px 0; margin-bottom: 20px;"><tr>';
+        buckets.forEach(function(b) {
+            var pctOfTotal = totalKR > 0 ? (b.count / totalKR) * 100 : 0;
+            html += '<td style="vertical-align: top; width: 33%; background: ' + b.bg + '; border-left: 4px solid ' + b.color + '; border-radius: 12px; padding: 16px 18px;">' +
+                '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; margin-bottom: 12px;"><tr>' +
+                    '<td style="vertical-align: top;">' +
+                        '<div style="font-weight: 700; color: #0F172A; font-size: 14px;">' + esc(b.label) + '</div>' +
+                        '<div style="font-size: 10px; color: #64748B; margin-top: 2px;">' + b.sublabel + '</div>' +
+                    '</td>' +
+                    '<td style="vertical-align: top; text-align: right;">' +
+                        '<div style="font-size: 28px; font-weight: 800; color: ' + b.color + '; line-height: 1;">' + b.count + '</div>' +
+                        '<div style="font-size: 10px; color: #94A3B8; margin-top: 2px;">' + pctOfTotal.toFixed(1) + '% of total</div>' +
+                    '</td>' +
+                '</tr></table>';
+
+            // Progress bar (table-based for email clients)
+            var fillW = Math.max(0, Math.min(100, pctOfTotal));
+            html += '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; background: #ffffff; border-radius: 999px; height: 6px; overflow: hidden; margin-bottom: 12px;"><tr>' +
+                '<td style="background: ' + b.color + '; width: ' + fillW.toFixed(1) + '%; height: 6px; font-size: 0; line-height: 0;">&nbsp;</td>' +
+                '<td style="width: ' + (100 - fillW).toFixed(1) + '%; height: 6px; font-size: 0; line-height: 0;">&nbsp;</td>' +
+            '</tr></table>';
+
+            // KR list
+            if (b.krs.length === 0) {
+                html += '<div style="font-size: 11px; color: #94A3B8; font-style: italic;">No KRs in this bucket</div>';
+            } else {
+                html += '<div style="font-size: 10px; font-weight: 700; color: ' + b.color + '; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 6px;">Key Results</div>';
+                var maxShow = Math.min(b.krs.length, 8);
+                for (var k = 0; k < maxShow; k++) {
+                    var krItem = b.krs[k];
+                    html += '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; font-size: 11px; margin-bottom: 3px;"><tr>' +
+                        '<td style="color: #334155;">' + esc(krItem.row.kr_name || '') + '</td>' +
+                        '<td style="color: ' + b.color + '; font-weight: 700; text-align: right;">' + krItem.progress.toFixed(0) + '%</td>' +
+                    '</tr></table>';
+                }
+                if (b.krs.length > maxShow) {
+                    html += '<div style="font-size: 10px; color: #94A3B8; margin-top: 4px;">+' + (b.krs.length - maxShow) + ' more</div>';
+                }
+            }
+            html += '</td>';
+        });
+        html += '</tr></table>';
+    }
+
+    // ===== Section: Monthly OKR Highlights =====
+    html += sectionBanner('Monthly OKR Highlights');
+
+    // =========================================
+    // Goal Performance Highlights
+    // =========================================
+    html += '<h2 style="margin: 28px 0 12px; font-size: 18px; color: #0F172A; border-left: 4px solid #2563EB; padding-left: 10px;">Goal Performance Highlights</h2>';
+
+    var sortedGoals = Object.keys(goalData).sort();
+    var anyGoal = false;
+    sortedGoals.forEach(function(goalName) {
+        var goal = goalData[goalName];
+        var withTargets = goal.krs.filter(function(kr) { return kr.target > 0; });
+        if (withTargets.length === 0) return;
+        anyGoal = true;
+
+        var achievedCount = withTargets.filter(function(kr) { return kr.progress >= 100; }).length;
+        var avgProgress   = withTargets.reduce(function(s, kr) { return s + kr.progress; }, 0) / withTargets.length;
+        var rate = (achievedCount / withTargets.length) * 100;
+
+        var gColor, gBg, gLabel;
+        if (rate >= 100) { gColor = '#10B981'; gBg = '#F0FDF4'; gLabel = 'Achieved Target'; }
+        else if (rate >= 90 || (withTargets.length - achievedCount) <= 1) { gColor = '#F59E0B'; gBg = '#FFFBEB'; gLabel = 'Slightly Under Target'; }
+        else { gColor = '#EF4444'; gBg = '#FEF2F2'; gLabel = 'Under Target'; }
+
+        html += '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; background: ' + gBg + '; border-left: 4px solid ' + gColor + '; border-radius: 8px; margin-bottom: 10px;">' +
+            '<tr><td style="padding: 14px 18px;">' +
+                '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;"><tr>' +
+                    '<td style="font-weight: 700; color: #0F172A; font-size: 14px;">' + esc(goalName) + '</td>' +
+                    '<td style="text-align: right; white-space: nowrap;"><span style="display: inline-block; padding: 3px 10px; background: ' + gColor + '; color: #ffffff; border-radius: 999px; font-size: 10px; font-weight: 700;">' + esc(gLabel) + '</span></td>' +
+                '</tr></table>' +
+                '<div style="font-size: 12px; color: #475569; margin-top: 6px;"><strong>' + achievedCount + ' of ' + withTargets.length + '</strong> KRs achieved (' + rate.toFixed(1) + '%). Avg progress: <strong>' + avgProgress.toFixed(1) + '%</strong>.</div>' +
+            '</td></tr>' +
+        '</table>';
+    });
+    if (!anyGoal) html += '<p style="color: #64748B; font-style: italic;">No goals with targets.</p>';
+
+    // =========================================
+    // Table View (full KR hierarchy)
+    // =========================================
+    html += '<h2 style="margin: 32px 0 12px; font-size: 18px; color: #0F172A; border-left: 4px solid #2563EB; padding-left: 10px;">Table View</h2>';
+
+    var tvHierarchy = {};
+    filteredData.forEach(function(row) {
+        var gn = row.goal_name || 'Uncategorized Goal';
+        var on = row.objective_name || 'Uncategorized Objective';
+        if (!tvHierarchy[gn]) tvHierarchy[gn] = {};
+        if (!tvHierarchy[gn][on]) tvHierarchy[gn][on] = { krs: [] };
+        tvHierarchy[gn][on].krs.push(row);
+    });
+
+    var tvGoalNames = Object.keys(tvHierarchy);
+    if (tvGoalNames.length === 0) {
+        html += '<p style="color: #64748B; font-style: italic;">No KR data available.</p>';
+    } else {
+        // Table header (sticky-styled)
+        html += '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; font-size: 12px; border: 1px solid #E2E8F0; border-radius: 8px; overflow: hidden;">';
+        html += '<thead><tr style="background: #1E3A8A; color: #ffffff;">' +
+            '<th align="left"  style="padding: 10px 12px; font-weight: 700; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase;">Key Result</th>' +
+            '<th align="left"  style="padding: 10px 12px; font-weight: 700; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase;">Topic</th>' +
+            '<th align="left"  style="padding: 10px 12px; font-weight: 700; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase;">Owner</th>' +
+            '<th align="right" style="padding: 10px 12px; font-weight: 700; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase;">Current</th>' +
+            '<th align="right" style="padding: 10px 12px; font-weight: 700; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase;">Target</th>' +
+            '<th align="right" style="padding: 10px 12px; font-weight: 700; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase;">Change</th>' +
+            '<th align="left"  style="padding: 10px 12px; font-weight: 700; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; min-width: 140px;">Progress</th>' +
+        '</tr></thead><tbody>';
+
+        tvGoalNames.forEach(function(gn) {
+            // Goal row
+            html += '<tr><td colspan="7" style="background: #0F172A; color: #ffffff; padding: 10px 14px; font-weight: 800; font-size: 12px;">' + esc(gn) + '</td></tr>';
+
+            Object.keys(tvHierarchy[gn]).forEach(function(on) {
+                // Objective row
+                html += '<tr><td colspan="7" style="background: #F1F5F9; color: #334155; padding: 8px 14px 8px 24px; font-weight: 700; font-size: 11px;">' + esc(on) + '</td></tr>';
+
+                var organized = organizeKRHierarchy(tvHierarchy[gn][on].krs);
+
+                function addKRRow(nodes, indent) {
+                    nodes.forEach(function(item) {
+                        var r = item.kr;
+                        var cur = getLatestValue(r);
+                        var prev = getPreviousValue(r);
+                        var tgt = getTarget(r);
+                        var chg = calculateChange(cur, prev);
+                        var prog = tgt > 0 && cur !== null ? ((cur / tgt) * 100) : 0;
+
+                        var chgStr = 'N/A';
+                        var chgColor = '#94A3B8';
+                        if (chg !== null && !isNaN(chg) && isFinite(chg)) {
+                            chgStr = (chg >= 0 ? '+' : '') + chg.toFixed(1) + '%';
+                            chgColor = chg >= 0 ? '#10B981' : '#EF4444';
+                        }
+
+                        // KR name + title (sub-KRs indented and prefixed)
+                        var krTitle = getShortTitle(r.kr_title_name || '');
+                        var indentPx = indent * 16;
+                        var krNameHtml = '<div style="font-weight: 700; color: #0F172A;">' +
+                            (indent > 0 ? '<span style="color: #94A3B8;">&rsaquo;&nbsp;</span>' : '') +
+                            esc(r.kr_name || '') + '</div>' +
+                            (krTitle ? '<div style="font-size: 10px; color: #64748B; font-style: italic; margin-top: 2px;">' + esc(krTitle) + '</div>' : '');
+
+                        // Progress bar + status colour
+                        var progColor, progBadgeBg, progBadgeText;
+                        if (tgt <= 0)              { progColor = '#94A3B8'; progBadgeBg = '#F1F5F9'; progBadgeText = '—'; }
+                        else if (prog >= 100)      { progColor = '#10B981'; progBadgeBg = '#F0FDF4'; progBadgeText = prog.toFixed(1) + '%'; }
+                        else if (prog >= 90)       { progColor = '#F59E0B'; progBadgeBg = '#FFFBEB'; progBadgeText = prog.toFixed(1) + '%'; }
+                        else                       { progColor = '#EF4444'; progBadgeBg = '#FEF2F2'; progBadgeText = prog.toFixed(1) + '%'; }
+
+                        var fillW = Math.max(0, Math.min(100, prog));
+                        var progressHtml = '';
+                        if (tgt > 0) {
+                            progressHtml =
+                                '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;"><tr>' +
+                                    '<td style="width: 64%; padding-right: 8px;">' +
+                                        '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; background: #F1F5F9; border-radius: 999px; height: 6px; overflow: hidden;"><tr>' +
+                                            '<td style="background: ' + progColor + '; width: ' + fillW.toFixed(1) + '%; height: 6px; font-size: 0; line-height: 0;">&nbsp;</td>' +
+                                            '<td style="width: ' + (100 - fillW).toFixed(1) + '%; height: 6px; font-size: 0; line-height: 0;">&nbsp;</td>' +
+                                        '</tr></table>' +
+                                    '</td>' +
+                                    '<td style="width: 36%; text-align: right; white-space: nowrap;">' +
+                                        '<span style="display: inline-block; padding: 2px 8px; background: ' + progBadgeBg + '; color: ' + progColor + '; border: 1px solid ' + progColor + '; border-radius: 999px; font-size: 10px; font-weight: 700;">' + progBadgeText + '</span>' +
+                                    '</td>' +
+                                '</tr></table>';
+                        } else {
+                            progressHtml = '<span style="color: #94A3B8; font-size: 11px;">No target</span>';
+                        }
+
+                        var unit = r.unit_name || '';
+                        var curHtml = cur !== null
+                            ? '<span style="font-family: \'Google Sans Text\', monospace; font-weight: 600; color: #0F172A;">' + esc(formatNumber(cur)) + '</span>' +
+                              (unit ? '<div style="font-size: 9px; color: #94A3B8; margin-top: 1px;">' + esc(unit) + '</div>' : '')
+                            : '<span style="color: #94A3B8;">N/A</span>';
+                        var tgtHtml = tgt > 0
+                            ? '<span style="font-family: \'Google Sans Text\', monospace; font-weight: 600; color: #0F172A;">' + esc(formatNumber(tgt)) + '</span>' +
+                              (unit ? '<div style="font-size: 9px; color: #94A3B8; margin-top: 1px;">' + esc(unit) + '</div>' : '')
+                            : '<span style="color: #94A3B8;">N/A</span>';
+
+                        html += '<tr style="background: #ffffff; border-bottom: 1px solid #F1F5F9;">' +
+                            '<td style="padding: 10px 12px; vertical-align: top; padding-left: ' + (12 + indentPx) + 'px;">' + krNameHtml + '</td>' +
+                            '<td style="padding: 10px 12px; vertical-align: top; color: #475569;">' + esc(r.kr_topic_name || '') + '</td>' +
+                            '<td style="padding: 10px 12px; vertical-align: top; color: #475569;">' + esc(r.kr_owner_name || 'Unassigned') + '</td>' +
+                            '<td style="padding: 10px 12px; vertical-align: top; text-align: right;">' + curHtml + '</td>' +
+                            '<td style="padding: 10px 12px; vertical-align: top; text-align: right;">' + tgtHtml + '</td>' +
+                            '<td style="padding: 10px 12px; vertical-align: top; text-align: right; color: ' + chgColor + '; font-weight: 600;">' + esc(chgStr) + '</td>' +
+                            '<td style="padding: 10px 12px; vertical-align: middle;">' + progressHtml + '</td>' +
+                        '</tr>';
+
+                        if (item.children && item.children.length > 0) addKRRow(item.children, indent + 1);
+                    });
+                }
+                addKRRow(organized, 0);
+            });
+        });
+
+        html += '</tbody></table>';
+    }
+
+    // Closing block (above everything else's footer)
+    html += '<div style="margin-top: 36px; padding-top: 20px; border-top: 1px solid #E2E8F0; font-size: 14px; color: #334155; line-height: 1.65;">' +
+        '<p style="margin: 0 0 12px;">For detailed interactive charts and comprehensive analysis, please refer to the full website attached to this email, logging in with your FairDee Google account.</p>' +
+        '<p style="margin: 0 0 20px;">Supporting dashboard: <a href="https://fairdee-okr.web.app/index.html" style="color: #2563EB; text-decoration: underline; font-weight: 600;">https://fairdee-okr.web.app/index.html</a></p>' +
+        '<p style="margin: 0;">Best regards,</p>' +
+    '</div>';
+
+    html += '</div>'; // close wrapper
+    return html;
+}
+
+function sendDashboardEmail() {
+    var errEl = document.getElementById('emailModalError');
+    errEl.style.display = 'none';
+    errEl.textContent = '';
+
+    var rawRecipients = document.getElementById('emailRecipients').value;
+    var subject = document.getElementById('emailSubject').value.trim();
+    var intro = document.getElementById('emailIntro').value;
+
+    var parsed = parseRecipients(rawRecipients);
+    if (parsed.valid.length === 0) {
+        errEl.textContent = 'Please enter at least one valid email address.';
+        errEl.style.display = 'block';
+        return;
+    }
+    if (parsed.invalid.length > 0) {
+        errEl.textContent = 'Invalid email(s): ' + parsed.invalid.join(', ');
+        errEl.style.display = 'block';
+        return;
+    }
+    if (!subject) {
+        errEl.textContent = 'Subject cannot be empty.';
+        errEl.style.display = 'block';
+        return;
+    }
+
+    // 1) Generate and download the PDF (re-uses existing export)
+    try {
+        exportTableToPDF();
+    } catch (e) {
+        console.error('PDF generation failed', e);
+        errEl.textContent = 'Failed to generate PDF: ' + e.message;
+        errEl.style.display = 'block';
+        return;
+    }
+
+    // 2) Remember recipients for quick-add next time
+    saveRecentEmailRecipients(parsed.valid);
+
+    // 3) Build rich HTML body + plain-text fallback
+    var htmlBody = buildDashboardEmailHTML(intro);
+    var textBody = buildDashboardEmailBody(intro);
+
+    // 4) Copy the rich HTML to the clipboard (so the user can paste into Gmail / Outlook compose).
+    //    Falls back gracefully if the modern Clipboard API isn't available.
+    function copyHtmlToClipboard() {
+        if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+            try {
+                var item = new ClipboardItem({
+                    'text/html':  new Blob([htmlBody], { type: 'text/html' }),
+                    'text/plain': new Blob([textBody], { type: 'text/plain' })
+                });
+                return navigator.clipboard.write([item]);
+            } catch (e) { /* fall through */ }
+        }
+        // Legacy fallback: select a contentEditable div and execCommand('copy')
+        return new Promise(function(resolve, reject) {
+            try {
+                var holder = document.createElement('div');
+                holder.contentEditable = 'true';
+                holder.style.position = 'fixed';
+                holder.style.left = '-9999px';
+                holder.style.top = '0';
+                holder.innerHTML = htmlBody;
+                document.body.appendChild(holder);
+                var range = document.createRange();
+                range.selectNodeContents(holder);
+                var sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+                var ok = document.execCommand('copy');
+                sel.removeAllRanges();
+                document.body.removeChild(holder);
+                ok ? resolve() : reject(new Error('execCommand copy returned false'));
+            } catch (err) { reject(err); }
+        });
+    }
+
+    // Determine and persist the "Open in" preference
+    var openInEl = document.getElementById('emailOpenIn');
+    var openIn = openInEl ? openInEl.value : 'gmail';
+    try { localStorage.setItem(EMAIL_OPEN_IN_STORAGE_KEY, openIn); } catch (e) { /* ignore */ }
+
+    function buildComposeUrl(includeBody) {
+        if (openIn === 'gmail') {
+            // Gmail compose in browser. If the user signed in via Firebase Auth with a
+            // Fairdee Google account, hint Gmail to use that account.
+            var authuser = '';
+            try {
+                if (typeof auth !== 'undefined' && auth && auth.currentUser && auth.currentUser.email) {
+                    authuser = '&authuser=' + encodeURIComponent(auth.currentUser.email);
+                }
+            } catch (e) {}
+            var url = 'https://mail.google.com/mail/?view=cm&fs=1'
+                + authuser
+                + '&to='  + encodeURIComponent(parsed.valid.join(','))
+                + '&su='  + encodeURIComponent(subject);
+            if (includeBody && includeBody.length > 0) {
+                url += '&body=' + encodeURIComponent(includeBody);
+            }
+            return url;
+        }
+        // Default: mailto:
+        var mailtoUrl = 'mailto:' + parsed.valid.join(',')
+            + '?subject=' + encodeURIComponent(subject);
+        if (includeBody && includeBody.length > 0) {
+            mailtoUrl += '&body=' + encodeURIComponent(includeBody);
+        }
+        return mailtoUrl;
+    }
+
+    function openCompose(url) {
+        if (openIn === 'gmail') {
+            // Open Gmail in a new tab so the dashboard stays put.
+            window.open(url, '_blank', 'noopener');
+        } else {
+            window.location.href = url;
+        }
+    }
+
+    copyHtmlToClipboard().then(function() {
+        // Build URL with recipients + subject (body is on the clipboard for paste)
+        var url = buildComposeUrl(null);
+
+        // Open after a small delay so the PDF download triggers first
+        setTimeout(function() { openCompose(url); }, 300);
+
+        closeEmailModal();
+        showEmailSentToast(parsed.valid.length, openIn);
+    }).catch(function(err) {
+        console.error('Clipboard copy failed', err);
+        errEl.innerHTML = 'Could not copy the formatted report to your clipboard. ' +
+            'Your browser may have blocked clipboard access. ' +
+            '<br>Falling back to plain-text email body.';
+        errEl.style.display = 'block';
+
+        // Plain-text fallback: include the text body in the URL itself
+        var truncated = textBody.length > 1900 ? textBody.substring(0, 1900) + '\n\n[Summary truncated. See attached PDF.]' : textBody;
+        var fallbackUrl = buildComposeUrl(truncated);
+        setTimeout(function() { openCompose(fallbackUrl); }, 600);
+    });
+}
+
+// Lightweight toast confirming the report was copied and email opened
+function showEmailSentToast(recipientCount, openIn) {
+    var existing = document.getElementById('emailSentToast');
+    if (existing) existing.remove();
+
+    var clientLabel = openIn === 'gmail' ? 'Gmail (new tab)' : 'your default email app';
+
+    var toast = document.createElement('div');
+    toast.id = 'emailSentToast';
+    toast.style.cssText = 'position: fixed; bottom: 24px; right: 24px; background: #0F172A; color: white; ' +
+        'padding: 14px 20px; border-radius: 12px; box-shadow: 0 10px 30px rgba(15,23,42,0.25); ' +
+        'font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 13px; max-width: 360px; ' +
+        'z-index: 2000; line-height: 1.5; animation: fadeIn 0.25s ease-out;';
+    toast.innerHTML =
+        '<div style="display: flex; align-items: flex-start; gap: 10px;">' +
+            '<span style="color: #10B981; display: inline-flex; margin-top: 2px;">' + ((window.ICONS && window.ICONS['check-circle']) || '') + '</span>' +
+            '<div>' +
+                '<div style="font-weight: 700; margin-bottom: 4px;">Report ready to send</div>' +
+                '<div style="color: #CBD5E1; font-size: 12px;">' +
+                    'Opening ' + clientLabel + '. PDF downloaded &mdash; the formatted report is on your clipboard. ' +
+                    '<strong>Paste (Cmd/Ctrl + V) into the email body</strong>, attach the PDF, and send to ' + recipientCount + ' recipient' + (recipientCount === 1 ? '' : 's') + '.' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    document.body.appendChild(toast);
+    setTimeout(function() {
+        toast.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(8px)';
+        setTimeout(function() { toast.remove(); }, 500);
+    }, 7000);
 }
 
 // Reset dashboard
@@ -2134,13 +3474,13 @@ function fetchSheetTab(sheetName, onSuccess, statusElementId) {
                 transformHeader: function(h) { return h.trim(); },
                 complete: onSuccess,
                 error: function(err) {
-                    showUploadStatus(statusElementId, 'error', '✗ Parse error: ' + err.message);
+                    showUploadStatus(statusElementId, 'error', 'Parse error: ' + err.message);
                     _markSourceLoaded();
                 }
             });
         })
         .catch(function(err) {
-            showUploadStatus(statusElementId, 'error', '✗ ' + err.message);
+            showUploadStatus(statusElementId, 'error', '' + err.message);
             _markSourceLoaded();
         });
 }
@@ -2158,18 +3498,18 @@ function fetchFirstTransactingData() {
                 transformHeader: function(h) { return h.trim(); },
                 complete: function(results) {
                     firstTransactingData = results.data;
-                    showUploadStatus('firstTransactingStatus', 'success', '✓ Loaded ' + firstTransactingData.length + ' rows');
+                    showUploadStatus('firstTransactingStatus', 'success', 'Loaded ' + firstTransactingData.length + ' rows');
                     _markSourceLoaded();
                     renderHunterAnalysis();
                 },
                 error: function(err) {
-                    showUploadStatus('firstTransactingStatus', 'error', '✗ ' + err.message);
+                    showUploadStatus('firstTransactingStatus', 'error', '' + err.message);
                     _markSourceLoaded();
                 }
             });
         })
         .catch(function(err) {
-            showUploadStatus('firstTransactingStatus', 'error', '✗ ' + err.message);
+            showUploadStatus('firstTransactingStatus', 'error', '' + err.message);
             _markSourceLoaded();
         });
 }
@@ -2187,18 +3527,18 @@ function fetchEarlyRetentionData() {
                 transformHeader: function(h) { return h.trim(); },
                 complete: function(results) {
                     earlyRetentionData = results.data;
-                    showUploadStatus('earlyRetentionStatus', 'success', '✓ Loaded ' + earlyRetentionData.length + ' rows');
+                    showUploadStatus('earlyRetentionStatus', 'success', 'Loaded ' + earlyRetentionData.length + ' rows');
                     _markSourceLoaded();
                     renderHunterAnalysis();
                 },
                 error: function(err) {
-                    showUploadStatus('earlyRetentionStatus', 'error', '✗ ' + err.message);
+                    showUploadStatus('earlyRetentionStatus', 'error', '' + err.message);
                     _markSourceLoaded();
                 }
             });
         })
         .catch(function(err) {
-            showUploadStatus('earlyRetentionStatus', 'error', '✗ ' + err.message);
+            showUploadStatus('earlyRetentionStatus', 'error', '' + err.message);
             _markSourceLoaded();
         });
 }
@@ -2216,7 +3556,7 @@ function renderHunterAnalysis() {
     if (firstTransactingData.length === 0 && earlyRetentionData.length === 0) {
         container.innerHTML = `
             <div class="no-monthly-data">
-                <h3 style="margin-bottom: 1rem;">🎯 Hunter Analysis</h3>
+                <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;"><span style="display: inline-flex; color: var(--accent);">${(window.ICONS && window.ICONS.target) || ''}</span> Hunter Analysis</h3>
                 <p>Hunter Analysis data is loading from Google Sheets. Please wait a moment.</p>
             </div>
         `;
@@ -3039,7 +4379,7 @@ function processTeamPerfFile(file, statusElementId) {
                 console.log('Sample row:', teamPerfRawData[0]);
             }
             
-            var msg = '✔ Loaded ' + teamPerfRawData.length + ' rows from ' + file.name;
+            var msg = 'Loaded ' + teamPerfRawData.length + ' rows from ' + file.name;
             showUploadStatus(statusElementId, 'success', msg);
             showUploadStatus(otherStatusId, 'success', msg);
             
@@ -3051,7 +4391,7 @@ function processTeamPerfFile(file, statusElementId) {
             renderTeamPerformanceDynamic();
         },
         error: function(error) {
-            var msg = '✗ Error: ' + error.message;
+            var msg = 'Error: ' + error.message;
             showUploadStatus(statusElementId, 'error', msg);
             showUploadStatus(otherStatusId, 'error', msg);
         }
@@ -3071,13 +4411,13 @@ function fetchTeamPerfData() {
                 transformHeader: function(h) { return h.trim(); },
                 complete: function(results) { _processTeamPerfResults(results); },
                 error: function(err) {
-                    showUploadStatus('teamPerfFileStatusMain', 'error', '✗ ' + err.message);
+                    showUploadStatus('teamPerfFileStatusMain', 'error', '' + err.message);
                     _markSourceLoaded();
                 }
             });
         })
         .catch(function(err) {
-            showUploadStatus('teamPerfFileStatusMain', 'error', '✗ ' + err.message);
+            showUploadStatus('teamPerfFileStatusMain', 'error', '' + err.message);
             _markSourceLoaded();
         });
 }
@@ -3113,8 +4453,8 @@ function _processTeamPerfResults(results) {
             };
         }).filter(function(row) { return row.team_name && row.month; });
 
-        showUploadStatus('teamPerfFileStatusMain', 'success', '✓ Loaded ' + teamPerfRawData.length + ' rows');
-        showUploadStatus('teamPerfFileStatus', 'success', '✓ Loaded ' + teamPerfRawData.length + ' rows');
+        showUploadStatus('teamPerfFileStatusMain', 'success', 'Loaded ' + teamPerfRawData.length + ' rows');
+        showUploadStatus('teamPerfFileStatus', 'success', 'Loaded ' + teamPerfRawData.length + ' rows');
         _markSourceLoaded();
         renderTeamPerformanceDynamic();
 }
@@ -3295,7 +4635,7 @@ function renderTeamPerformanceDynamic() {
     // Re-upload button + month selector
     html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">';
     html += '<div style="display: flex; align-items: center; gap: 1rem;">';
-    html += '<label style="font-weight: 600; font-size: 0.875rem; color: var(--text-primary);">📅 View Month:</label>';
+    html += '<label style="font-weight: 600; font-size: 0.875rem; color: var(--text-primary); display: inline-flex; align-items: center; gap: 0.4rem;"><span style="display: inline-flex;">' + ((window.ICONS && window.ICONS.calendar) || '') + '</span> View Month:</label>';
     html += '<select id="teamPerfMonthSelect" onchange="onTeamPerfMonthChange()" class="filter-select month-select" style="width: auto; min-width: 180px;">';
     sortedTeamMonths.forEach(function(m) {
         var sel = m === selectedYYYYMM ? ' selected' : '';
@@ -3303,7 +4643,7 @@ function renderTeamPerformanceDynamic() {
     });
     html += '</select>';
     html += '</div>';
-    html += '<button class="btn-reset" onclick="resetTeamPerfData()" style="font-size: 0.85rem; padding: 0.5rem 1rem;">📁 Upload New Team Data</button>';
+    html += '<button class="btn-reset" onclick="resetTeamPerfData()" style="font-size: 0.85rem; padding: 0.5rem 1rem; display: inline-flex; align-items: center; gap: 0.4rem;"><span style="display: inline-flex;">' + ((window.ICONS && window.ICONS.folder) || '') + '</span> Upload New Team Data</button>';
     html += '</div>';
     
     // Metrics cards
@@ -3377,7 +4717,7 @@ function renderTeamPerformanceDynamic() {
     
     // Key Highlights
     html += '<div class="insights-section" style="background: var(--card-bg); border-radius: 12px; padding: 2rem; box-shadow: var(--shadow-md); border: 1px solid var(--border); margin-bottom: 2rem;">';
-    html += '<h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 1.5rem; color: var(--primary);">📊 Key Highlights - ' + displayMonth + '</h2>';
+    html += '<h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 1.5rem; color: var(--primary); display: flex; align-items: center; gap: 0.6rem;"><span style="display: inline-flex; color: var(--accent);">' + ((window.ICONS && window.ICONS['bar-chart']) || '') + '</span> Key Highlights - ' + displayMonth + '</h2>';
     
     // Top performer focus
     if (focusArr.length > 0) {
@@ -3743,14 +5083,14 @@ function fetchFleetData() {
                 }
             },
             error: function(error) {
-                showUploadStatus('fleetFetchStatus', 'error', '✗ CSV parse error: ' + error.message);
+                showUploadStatus('fleetFetchStatus', 'error', 'CSV parse error: ' + error.message);
                 _markSourceLoaded();
             }
         });
     })
     .catch(function(error) {
         console.error('Fetch error:', error);
-        showUploadStatus('fleetFetchStatus', 'error', '✗ ' + error.message);
+        showUploadStatus('fleetFetchStatus', 'error', '' + error.message);
         _markSourceLoaded();
     });
 }
@@ -3844,7 +5184,7 @@ function processFleetSheetData(rows) {
     console.log('Fleet policies:', policies);
     
     if (months.length === 0) {
-        showUploadStatus('fleetFetchStatus', 'error', '✗ No month data found. Check sheet format (Column A should have "YYYY-Mon" like "2026-Jan").');
+        showUploadStatus('fleetFetchStatus', 'error', 'No month data found. Check sheet format (Column A should have "YYYY-Mon" like "2026-Jan").');
         return;
     }
     
@@ -3865,7 +5205,7 @@ function processFleetSheetData(rows) {
         year: parseInt(mainYear) || 2026
     };
     
-    showUploadStatus('fleetFetchStatus', 'success', '✔ Data loaded: ' + months.length + ' months of Fleet GWP data (includes historical)');
+    showUploadStatus('fleetFetchStatus', 'success', 'Data loaded: ' + months.length + ' months of Fleet GWP data (includes historical)');
     
     renderFleetAnalysis();
 }
@@ -4053,11 +5393,11 @@ function renderFleetAnalysis() {
             statusBadge = '<span style="color: var(--text-muted);">—</span>';
         } else if (a > 0) {
             if (pct >= 100) {
-                statusBadge = '<span class="table-status-badge achieved" title="Achieved">✔</span>';
+                statusBadge = '<span class="table-status-badge achieved" title="Achieved" style="display: inline-flex; align-items: center; justify-content: center;">' + ((window.ICONS && window.ICONS.check) || '') + '</span>';
             } else if (pct >= 90) {
-                statusBadge = '<span class=”table-status-badge slightly-under” title=”Near Target”>⚠</span>';
+                statusBadge = '<span class="table-status-badge slightly-under" title="Near Target" style="display: inline-flex; align-items: center; justify-content: center;">' + ((window.ICONS && window.ICONS.alert) || '') + '</span>';
             } else {
-                statusBadge = '<span class=”table-status-badge under” title=”Under Target”>✗</span>';
+                statusBadge = '<span class="table-status-badge under" title="Under Target" style="display: inline-flex; align-items: center; justify-content: center;">' + ((window.ICONS && window.ICONS.x) || '') + '</span>';
             }
         } else {
             statusBadge = '<span style="color: var(--text-muted);">—</span>';

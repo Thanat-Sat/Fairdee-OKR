@@ -373,6 +373,108 @@
             cursor: not-allowed;
             transform: none;
         }
+
+        /* Send Email Button */
+        .btn-send-email {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.6rem 1.25rem;
+            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            font-family: 'Google Sans Text', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+        }
+        .btn-send-email:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+        }
+        .btn-send-email:active { transform: translateY(0); }
+        .btn-send-email:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Email modal helpers */
+        .email-modal-field { margin-bottom: 1rem; }
+        .email-modal-label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            margin-bottom: 0.4rem;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+        .email-modal-input,
+        .email-modal-textarea {
+            width: 100%;
+            padding: 0.65rem 0.85rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-family: 'Google Sans Text', sans-serif;
+            color: var(--text-primary);
+            background: white;
+            box-sizing: border-box;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .email-modal-input:focus,
+        .email-modal-textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(255,107,53,0.12);
+        }
+        .email-modal-textarea { min-height: 88px; resize: vertical; }
+        .email-modal-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.35rem;
+        }
+        .email-modal-error {
+            font-size: 0.8rem;
+            color: #DC2626;
+            background: #FEF2F2;
+            border: 1px solid #FECACA;
+            border-radius: 8px;
+            padding: 0.6rem 0.8rem;
+            margin-bottom: 1rem;
+        }
+        .email-modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.6rem;
+            padding: 1rem 1.75rem 1.5rem;
+            border-top: 1px solid var(--border);
+            background: #FAFBFC;
+        }
+        .email-recent-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            margin-top: 0.5rem;
+        }
+        .email-recent-chip {
+            font-size: 0.75rem;
+            background: #F1F5F9;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 0.2rem 0.65rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .email-recent-chip:hover {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
     </style>
 </head>
 <body>
@@ -412,7 +514,7 @@
 
             <!-- OKR Data Source -->
             <div style="border: 2px solid var(--border); border-radius: 12px; padding: 2rem; background: #FAFBFC; text-align: center;">
-                <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📊</div>
+                <div style="font-size: 2.5rem; margin-bottom: 0.75rem; color: var(--accent); line-height: 1;"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line><line x1="3" y1="20" x2="21" y2="20"></line></svg></div>
                 <div style="font-weight: 600; font-size: 1rem; margin-bottom: 0.5rem; color: var(--text-primary);">OKR Data</div>
                 <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">Auto-loaded from Google Sheets</div>
                 <div id="dataFileStatus" class="upload-status"></div>
@@ -422,19 +524,19 @@
             <!-- Hunter Analysis Auto-load -->
             <div style="margin-top: 3rem;">
                 <h3 style="text-align: center; color: var(--primary); margin-bottom: 1rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                    <span style="font-size: 1.2rem;">🎯</span> Hunter Analysis
+                    <span style="font-size: 1.2rem; display: inline-flex; color: var(--accent);"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2" fill="currentColor"></circle></svg></span> Hunter Analysis
                 </h3>
 
                 <div style="border: 2px solid var(--border); border-radius: 12px; padding: 1.5rem; background: #FAFBFC;">
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
                         <div style="text-align: center; padding: 1rem;">
-                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📈</div>
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem; color: #10B981; line-height: 1;"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg></div>
                             <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem; color: var(--text-primary);">First Transacting</div>
                             <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem;">Auto-loaded from Google Sheets</div>
                             <div id="firstTransactingStatus" class="upload-status"></div>
                         </div>
                         <div style="text-align: center; padding: 1rem;">
-                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📊</div>
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem; color: var(--accent); line-height: 1;"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line><line x1="3" y1="20" x2="21" y2="20"></line></svg></div>
                             <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem; color: var(--text-primary);">Early Retention</div>
                             <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem;">Auto-loaded from Google Sheets</div>
                             <div id="earlyRetentionStatus" class="upload-status"></div>
@@ -447,11 +549,11 @@
             <!-- Team Performance Auto-load -->
             <div style="margin-top: 3rem;">
                 <h3 style="text-align: center; color: var(--primary); margin-bottom: 1rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                    <span style="font-size: 1.2rem;">📊</span> Team Performance Data
+                    <span style="font-size: 1.2rem; display: inline-flex; color: var(--accent);"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line><line x1="3" y1="20" x2="21" y2="20"></line></svg></span> Team Performance Data
                 </h3>
 
                 <div style="border: 2px solid var(--border); border-radius: 12px; padding: 2rem; background: #FAFBFC; text-align: center;">
-                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">📊</div>
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem; color: var(--accent); line-height: 1;"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line><line x1="3" y1="20" x2="21" y2="20"></line></svg></div>
                     <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem; color: var(--text-primary);">MLM Key Funnel</div>
                     <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem;">Auto-loaded from Google Sheets</div>
                     <div id="teamPerfFileStatusMain" class="upload-status"></div>
@@ -477,7 +579,7 @@
             <div class="filter-section">
                 <div class="filter-row">
                     <div class="filter-group">
-                        <label class="filter-label">📅 View Month</label>
+                        <label class="filter-label" style="display: inline-flex; align-items: center; gap: 0.4rem;"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> View Month</label>
                         <select class="filter-select month-select" id="monthFilter" onchange="applyFilters()">
                             <option value="">Latest Month</option>
                         </select>
@@ -524,9 +626,21 @@
             </div>
 
 
+            <!-- Executive Summary (Agency / IG / EB) -->
+            <div class="executive-summary-section" id="executiveSummary" style="margin-bottom: 2rem;">
+                <h2 style="margin: 0 0 1.5rem 0; color: var(--primary); font-size: 1.5rem; font-weight: 800; display: flex; align-items: center; gap: 0.6rem;"><svg xmlns="http://www.w3.org/2000/svg" width="1.2em" height="1.2em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent); flex-shrink: 0;"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg> Executive Summary</h2>
+                <div id="executiveSummaryContainer"></div>
+            </div>
+
+            <!-- KR Status Counter -->
+            <div class="kr-status-section" id="krStatusSection" style="margin-bottom: 2rem;">
+                <h2 style="margin: 0 0 1.5rem 0; color: var(--primary); font-size: 1.5rem; font-weight: 800; display: flex; align-items: center; gap: 0.6rem;"><svg xmlns="http://www.w3.org/2000/svg" width="1.2em" height="1.2em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent); flex-shrink: 0;"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2" fill="currentColor"></circle></svg> KR Status Overview</h2>
+                <div id="krStatusContainer"></div>
+            </div>
+
             <!-- Goal Highlights (shown on main views) -->
             <div class="goal-highlights-section" id="goalHighlights">
-                <h2 style="margin: 0 0 1.5rem 0; color: var(--primary); font-size: 1.5rem; font-weight: 800;">📊 Goal Performance Highlights</h2>
+                <h2 style="margin: 0 0 1.5rem 0; color: var(--primary); font-size: 1.5rem; font-weight: 800; display: flex; align-items: center; gap: 0.6rem;"><svg xmlns="http://www.w3.org/2000/svg" width="1.2em" height="1.2em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent); flex-shrink: 0;"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line><line x1="3" y1="20" x2="21" y2="20"></line></svg> Goal Performance Highlights</h2>
                 <div id="goalHighlightsContainer"></div>
             </div>
 
@@ -539,9 +653,12 @@
 
             <!-- Table View -->
             <div class="tab-content" id="tableView">
-                <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-bottom: 1rem;">
+                    <button class="btn-send-email" onclick="openEmailModal()">
+                        <span style="margin-right: 0.4rem; display: inline-flex;"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></span> Send Email
+                    </button>
                     <button class="btn-export-pdf" onclick="exportTableToPDF()">
-                        <span style="margin-right: 0.4rem;">📄</span> Export to PDF
+                        <span style="margin-right: 0.4rem; display: inline-flex;"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg></span> Export to PDF
                     </button>
                 </div>
                 <div class="table-container">
@@ -567,13 +684,13 @@
             <div class="tab-content" id="topMovers">
                 <div class="top-movers-page">
                     <div class="top-movers-header">
-                        <h2>📈 KR Performance Trends</h2>
+                        <h2 style="display: flex; align-items: center; gap: 0.6rem;"><svg xmlns="http://www.w3.org/2000/svg" width="1.2em" height="1.2em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent); flex-shrink: 0;"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg> KR Performance Trends</h2>
                         <p>Track the biggest month-over-month changes in your Key Results</p>
                     </div>
                     <div class="top-movers-section">
                         <div class="mover-card growth">
                             <h2 class="mover-title">
-                                <span class="mover-icon">📈</span>
+                                <span class="mover-icon" style="display: inline-flex; color: #10B981;"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg></span>
                                 Top 5 KR Growth
                             </h2>
                             <div id="topGrowth"></div>
@@ -582,7 +699,7 @@
 
                         <div class="mover-card drop">
                             <h2 class="mover-title">
-                                <span class="mover-icon">📉</span>
+                                <span class="mover-icon" style="display: inline-flex; color: #EF4444;"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"></polyline><polyline points="16 17 22 17 22 11"></polyline></svg></span>
                                 Top 5 KR Drop
                             </h2>
                             <div id="topDrop"></div>
@@ -618,7 +735,7 @@
                     <!-- Upload zone shown when no data loaded -->
                     <div id="teamPerfUploadSection">
                         <div style="border: 2px dashed var(--border); border-radius: 12px; padding: 3rem; background: #FAFBFC; text-align: center;">
-                            <div class="upload-icon" style="background: linear-gradient(135deg, #FF6B35 0%, #E85A2B 100%); margin: 0 auto 1.5rem; font-size: 2.5rem;">📊</div>
+                            <div class="upload-icon" style="background: linear-gradient(135deg, #FF6B35 0%, #E85A2B 100%); margin: 0 auto 1.5rem; font-size: 2.5rem; color: white; display: inline-flex; align-items: center; justify-content: center;"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line><line x1="3" y1="20" x2="21" y2="20"></line></svg></div>
                             <h3 style="color: var(--primary); margin-bottom: 0.5rem; font-weight: 700;">Upload Team Performance Data</h3>
                             <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">Upload a CSV file with columns: team_name, team_anchor_code, agent_province, month, gwp, active_agent, sales</p>
                             <div class="upload-zone" id="teamPerfUploadZone" style="border: none; background: transparent; padding: 2rem 1rem;">
@@ -656,6 +773,62 @@
             <!-- Reset Button -->
             <div style="text-align: center; margin-top: 2rem;">
                 <button class="btn-reset" onclick="resetDashboard()">Upload New Files</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Send Email Modal -->
+    <div id="emailModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="display: inline-flex; color: var(--accent);"><svg xmlns="http://www.w3.org/2000/svg" width="1.1em" height="1.1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></span>
+                    Send OKR Dashboard Report
+                </h2>
+                <button class="modal-close" onclick="closeEmailModal()" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="emailModalError" class="email-modal-error" style="display: none;"></div>
+
+                <div class="email-modal-field">
+                    <label class="email-modal-label" for="emailRecipients">Recipients</label>
+                    <textarea id="emailRecipients" class="email-modal-textarea" placeholder="alice@fairdee.co.th, bob@fairdee.co.th"></textarea>
+                    <div class="email-modal-hint">Separate multiple emails with commas, semicolons, or new lines.</div>
+                    <div id="emailRecentChips" class="email-recent-chips"></div>
+                </div>
+
+                <div class="email-modal-field">
+                    <label class="email-modal-label" for="emailSubject">Subject</label>
+                    <input type="text" id="emailSubject" class="email-modal-input">
+                </div>
+
+                <div class="email-modal-field">
+                    <label class="email-modal-label" for="emailIntro">Intro message (optional)</label>
+                    <textarea id="emailIntro" class="email-modal-textarea" placeholder="Add a short note that appears above the report summary."></textarea>
+                </div>
+
+                <div class="email-modal-field">
+                    <label class="email-modal-label" for="emailOpenIn">Open in</label>
+                    <select id="emailOpenIn" class="email-modal-input">
+                        <option value="gmail">Gmail (opens in your browser)</option>
+                        <option value="mailto">Default email app (Mac Mail, Outlook desktop, etc.)</option>
+                    </select>
+                </div>
+
+                <div class="email-modal-hint" style="background: #EEF2FF; border: 1px solid #C7D2FE; color: #3730A3; padding: 0.7rem 0.9rem; border-radius: 8px; line-height: 1.5;">
+                    <strong>On click, three things happen:</strong><br>
+                    1. The PDF report downloads to your computer.<br>
+                    2. The formatted HTML report is copied to your clipboard.<br>
+                    3. Your email client opens with recipients &amp; subject pre-filled.<br>
+                    <span style="display: inline-block; margin-top: 6px;">Then: <strong>paste (Cmd/Ctrl + V)</strong> into the email body to drop in the styled report, attach the PDF, and send.</span>
+                </div>
+            </div>
+            <div class="email-modal-actions">
+                <button class="btn-reset" type="button" onclick="closeEmailModal()">Cancel</button>
+                <button class="btn-send-email" type="button" onclick="sendDashboardEmail()">
+                    <span style="margin-right: 0.4rem; display: inline-flex;"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></span>
+                    Download PDF & Open Email
+                </button>
             </div>
         </div>
     </div>
@@ -707,6 +880,7 @@
     </script>
 
     <!-- External JavaScript -->
+    <script src="icons.js"></script>
     <script src="dashboard-copy.js?v=1778064200000"></script>
     <script src="script.js"></script>
 </body>
