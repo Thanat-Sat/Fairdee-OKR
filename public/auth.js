@@ -134,6 +134,30 @@ function initializeAuthHandlers() {
         }
     });
 
+    // Handle Google sign-in
+    const googleButton = document.getElementById('googleSignInButton');
+    if (googleButton) {
+        googleButton.addEventListener('click', async function() {
+            hideMessages();
+            const originalText = googleButton.innerHTML;
+            googleButton.disabled = true;
+            googleButton.textContent = 'Signing in with Google...';
+
+            const result = await authManager.signInWithGoogle();
+
+            if (result.success) {
+                showSuccess('Sign in successful! Redirecting...');
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1000);
+            } else {
+                showError(result.error);
+                googleButton.disabled = false;
+                googleButton.innerHTML = originalText;
+            }
+        });
+    }
+
     // Check if user is already logged in
     authManager.onAuthStateChanged((user) => {
         if (user) {

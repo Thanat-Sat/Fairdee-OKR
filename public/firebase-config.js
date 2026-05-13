@@ -17,6 +17,17 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+// Only allow accounts on Fairdee's company domain
+const ALLOWED_EMAIL_DOMAINS = ['fairdee.co.th'];
+const DOMAIN_ERROR_MESSAGE = 'Access restricted to @' + ALLOWED_EMAIL_DOMAINS.join(' / @') + ' accounts.';
+
+function isAllowedEmail(email) {
+    if (!email || typeof email !== 'string') return false;
+    const domain = email.split('@')[1];
+    if (!domain) return false;
+    return ALLOWED_EMAIL_DOMAINS.includes(domain.toLowerCase());
+}
+
 // ============================================================================
 // AUTH MANAGER
 // ============================================================================
@@ -24,6 +35,9 @@ const db = firebase.firestore();
 window.authManager = {
     // Sign in with email and password
     signIn: async function(email, password) {
+        if (!isAllowedEmail(email)) {
+            return { success: false, error: DOMAIN_ERROR_MESSAGE };
+        }
         try {
             const userCredential = await auth.signInWithEmailAndPassword(email, password);
             console.log('✅ Signed in:', userCredential.user.email);
@@ -36,6 +50,9 @@ window.authManager = {
 
     // Sign up with email, password, and name
     signUp: async function(email, password, name) {
+        if (!isAllowedEmail(email)) {
+            return { success: false, error: DOMAIN_ERROR_MESSAGE };
+        }
         try {
             const userCredential = await auth.createUserWithEmailAndPassword(email, password);
             const user = userCredential.user;
@@ -54,6 +71,40 @@ window.authManager = {
             return { success: true, user: user };
         } catch (error) {
             console.error('❌ Sign up error:', error.code, error.message);
+            return { success: false, error: getErrorMessage(error.code) };
+        }
+    },
+
+    // Sign in with Google (restricted to Fairdee Workspace accounts)
+    signInWithGoogle: async function() {
+        try {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            // Hint Google to filter to the Fairdee Workspace domain
+            provider.setCustomParameters({ hd: ALLOWED_EMAIL_DOMAINS[0] });
+
+            const result = await auth.signInWithPopup(provider);
+            const user = result.user;
+
+            if (!isAllowedEmail(user.email)) {
+                await auth.signOut();
+                return { success: false, error: DOMAIN_ERROR_MESSAGE };
+            }
+
+            // Upsert user record on first Google sign-in
+            await db.collection('users').doc(user.uid).set({
+                name: user.displayName || '',
+                email: user.email,
+                provider: 'google',
+                lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
+            console.log('✅ Google sign-in:', user.email);
+            return { success: true, user: user };
+        } catch (error) {
+            console.error('❌ Google sign-in error:', error.code, error.message);
+            if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
+                return { success: false, error: 'Sign-in cancelled.' };
+            }
             return { success: false, error: getErrorMessage(error.code) };
         }
     },
@@ -78,7 +129,15 @@ window.authManager = {
 
     // Listen to auth state changes
     onAuthStateChanged: function(callback) {
-        auth.onAuthStateChanged(callback);
+        auth.onAuthStateChanged(function(user) {
+            if (user && !isAllowedEmail(user.email)) {
+                console.warn('⚠️ Non-Fairdee account detected, signing out:', user.email);
+                auth.signOut();
+                callback(null);
+                return;
+            }
+            callback(user);
+        });
     }
 };
 
@@ -103,6 +162,10 @@ function getErrorMessage(errorCode) {
             return 'Too many attempts. Please try again later.';
         case 'auth/network-request-failed':
             return 'Network error. Please check your connection.';
+        case 'auth/popup-blocked':
+            return 'Popup was blocked by your browser. Please allow popups and try again.';
+        case 'auth/account-exists-with-different-credential':
+            return 'An account with this email already exists with a different sign-in method.';
         default:
             return 'An error occurred. Please try again.';
     }
