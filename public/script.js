@@ -1263,10 +1263,20 @@ function renderKRStatusOverview() {
     const cards = buckets.map(b => {
         const pctOfTotal = (b.count / total) * 100;
         const krList = b.krs
-            .slice(0, 5)
-            .map(k => `<span style="display: inline-block; background: white; border: 1px solid ${b.color}; color: ${b.color}; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.7rem; font-weight: 600; margin: 0.15rem;">${k.row.kr_name} · ${k.progress.toFixed(0)}%</span>`)
+            .map(k => {
+                const title = getShortTitle(k.row.kr_title_name || '') || '';
+                return `
+                    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; padding: 0.4rem 0; border-bottom: 1px dashed rgba(15,23,42,0.08);">
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-size: 0.8rem; font-weight: 700; color: var(--primary); line-height: 1.3;">${k.row.kr_name || ''}</div>
+                            ${title ? `<div style="font-size: 0.7rem; color: var(--text-secondary); line-height: 1.35; margin-top: 0.1rem; white-space: normal; word-break: break-word;" title="${title.replace(/"/g, '&quot;')}">${title}</div>` : ''}
+                        </div>
+                        <div style="font-size: 0.85rem; font-weight: 700; color: ${b.color}; white-space: nowrap; padding-top: 0.05rem;">${k.progress.toFixed(0)}%</div>
+                    </div>
+                `;
+            })
             .join('');
-        const moreText = b.krs.length > 5 ? `<span style="font-size: 0.7rem; color: var(--text-muted); margin-left: 0.25rem;">+${b.krs.length - 5} more</span>` : '';
+        const moreText = '';
 
         return `
             <div style="background: ${b.bg}; border-radius: 12px; padding: 1.25rem 1.5rem; border-left: 4px solid ${b.color};">
@@ -2143,21 +2153,35 @@ function exportTableToPDF() {
                     doc.setFont('helvetica', 'italic'); doc.setFontSize(7); doc.setTextColor(148, 163, 184);
                     doc.text('No KRs in this bucket', bx + 6, krY);
                 } else {
-                    var maxRows = Math.floor((bucketY + bucketH - krY - 4) / 5);
-                    var shown = Math.min(b.krs.length, maxRows);
-                    for (var k = 0; k < shown; k++) {
+                    // Show ALL KRs. Pick a row height that fits the bucket; shrink if needed.
+                    var bottomLimit = bucketY + bucketH - 4;
+                    var available = bottomLimit - krY;
+                    var rowH = 6;                                     // default: name + title on two lines
+                    if (b.krs.length * rowH > available) {
+                        rowH = Math.max(3.6, available / b.krs.length); // shrink to fit, floor at 3.6mm
+                    }
+                    var compact = rowH < 5.4;                          // very tight → drop the title line
+                    for (var k = 0; k < b.krs.length; k++) {
                         var krItem = b.krs[k];
                         var krName = krItem.row.kr_name || '';
+                        var krTitle = getShortTitle(krItem.row.kr_title_name || '') || '';
                         var pctStr = krItem.progress.toFixed(0) + '%';
-                        doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(51, 65, 85);
-                        doc.text(krName.length > 22 ? krName.substring(0, 22) + '...' : krName, bx + 6, krY);
-                        doc.setFont('helvetica', 'bold'); doc.setTextColor(b.r, b.g, b.b);
+
+                        // KR name (bold)
+                        doc.setFont('helvetica', 'bold'); doc.setFontSize(compact ? 6 : 6.8); doc.setTextColor(15, 23, 42);
+                        doc.text(krName.length > 24 ? krName.substring(0, 24) + '...' : krName, bx + 6, krY);
+
+                        // % (right, colored)
+                        doc.setFont('helvetica', 'bold'); doc.setFontSize(compact ? 6 : 7); doc.setTextColor(b.r, b.g, b.b);
                         doc.text(pctStr, bx + bucketW - 6, krY, { align: 'right' });
-                        krY += 5;
-                    }
-                    if (b.krs.length > shown) {
-                        doc.setFont('helvetica', 'italic'); doc.setFontSize(6); doc.setTextColor(148, 163, 184);
-                        doc.text('+' + (b.krs.length - shown) + ' more', bx + 6, krY);
+
+                        // Title (smaller, muted) on the line below — only when we have vertical room
+                        if (krTitle && !compact) {
+                            doc.setFont('helvetica', 'normal'); doc.setFontSize(5.5); doc.setTextColor(100, 116, 139);
+                            doc.text(krTitle.length > 42 ? krTitle.substring(0, 42) + '...' : krTitle, bx + 6, krY + 2.6);
+                        }
+                        krY += rowH;
+                        if (krY > bottomLimit) break; // safety guard against extreme cases
                     }
                 }
             });
@@ -2720,10 +2744,12 @@ function buildDashboardEmailBody(intro) {
         function listBucket(title, items) {
             if (items.length === 0) return;
             lines.push(title + ':');
-            items.slice(0, 15).forEach(function(k) {
-                lines.push('  - ' + (k.row.kr_name || '(unnamed)') + '  ' + k.progress.toFixed(0) + '%');
+            items.forEach(function(k) {
+                var krT = getShortTitle(k.row.kr_title_name || '') || '';
+                var line = '  - ' + (k.row.kr_name || '(unnamed)') + '  ' + k.progress.toFixed(0) + '%';
+                if (krT) line += '\n      ' + krT;
+                lines.push(line);
             });
-            if (items.length > 15) lines.push('  ... +' + (items.length - 15) + ' more');
             lines.push('');
         }
         listBucket('ACHIEVED',       achievedList);
@@ -3009,21 +3035,21 @@ function buildDashboardEmailHTML(intro) {
                 '<td style="width: ' + (100 - fillW).toFixed(1) + '%; height: 6px; font-size: 0; line-height: 0;">&nbsp;</td>' +
             '</tr></table>';
 
-            // KR list
+            // KR list (show ALL KRs in the bucket — no truncation)
             if (b.krs.length === 0) {
                 html += '<div style="font-size: 11px; color: #94A3B8; font-style: italic;">No KRs in this bucket</div>';
             } else {
                 html += '<div style="font-size: 10px; font-weight: 700; color: ' + b.color + '; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 6px;">Key Results</div>';
-                var maxShow = Math.min(b.krs.length, 8);
-                for (var k = 0; k < maxShow; k++) {
+                for (var k = 0; k < b.krs.length; k++) {
                     var krItem = b.krs[k];
-                    html += '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; font-size: 11px; margin-bottom: 3px;"><tr>' +
-                        '<td style="color: #334155;">' + esc(krItem.row.kr_name || '') + '</td>' +
-                        '<td style="color: ' + b.color + '; font-weight: 700; text-align: right;">' + krItem.progress.toFixed(0) + '%</td>' +
+                    var krTitle = getShortTitle(krItem.row.kr_title_name || '') || '';
+                    html += '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px solid rgba(15,23,42,0.06);"><tr>' +
+                        '<td style="vertical-align: top;">' +
+                            '<div style="font-size: 11px; font-weight: 700; color: #0F172A; line-height: 1.3;">' + esc(krItem.row.kr_name || '') + '</div>' +
+                            (krTitle ? '<div style="font-size: 10px; color: #64748B; line-height: 1.35; margin-top: 1px; word-break: break-word;">' + esc(krTitle) + '</div>' : '') +
+                        '</td>' +
+                        '<td style="vertical-align: top; color: ' + b.color + '; font-weight: 700; text-align: right; white-space: nowrap; font-size: 12px;">' + krItem.progress.toFixed(0) + '%</td>' +
                     '</tr></table>';
-                }
-                if (b.krs.length > maxShow) {
-                    html += '<div style="font-size: 10px; color: #94A3B8; margin-top: 4px;">+' + (b.krs.length - maxShow) + ' more</div>';
                 }
             }
             html += '</td>';
@@ -3069,8 +3095,11 @@ function buildDashboardEmailHTML(intro) {
     if (!anyGoal) html += '<p style="color: #64748B; font-style: italic;">No goals with targets.</p>';
 
     // =========================================
-    // Table View (full KR hierarchy)
+    // Table View (full KR hierarchy) — hidden from email per request.
+    // Set INCLUDE_TABLE_VIEW = true to bring it back.
     // =========================================
+    var INCLUDE_TABLE_VIEW = false;
+    if (INCLUDE_TABLE_VIEW) {
     html += '<h2 style="margin: 32px 0 12px; font-size: 18px; color: #0F172A; border-left: 4px solid #2563EB; padding-left: 10px;">Table View</h2>';
 
     var tvHierarchy = {};
@@ -3187,6 +3216,7 @@ function buildDashboardEmailHTML(intro) {
 
         html += '</tbody></table>';
     }
+    } // end INCLUDE_TABLE_VIEW
 
     // Closing block (above everything else's footer)
     html += '<div style="margin-top: 36px; padding-top: 20px; border-top: 1px solid #E2E8F0; font-size: 14px; color: #334155; line-height: 1.65;">' +
