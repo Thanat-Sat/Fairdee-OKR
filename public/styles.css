@@ -209,6 +209,7 @@
             background: var(--card-bg);
             border-radius: 12px;
             padding: 1.5rem;
+            margin-top: 2rem;
             margin-bottom: 2rem;
             box-shadow: var(--shadow-sm);
             border: 1px solid var(--border);
@@ -1403,13 +1404,82 @@
 }
 
 /* Goal Highlights Section */
-.goal-highlights-section {
+.goal-highlights-section,
+.executive-summary-section,
+.kr-status-section {
     background: white;
     border-radius: 12px;
     padding: 2rem;
     margin-bottom: 2rem;
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--border);
+}
+
+/* Collapsible sections (native <details>/<summary>) */
+details.goal-highlights-section,
+details.executive-summary-section,
+details.kr-status-section {
+    overflow: hidden;
+}
+details.goal-highlights-section > summary,
+details.executive-summary-section > summary,
+details.kr-status-section > summary {
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0;
+    margin: 0;
+    transition: opacity 0.15s ease;
+}
+details.goal-highlights-section > summary::-webkit-details-marker,
+details.executive-summary-section > summary::-webkit-details-marker,
+details.kr-status-section > summary::-webkit-details-marker { display: none; }
+details.goal-highlights-section > summary::marker,
+details.executive-summary-section > summary::marker,
+details.kr-status-section > summary::marker { content: ''; }
+details.goal-highlights-section > summary:hover .fd-collapsible__chevron,
+details.executive-summary-section > summary:hover .fd-collapsible__chevron,
+details.kr-status-section > summary:hover .fd-collapsible__chevron {
+    color: var(--accent);
+    background: rgba(255, 107, 53, 0.1);
+}
+details[open].goal-highlights-section > summary,
+details[open].executive-summary-section > summary,
+details[open].kr-status-section > summary {
+    margin-bottom: 1.5rem;
+}
+.fd-collapsible__title {
+    margin: 0;
+    flex: 1;
+    color: var(--primary);
+    font-size: 1.5rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    line-height: 1.2;
+}
+.fd-collapsible__title > svg {
+    color: var(--accent);
+    flex-shrink: 0;
+}
+.fd-collapsible__chevron {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    transition: transform 0.25s ease, color 0.2s ease, background 0.2s ease;
+    flex-shrink: 0;
+}
+.fd-collapsible__chevron > svg { display: block; }
+details[open] > summary .fd-collapsible__chevron {
+    transform: rotate(180deg);
 }
 
 /* Top Movers Page Styles */
@@ -1944,6 +2014,102 @@
 @keyframes lb-shimmer {
     0%   { left: -60%; }
     100% { left: 160%; }
+}
+
+/* ============================================================================
+   FD PROGRESS BANNER — Google Sheets fetch indicator (top-center, navy)
+   Translated from claude.design "Fleet bot" ToastBanner (multi-step variant).
+   ============================================================================ */
+.fd-progress-banner {
+    position: fixed;
+    top: 88px;
+    right: 24px;
+    transform: translateY(-8px);
+    display: none;
+    align-items: center;
+    gap: 12px;
+    background: #0A0E27;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 10px 14px 10px 12px;
+    box-shadow: 0 12px 36px rgba(10, 14, 39, 0.28), 0 2px 6px rgba(10, 14, 39, 0.18);
+    min-width: 320px;
+    max-width: min(92vw, 420px);
+    z-index: 9000;
+    font-family: 'Google Sans Text', sans-serif;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.fd-progress-banner.visible {
+    display: flex;
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+.fd-progress-banner.fade-out {
+    opacity: 0;
+    transform: translateY(-8px);
+}
+.fd-progress-banner__icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    background: rgba(255, 107, 53, 0.2);
+    color: #FF6B35;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+.fd-progress-banner__icon svg {
+    width: 14px;
+    height: 14px;
+}
+.fd-progress-banner__body {
+    flex: 1;
+    min-width: 0;
+}
+.fd-progress-banner__title {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: -0.005em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.fd-progress-banner__bar {
+    margin-top: 6px;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+}
+.fd-progress-banner__fill {
+    height: 100%;
+    width: 0%;
+    background: #FF6B35;
+    border-radius: inherit;
+    transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.fd-progress-banner.is-complete .fd-progress-banner__fill {
+    background: #00D9A3;
+}
+.fd-progress-banner.is-complete .fd-progress-banner__icon {
+    background: rgba(0, 217, 163, 0.18);
+    color: #00D9A3;
+}
+@media (max-width: 640px) {
+    .fd-progress-banner {
+        min-width: 0;
+        width: calc(100vw - 24px);
+        right: 12px;
+        left: 12px;
+        top: 76px;
+    }
+    .fd-progress-banner__title { white-space: normal; }
 }
 
 /* ============================================================================

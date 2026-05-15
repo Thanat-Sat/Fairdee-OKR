@@ -115,7 +115,7 @@ The hub at `/` ([index.html](public/index.html)) is the entry point. It links to
 |---|---|---|
 | OKR Dashboard | [okr-dashboard.html](public/okr-dashboard.html) | OKR app (powered by [script.js](public/script.js)) |
 | Monthly Metrics | [mm.html](public/mm.html) | MM app (tabbed iframe shell) |
-| Fairdee CRM | `http://143.14.9.55:8090/` | External — outside this repo |
+| Fairdee CRM | `https://crm.fairdee-crm.xyz/` | External — outside this repo |
 
 The two applications are deliberately decoupled:
 
@@ -356,8 +356,10 @@ The largest single page in the project, powered by **[script.js (4477 lines)](pu
 Notable:
 - KRs are tracked via objects with `current` / `target` / `name`. `LESS_IS_BETTER_KRS` inverts the progress formula (`target / current` instead of `current / target`).
 - Hunter targets are **hardcoded arrays** in [script.js:40-69](public/script.js#L40) — 12 monthly values for `FIRST_TRANSACTING` and `EARLY_RETENTION`.
-- Loading progress is tracked via `_loadedCount` / `_totalSources = 5`.
+- Loading progress is tracked via `_loadedCount` / `_totalSources = 5` and drives both the header pill and the top-right `.fd-progress-banner`.
 - Provides a PDF export via jsPDF (in the report sections).
+- The three top sections — **Executive Summary**, **KR Status Overview**, **Goal Performance Highlights** — are native HTML `<details>`/`<summary>` elements. Click the header to collapse; the chevron rotates 180°. CSS lives near `details.executive-summary-section` in [styles.css](public/styles.css).
+- Monthly Progress cards (`createMonthlyProgressCard` in [script.js](public/script.js)) render a small `.monthly-kr-header__legend` pill in the card header — `% achieved (actual / target)` — so the row format under each month is self-explanatory.
 
 ### mm.html — Monthly Metrics shell
 
@@ -418,14 +420,21 @@ One-off utility page for data cleanup. Not part of normal flow.
 
 ## Sync indicator & in-flight progress
 
-Defined in [app.js:80-115](public/app.js#L80) and driven by the `key` field on every `dashboardDataUpdated` postMessage from each iframe.
+Two coordinated indicators run during a Google Sheets fetch:
+
+1. **Header pill** (`.sheet-sync-status`) — a small colored pill in the header bar that shows fetch state (`loading` → `success`/`warning`). Always visible.
+2. **Top-right floating banner** (`.fd-progress-banner`) — a dark-navy card with an animated orange progress bar that appears top-right during loading and fades 1.2s after completion.
+
+### MM side
+
+Defined in [app.js:69-135](public/app.js#L69) and driven by the `key` field on every `dashboardDataUpdated` postMessage from each iframe.
 
 ```
-Fetching Google Sheets 0/7...   ← initial
-Fetching Google Sheets 1/7...   ← channel arrives
-Fetching Google Sheets 2/7...   ← mlm arrives
+Fetching Google Sheets · 0 of 7   ← initial      (banner + pill)
+Fetching Google Sheets · 1 of 7   ← channel arrives
+Fetching Google Sheets · 2 of 7   ← mlm arrives
 ...
-Google Sheets synced at 11:19 AM  ← all 7 done
+Google Sheets synced at 11:19 AM  ← all 7 done   (banner fades, pill stays)
 ```
 
 The 7 datasets are defined in `GOOGLE_SHEET_DATASETS` in [app.js:53-61](public/app.js#L53):
@@ -434,7 +443,15 @@ The 7 datasets are defined in `GOOGLE_SHEET_DATASETS` in [app.js:53-61](public/a
 
 Each iframe completes its fetch by calling `dashboardDataStore.update{Key}Data(...)`, which calls `saveToStorage(key)` → `notifyDataUpdated(key)` → `postMessage({ type: 'dashboardDataUpdated', key }, '*')` to the parent. The parent dedupes by key in a `Set` so duplicate notifications don't double-count.
 
-Refresh button calls `resetSyncTracking()` which clears the set and re-runs the indicator.
+Refresh button calls `resetSyncTracking()` which clears the set and re-runs the indicator (banner re-appears).
+
+### OKR side
+
+Defined in [script.js:95-181](public/script.js#L95). Tracks 5 sources (`_totalSources = 5`): `dataFileStatus · firstTransactingStatus · earlyRetentionStatus · teamPerfFileStatusMain · fleetFetchStatus`. Each `fetch*` callback ends with `_markSourceLoaded()`, which updates both the pill (via `_setOkrSheetSyncStatus`) and the banner (via `_setOkrProgressBanner`).
+
+### Banner CSS
+
+`.fd-progress-banner` lives in [styles.css](public/styles.css) (search `FD PROGRESS BANNER`). It's a `position: fixed` card anchored `top: 88px; right: 24px;` (mobile: full-width with 12px side margins). States: `.visible`, `.is-complete` (fill turns green), `.fade-out`. Translated from a [Claude Design](https://claude.ai/design) ToastBanner mockup ("Fleet bot" exploration).
 
 ---
 

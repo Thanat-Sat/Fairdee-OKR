@@ -117,6 +117,33 @@ function _setOkrSheetSyncStatus(status, text) {
     statusEl.innerHTML = '<span class="sheet-sync-dot"></span><span>' + text + '</span>';
 }
 
+function _setOkrProgressBanner(state, title, pct) {
+    var banner = document.getElementById('okrProgressBanner');
+    var titleEl = document.getElementById('okrProgressBannerTitle');
+    var fillEl = document.getElementById('okrProgressBannerFill');
+    if (!banner) return;
+
+    if (titleEl && typeof title === 'string') titleEl.textContent = title;
+    if (fillEl && typeof pct === 'number') fillEl.style.width = Math.max(0, Math.min(100, pct)) + '%';
+
+    if (state === 'show') {
+        banner.classList.remove('fade-out', 'is-complete');
+        banner.classList.add('visible');
+    } else if (state === 'complete') {
+        banner.classList.add('visible', 'is-complete');
+        banner.classList.remove('fade-out');
+    } else if (state === 'hide') {
+        banner.classList.add('fade-out');
+        banner.classList.remove('is-complete');
+        setTimeout(function() {
+            banner.classList.remove('visible', 'fade-out');
+        }, 240);
+    }
+}
+
+// Show banner on initial load
+_setOkrProgressBanner('show', 'Fetching Google Sheets · 0 of ' + _totalSources, 0);
+
 function _getOkrFetchErrorCount() {
     return _sheetFetchStatusIds.reduce(function(count, id) {
         var el = document.getElementById(id);
@@ -134,6 +161,7 @@ function _markSourceLoaded() {
     if (countEl) countEl.textContent = _loadedCount + ' / ' + _totalSources;
     if (_loadedCount < _totalSources) {
         _setOkrSheetSyncStatus('loading', 'Fetching Google Sheets ' + _loadedCount + ' / ' + _totalSources);
+        _setOkrProgressBanner('show', 'Fetching Google Sheets · ' + _loadedCount + ' of ' + _totalSources, pct);
     }
     if (_loadedCount >= _totalSources) {
         var errorCount = _getOkrFetchErrorCount();
@@ -142,9 +170,11 @@ function _markSourceLoaded() {
             : 'Google Sheets synced at ' + _formatSyncTime(new Date());
         if (textEl) textEl.textContent = syncText;
         _setOkrSheetSyncStatus(errorCount ? 'warning' : 'success', syncText);
+        _setOkrProgressBanner('complete', syncText, 100);
         setTimeout(function() {
             var bar = document.getElementById('dataLoadingBar');
             if (bar) bar.style.display = 'none';
+            _setOkrProgressBanner('hide');
         }, 1200);
     }
 }
@@ -1052,8 +1082,14 @@ function createMonthlyProgressCard(row, runRateOptions = null) {
     const header = document.createElement('div');
     header.className = 'monthly-kr-header';
     header.innerHTML = `
-        <div class="monthly-kr-name">${krName}</div>
-        ${krTitle ? `<div class="monthly-kr-title">${krTitle}</div>` : ''}
+        <div class="monthly-kr-header__left">
+            <div class="monthly-kr-name">${krName}</div>
+            ${krTitle ? `<div class="monthly-kr-title">${krTitle}</div>` : ''}
+        </div>
+        <div class="monthly-kr-header__legend" title="How to read each month's value">
+            <span class="monthly-kr-header__legend-key">% achieved</span>
+            <span>(actual / target)</span>
+        </div>
     `;
     card.appendChild(header);
     
@@ -1363,24 +1399,22 @@ function renderExecutiveSummary() {
     }).join('');
 
     container.innerHTML = `
-        <div style="background: linear-gradient(135deg, #F8FAFC 0%, #EEF2FF 100%); border-radius: 20px; padding: 2rem 2.25rem; border: 1px solid #E5E7EB;">
-            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.75rem;">
-                <div style="flex: 1; min-width: 280px;">
-                    <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem;">GWP Total — All Channels</div>
-                    <div style="font-size: 2.75rem; font-weight: 800; color: var(--primary); font-family: 'Google Sans Text', sans-serif; line-height: 1.05; letter-spacing: -0.02em;">
-                        ${formatNumber(overallCurrent)}${overallUnit ? ' <span style="font-size: 1.25rem; color: var(--text-secondary); font-weight: 600;">' + overallUnit + '</span>' : ''}
-                    </div>
-                    <div style="font-size: 0.95rem; color: var(--text-secondary); margin-top: 0.5rem;">
-                        Target: <strong style="color: var(--primary);">${formatNumber(overallTarget)}${overallUnit ? ' ' + overallUnit : ''}</strong>
-                    </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.75rem;">
+            <div style="flex: 1; min-width: 280px;">
+                <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem;">GWP Total — All Channels</div>
+                <div style="font-size: 2.75rem; font-weight: 800; color: var(--primary); font-family: 'Google Sans Text', sans-serif; line-height: 1.05; letter-spacing: -0.02em;">
+                    ${formatNumber(overallCurrent)}${overallUnit ? ' <span style="font-size: 1.25rem; color: var(--text-secondary); font-weight: 600;">' + overallUnit + '</span>' : ''}
                 </div>
-                <span style="display: inline-block; padding: 0.6rem 1.25rem; background: ${overallColor}; color: white; border-radius: 999px; font-size: 0.95rem; font-weight: 700; white-space: nowrap;">
-                    ${overallLabel}
-                </span>
+                <div style="font-size: 0.95rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                    Target: <strong style="color: var(--primary);">${formatNumber(overallTarget)}${overallUnit ? ' ' + overallUnit : ''}</strong>
+                </div>
             </div>
-            <div style="display: grid; grid-template-columns: repeat(${validBuckets.length}, 1fr); gap: 1.25rem;">
-                ${cards}
-            </div>
+            <span style="display: inline-block; padding: 0.6rem 1.25rem; background: ${overallColor}; color: white; border-radius: 999px; font-size: 0.95rem; font-weight: 700; white-space: nowrap;">
+                ${overallLabel}
+            </span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(${validBuckets.length}, 1fr); gap: 1.25rem;">
+            ${cards}
         </div>
     `;
 }
@@ -3660,6 +3694,7 @@ function resetDashboard() {
     if (countEl) countEl.textContent = '0 / 5';
     if (textEl) textEl.textContent = 'Fetching data from Google Sheets...';
     _setOkrSheetSyncStatus('loading', 'Fetching Google Sheets...');
+    _setOkrProgressBanner('show', 'Fetching Google Sheets · 0 of ' + _totalSources, 0);
 
     // Re-fetch all data from Google Sheets
     fetchOKRSheetData();

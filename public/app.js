@@ -75,6 +75,35 @@ function setGoogleSheetSyncStatus(status, text) {
     statusEl.innerHTML = `<span class="sheet-sync-dot"></span><span>${text}</span>`;
 }
 
+let _mmBannerHideTimer = null;
+function setMmProgressBanner(state, title, pct) {
+    const banner = document.getElementById('mmProgressBanner');
+    const titleEl = document.getElementById('mmProgressBannerTitle');
+    const fillEl = document.getElementById('mmProgressBannerFill');
+    if (!banner) return;
+
+    if (titleEl && typeof title === 'string') titleEl.textContent = title;
+    if (fillEl && typeof pct === 'number') {
+        fillEl.style.width = Math.max(0, Math.min(100, pct)) + '%';
+    }
+
+    if (state === 'show') {
+        if (_mmBannerHideTimer) { clearTimeout(_mmBannerHideTimer); _mmBannerHideTimer = null; }
+        banner.classList.remove('fade-out', 'is-complete');
+        banner.classList.add('visible');
+    } else if (state === 'complete') {
+        banner.classList.add('visible', 'is-complete');
+        banner.classList.remove('fade-out');
+    } else if (state === 'hide') {
+        banner.classList.add('fade-out');
+        banner.classList.remove('is-complete');
+        _mmBannerHideTimer = setTimeout(() => {
+            banner.classList.remove('visible', 'fade-out');
+            _mmBannerHideTimer = null;
+        }, 240);
+    }
+}
+
 // Track which datasets have completed a fresh fetch in THIS session
 const sessionFetchedKeys = new Set();
 let sessionSyncedAt = null;
@@ -82,14 +111,20 @@ let sessionSyncedAt = null;
 function updateGoogleSheetSyncIndicator() {
     const total = GOOGLE_SHEET_DATASETS.length;
     const done = sessionFetchedKeys.size;
+    const pct = total ? Math.round((done / total) * 100) : 0;
 
     if (done >= total) {
         const t = formatSyncTime(sessionSyncedAt);
-        setGoogleSheetSyncStatus('success', 'Google Sheets synced' + (t ? ` at ${t}` : ''));
+        const syncText = 'Google Sheets synced' + (t ? ` at ${t}` : '');
+        setGoogleSheetSyncStatus('success', syncText);
+        setMmProgressBanner('complete', syncText, 100);
+        setTimeout(() => setMmProgressBanner('hide'), 1200);
         return;
     }
 
+    const loadingText = `Fetching Google Sheets · ${done} of ${total}`;
     setGoogleSheetSyncStatus('loading', `Fetching Google Sheets ${done}/${total}...`);
+    setMmProgressBanner('show', loadingText, pct);
 }
 
 function recordFetchedKey(key) {
