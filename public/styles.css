@@ -602,16 +602,43 @@
             background: var(--bg);
             border-radius: 10px;
             height: 10px;
-            
+
             margin-top: 1rem;
+            position: relative;
+            overflow: hidden;
         }
-        
+
         .progress-bar {
             height: 100%;
             border-radius: 10px;
             transition: width 0.6s ease, background 0.3s ease;
             background: #EF4444;  /* Default red for low progress */
+            position: relative;
+            z-index: 2;
         }
+
+        /* Run rate projection underlay (card view) */
+        .progress-bar-projection {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            border-radius: 10px;
+            opacity: 0.55;
+            background-image: repeating-linear-gradient(
+                45deg,
+                rgba(255, 255, 255, 0.35) 0,
+                rgba(255, 255, 255, 0.35) 6px,
+                rgba(255, 255, 255, 0) 6px,
+                rgba(255, 255, 255, 0) 12px
+            );
+            background-color: #9CA3AF;
+            transition: width 0.6s ease;
+            z-index: 1;
+        }
+        .progress-bar-projection.excellent { background-color: #10B981; }
+        .progress-bar-projection.good      { background-color: #F59E0B; }
+        .progress-bar-projection.poor      { background-color: #EF4444; }
         
         .progress-bar.medium {
             background: #F59E0B;  /* Yellow/Amber for medium progress */
@@ -767,17 +794,52 @@
             height: 6px;
             overflow: hidden;
             min-width: 50px;
+            position: relative;
         }
-        
+
         .progress-fill {
             height: 100%;
             border-radius: 6px;
             transition: width 0.3s ease;
+            position: relative;
+            z-index: 2;
         }
-        
+
         .progress-fill.complete { background: #10B981; }  /* Green for 100%+ */
         .progress-fill.high { background: #F59E0B; }      /* Yellow for 90-99% */
         .progress-fill.low { background: #EF4444; }       /* Red for <90% */
+
+        /* Run rate projection underlay (table view) */
+        .progress-fill-projection {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            border-radius: 6px;
+            opacity: 0.55;
+            background-image: repeating-linear-gradient(
+                45deg,
+                rgba(255, 255, 255, 0.4) 0,
+                rgba(255, 255, 255, 0.4) 4px,
+                rgba(255, 255, 255, 0) 4px,
+                rgba(255, 255, 255, 0) 8px
+            );
+            background-color: #9CA3AF;
+            transition: width 0.3s ease;
+            z-index: 1;
+        }
+        .progress-fill-projection.excellent { background-color: #10B981; }
+        .progress-fill-projection.good      { background-color: #F59E0B; }
+        .progress-fill-projection.poor      { background-color: #EF4444; }
+
+        /* Run rate inline projection text (shared across views) */
+        .run-rate-projection {
+            color: #B45309;
+            font-weight: 700;
+            font-family: 'Google Sans Text', sans-serif;
+        }
+        .run-rate-projection.over { color: #16A34A; }
+        .run-rate-projection.under { color: #DC2626; }
         
         .progress-text {
             font-weight: 700;

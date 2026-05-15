@@ -636,6 +636,7 @@ function switchTab(button, tabId) {
 // Render all views
 function renderAll() {
     updateStats();
+    setupRunRateControls();
     renderTopMovers();
     renderExecutiveSummary();
     renderKRStatusOverview();
@@ -846,11 +847,153 @@ function organizeKRHierarchy(krs) {
     return organized;
 }
 
+// Run rate state for the monthly progress view
+const runRateState = {
+    enabled: false,
+    month: null,
+    day: new Date().getDate()
+};
+
+function daysInMonthFromLabel(monthLabel) {
+    if (!monthLabel) return 31;
+    const d = new Date(monthLabel.replace(', ', ' 1, '));
+    if (isNaN(d.getTime())) return 31;
+    return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+}
+
+function getDefaultRunRateMonth() {
+    const now = new Date();
+    const monthName = now.toLocaleString('en-US', { month: 'long' });
+    const candidate = `${monthName}, ${now.getFullYear()}`;
+    const months2026 = allMonths.filter(m => m.includes('2026'));
+    if (months2026.includes(candidate)) return candidate;
+    return months2026[months2026.length - 1] || allMonths[allMonths.length - 1] || null;
+}
+
+// Scope: Goal 1 KRs only (number "1" or starts with "1."), excluding KR-1.1.1
+function isRunRateEligibleKR(krName) {
+    const info = parseKRLevel(krName);
+    const num = info.number || '';
+    return (num === '1' || num.startsWith('1.')) && num !== '1.1.1';
+}
+
+// Returns the month label that getLatestValue/getTarget effectively used for this row
+function getEffectiveMonthForRow(row) {
+    if (!row || !row.monthlyData) return null;
+    if (selectedMonth && row.monthlyData.has(selectedMonth)) return selectedMonth;
+    for (let i = allMonths.length - 1; i >= 0; i--) {
+        if (row.monthlyData.has(allMonths[i])) return allMonths[i];
+    }
+    return null;
+}
+
+// Compute run rate projection for a row at a given month. Returns null when not applicable.
+function computeRunRateProjection(row, displayedMonth) {
+    if (!runRateState.enabled) return null;
+    if (!displayedMonth) return null;
+    if (!isRunRateEligibleKR(row.kr_name)) return null;
+    if (!row.monthlyData) return null;
+    const actualValue = row.monthlyData.get(displayedMonth);
+    if (actualValue === null || actualValue === undefined) return null;
+    const krMonthlyTargets = monthlyTargets.get(row.kr_name);
+    const monthlyTarget = krMonthlyTargets?.get(displayedMonth);
+    if (!monthlyTarget) return null;
+    const day = Math.max(1, parseInt(runRateState.day, 10) || 1);
+    const daysInMonth = daysInMonthFromLabel(displayedMonth);
+    const safeDay = Math.min(day, daysInMonth);
+    const projectedActual = (actualValue / safeDay) * daysInMonth;
+    const projectedPercent = calculateProgress(row.kr_name, projectedActual, monthlyTarget);
+    let projectionClass = 'under';
+    let projectionBarClass = 'poor';
+    if (projectedPercent >= 100) { projectionClass = 'over'; projectionBarClass = 'excellent'; }
+    else if (projectedPercent >= 90) { projectionClass = ''; projectionBarClass = 'good'; }
+    return {
+        actualValue, monthlyTarget,
+        projectedActual, projectedPercent,
+        projectionClass, projectionBarClass,
+        day: safeDay, daysInMonth, month: displayedMonth
+    };
+}
+
+function setupRunRateControls() {
+    const panel = document.getElementById('runRateControls');
+    const checkbox = document.getElementById('runRateCheckbox');
+    const monthSelect = document.getElementById('runRateMonthSelect');
+    const dayInput = document.getElementById('runRateDayInput');
+    const daysSuffix = document.getElementById('runRateDaysSuffix');
+    if (!panel || !checkbox || !monthSelect || !dayInput) return;
+
+    // Panel is global (above all tabs). Show whenever monthly targets are available.
+    panel.style.display = monthlyTargets.size > 0 ? 'flex' : 'none';
+
+    // Populate month options with 2026 months
+    const months2026 = allMonths.filter(m => m.includes('2026'));
+    const existing = Array.from(monthSelect.options).map(o => o.value).join('|');
+    const next = months2026.join('|');
+    if (existing !== next) {
+        monthSelect.innerHTML = '';
+        months2026.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m;
+            opt.textContent = m;
+            monthSelect.appendChild(opt);
+        });
+    }
+
+    if (!runRateState.month || !months2026.includes(runRateState.month)) {
+        runRateState.month = getDefaultRunRateMonth();
+    }
+    if (runRateState.month) monthSelect.value = runRateState.month;
+
+    const refreshDayBounds = () => {
+        const maxDay = daysInMonthFromLabel(monthSelect.value);
+        dayInput.max = maxDay;
+        if (parseInt(dayInput.value, 10) > maxDay) dayInput.value = maxDay;
+        if (parseInt(dayInput.value, 10) < 1) dayInput.value = 1;
+        if (daysSuffix) daysSuffix.textContent = `of ${maxDay}`;
+    };
+
+    dayInput.value = runRateState.day;
+    refreshDayBounds();
+
+    checkbox.checked = runRateState.enabled;
+    panel.dataset.active = String(runRateState.enabled);
+
+    const refreshAllViews = () => {
+        renderMonthlyProgress();
+        if (typeof renderOKRCards === 'function') renderOKRCards();
+        if (typeof renderDataTable === 'function') renderDataTable();
+    };
+
+    if (!panel.dataset.bound) {
+        panel.dataset.bound = '1';
+        checkbox.addEventListener('change', () => {
+            runRateState.enabled = checkbox.checked;
+            panel.dataset.active = String(runRateState.enabled);
+            refreshAllViews();
+        });
+        monthSelect.addEventListener('change', () => {
+            runRateState.month = monthSelect.value;
+            refreshDayBounds();
+            runRateState.day = parseInt(dayInput.value, 10) || 1;
+            if (runRateState.enabled) refreshAllViews();
+        });
+        dayInput.addEventListener('input', () => {
+            const maxDay = daysInMonthFromLabel(monthSelect.value);
+            let v = parseInt(dayInput.value, 10);
+            if (isNaN(v)) return;
+            v = Math.min(maxDay, Math.max(1, v));
+            runRateState.day = v;
+            if (runRateState.enabled) refreshAllViews();
+        });
+    }
+}
+
 // Render Monthly Progress View
 function renderMonthlyProgress() {
     const container = document.getElementById('monthlyProgressContainer');
     container.innerHTML = '';
-    
+
     if (monthlyTargets.size === 0) {
         container.innerHTML = `
             <div class="no-monthly-data">
@@ -863,22 +1006,28 @@ function renderMonthlyProgress() {
         `;
         return;
     }
-    
+
+    setupRunRateControls();
+
     // NOTE: Monthly Progress view filters to show only 2026 months
     // This focuses the view on current year targets
-    
+
     // Create grid of KR cards with monthly progress
     const grid = document.createElement('div');
     grid.className = 'monthly-grid';
-    
+
+    const runRateOptions = runRateState.enabled
+        ? { month: runRateState.month, day: runRateState.day }
+        : null;
+
     filteredData.forEach(row => {
         const krName = row.kr_name;
         if (!monthlyTargets.has(krName)) return; // Skip if no monthly targets
-        
-        const card = createMonthlyProgressCard(row);
+
+        const card = createMonthlyProgressCard(row, runRateOptions);
         grid.appendChild(card);
     });
-    
+
     if (grid.children.length === 0) {
         container.innerHTML = `
             <div class="no-monthly-data">
@@ -891,10 +1040,10 @@ function renderMonthlyProgress() {
 }
 
 // Create individual monthly progress card
-function createMonthlyProgressCard(row) {
+function createMonthlyProgressCard(row, runRateOptions = null) {
     const card = document.createElement('div');
     card.className = 'monthly-kr-card';
-    
+
     const krName = row.kr_name;
     const krTitle = getShortTitle(row.kr_title_name || '');
     const krMonthlyTargets = monthlyTargets.get(krName);
@@ -927,10 +1076,13 @@ function createMonthlyProgressCard(row) {
         let progressClass = 'poor';
         let displayText = 'No data';
         let statusBadge = '';
-        
+        let projectionPercent = null;
+        let projectionBarClass = 'poor';
+        let projectionRowHtml = '';
+
         if (monthlyTarget && actualValue !== null && actualValue !== undefined) {
             progressPercent = calculateProgress(krName, actualValue, monthlyTarget);
-            
+
             // Determine status badge and class - MUST MATCH
             if (progressPercent >= 100) {
                 progressClass = 'excellent';  // Green bar
@@ -942,8 +1094,32 @@ function createMonthlyProgressCard(row) {
                 progressClass = 'poor';  // Red bar
                 statusBadge = '<span class="status-badge under" style="display: inline-flex; align-items: center; gap: 0.25rem;">' + ((window.ICONS && window.ICONS.x) || '') + ' Under Target</span>';
             }
-            
+
             displayText = `${progressPercent.toFixed(1)}% (${formatNumber(actualValue)} / ${formatNumber(monthlyTarget)})`;
+
+            // Run rate projection for the selected month (rendered on its own row below)
+            // Scope: Goal 1 KRs only (number starts with "1." or equals "1"), excluding KR-1.1.1
+            const _krInfoForRunRate = parseKRLevel(krName);
+            const _krNum = _krInfoForRunRate.number || '';
+            const _runRateAllowed = (_krNum === '1' || _krNum.startsWith('1.')) && _krNum !== '1.1.1';
+            if (runRateOptions && runRateOptions.month === month && _runRateAllowed) {
+                const day = Math.max(1, parseInt(runRateOptions.day, 10) || 1);
+                const daysInMonth = daysInMonthFromLabel(month);
+                const safeDay = Math.min(day, daysInMonth);
+                const projectedActual = (actualValue / safeDay) * daysInMonth;
+                const projectedPercent = calculateProgress(krName, projectedActual, monthlyTarget);
+                let projectionClass = 'under';
+                if (projectedPercent >= 100) { projectionClass = 'over'; projectionBarClass = 'excellent'; }
+                else if (projectedPercent >= 90) { projectionClass = ''; projectionBarClass = 'good'; }
+                else { projectionBarClass = 'poor'; }
+                projectionPercent = projectedPercent;
+                projectionRowHtml = `
+                    <div class="monthly-progress-projection-row">
+                        <span class="run-rate-projection-label">Run rate (day ${safeDay}/${daysInMonth})</span>
+                        <span class="run-rate-projection ${projectionClass}">→ projected ${projectedPercent.toFixed(1)}% (${formatNumber(projectedActual)})</span>
+                    </div>
+                `;
+            }
         } else if (monthlyTarget) {
             displayText = `Target: ${formatNumber(monthlyTarget)}`;
         } else if (actualValue !== null && actualValue !== undefined) {
@@ -961,9 +1137,11 @@ function createMonthlyProgressCard(row) {
                 <span class="monthly-progress-label-month">${month}</span>
                 <span class="monthly-progress-label-value ${labelClass}">${displayText}</span>
             </div>
+            ${projectionRowHtml}
             ${statusBadge}
             ${monthlyTarget ? `
                 <div class="monthly-bar-container">
+                    ${projectionPercent !== null ? `<div class="monthly-bar-projection ${projectionBarClass}" style="width: ${Math.min(projectionPercent, 100)}%" title="Run rate projection: ${projectionPercent.toFixed(1)}%"></div>` : ''}
                     <div class="monthly-bar-fill ${progressClass}" style="width: ${Math.min(progressPercent, 100)}%"></div>
                 </div>
             ` : ''}
@@ -1165,7 +1343,7 @@ function renderExecutiveSummary() {
                     </span>
                 </div>
                 <div style="color: var(--text-secondary); font-size: 1rem; line-height: 1.4;">
-                    Achieved <strong style="color: ${badgeColor}; font-size: 1.1rem;">${b.pct.toFixed(1)}%</strong> of yearly target
+                    Achieved <strong style="color: ${badgeColor}; font-size: 1.1rem;">${b.pct.toFixed(1)}%</strong> of monthly target
                     <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.15rem;">(${formatNumber(b.totalTarget)}${b.unit ? ' ' + b.unit : ''})</div>
                 </div>
                 <div style="background: ${b.color}; color: white; border-radius: 12px; padding: 1rem 1.25rem; font-weight: 700; display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; flex-wrap: wrap;">
@@ -1674,6 +1852,8 @@ function renderOKRCards() {
                     const target = getTarget(row);
                     const progress = Math.min(calculateProgress(row.kr_name, latestValue, target), 100);
                     const numberClass = getNumberPairLengthClass(latestValue, target);
+                    const _displayedMonth = getEffectiveMonthForRow(row);
+                    const projection = computeRunRateProjection(row, _displayedMonth);
                     const card = document.createElement('div');
                     card.className = `okr-card ${getTopicClass(row.kr_topic_name)} horizontal-layout`;
                     
@@ -1709,10 +1889,11 @@ function renderOKRCards() {
                         ${target > 0 ? `
                             <div class="progress-section" style="width: 100%;">
                                 <div class="progress-bar-container">
+                                    ${projection ? `<div class="progress-bar-projection ${projection.projectionBarClass}" style="width: ${Math.min(projection.projectedPercent, 100)}%" title="Run rate projection: ${projection.projectedPercent.toFixed(1)}%"></div>` : ''}
                                     <div class="progress-bar ${progressClass}" style="width: ${progress}%"></div>
                                 </div>
                                 <div style="text-align: center; margin-top: 10px; color: var(--text-muted); font-size: 0.9em;">
-                                    ${progress.toFixed(1)}% achieved
+                                    ${progress.toFixed(1)}% achieved${projection ? ` <span class="run-rate-projection ${projection.projectionClass}">→ projected ${projection.projectedPercent.toFixed(1)}% (day ${projection.day}/${projection.daysInMonth})</span>` : ''}
                                 </div>
                             </div>
                         ` : ''}
@@ -1744,6 +1925,8 @@ function renderOKRCards() {
                                 else childProgressClass = 'low';
                                 const childKrTitle = getShortTitle(childRow.kr_title_name || '');
                                 const childNumberClass = getNumberPairLengthClass(childLatestValue, childTarget);
+                                const _childDisplayedMonth = getEffectiveMonthForRow(childRow);
+                                const childProjection = computeRunRateProjection(childRow, _childDisplayedMonth);
                                 const childCard = document.createElement('div');
                                 childCard.className = `okr-card ${getTopicClass(childRow.kr_topic_name)} horizontal-layout`;
                                 childCard.innerHTML = `
@@ -1766,10 +1949,11 @@ function renderOKRCards() {
                                     ${childTarget > 0 ? `
                                         <div class="progress-section" style="width: 100%;">
                                             <div class="progress-bar-container">
+                                                ${childProjection ? `<div class="progress-bar-projection ${childProjection.projectionBarClass}" style="width: ${Math.min(childProjection.projectedPercent, 100)}%" title="Run rate projection: ${childProjection.projectedPercent.toFixed(1)}%"></div>` : ''}
                                                 <div class="progress-bar ${childProgressClass}" style="width: ${childProgress}%"></div>
                                             </div>
                                             <div style="text-align: center; margin-top: 10px; color: var(--text-muted); font-size: 0.9em;">
-                                                ${childProgress.toFixed(1)}% achieved
+                                                ${childProgress.toFixed(1)}% achieved${childProjection ? ` <span class="run-rate-projection ${childProjection.projectionClass}">→ projected ${childProjection.projectedPercent.toFixed(1)}% (day ${childProjection.day}/${childProjection.daysInMonth})</span>` : ''}
                                             </div>
                                         </div>
                                     ` : ''}
@@ -1841,6 +2025,8 @@ function renderDataTable() {
                     const target = getTarget(row);
                     const change = calculateChange(current, previous);
                     const progress = calculateProgress(row.kr_name, current, target);
+                    const _tblDisplayedMonth = getEffectiveMonthForRow(row);
+                    const tblProjection = computeRunRateProjection(row, _tblDisplayedMonth);
                     let changeTrendClass = 'trend-neutral';
                     let changeDisplay = 'N/A';
                     if (change !== null && !isNaN(change) && isFinite(change)) {
@@ -1871,15 +2057,17 @@ function renderDataTable() {
                             ${target > 0 ? `
                                 <div class="progress-cell">
                                     <div class="progress-bar-mini">
+                                        ${tblProjection ? `<div class="progress-fill-projection ${tblProjection.projectionBarClass}" style="width: ${Math.min(tblProjection.projectedPercent, 100)}%;" title="Run rate projection: ${tblProjection.projectedPercent.toFixed(1)}%"></div>` : ''}
                                         <div class="progress-fill ${progress >= 100 ? 'complete' : progress >= 90 ? 'high' : 'low'}" style="width: ${Math.min(progress, 100)}%;"></div>
                                     </div>
-                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
                                         <span class="progress-text ${progress >= 100 ? 'complete' : progress >= 90 ? 'high' : 'low'}">${progress.toFixed(1)}%</span>
                                         ${progress >= 100 ?
                                             '<span class="table-status-badge achieved" title="Achieved Target" style="display: inline-flex; align-items: center; justify-content: center;">' + ((window.ICONS && window.ICONS.check) || '') + '</span>' :
                                          progress >= 90 ?
                                             '<span class="table-status-badge slightly-under" title="Slightly Under Target" style="display: inline-flex; align-items: center; justify-content: center;">' + ((window.ICONS && window.ICONS.alert) || '') + '</span>' :
                                             '<span class="table-status-badge under" title="Under Target" style="display: inline-flex; align-items: center; justify-content: center;">' + ((window.ICONS && window.ICONS.x) || '') + '</span>'}
+                                        ${tblProjection ? `<span class="run-rate-projection ${tblProjection.projectionClass}" style="font-size: 0.75rem;">→ ${tblProjection.projectedPercent.toFixed(1)}% proj.</span>` : ''}
                                     </div>
                                 </div>
                             ` : '<span class="na-text">N/A</span>'}
@@ -2040,7 +2228,7 @@ function exportTableToPDF() {
 
                 // Achievement line
                 doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(71, 85, 105);
-                doc.text('Achieved ' + b.pct.toFixed(1) + '% of yearly target', cx + 4, cardsY + 13);
+                doc.text('Achieved ' + b.pct.toFixed(1) + '% of monthly target', cx + 4, cardsY + 13);
                 doc.setTextColor(148, 163, 184); doc.setFontSize(6.5);
                 doc.text('(' + formatNumber(b.totalTarget) + (b.unit ? ' ' + b.unit : '') + ')', cx + 4, cardsY + 17);
 
@@ -2704,7 +2892,7 @@ function buildDashboardEmailBody(intro) {
             lines.push('- ' + b.label + '  [' + status + ']');
             lines.push('    GWP Total:    ' + formatNumber(b.totalCurrent) + (b.unit ? ' ' + b.unit : ''));
             lines.push('    Target:       ' + formatNumber(b.totalTarget)  + (b.unit ? ' ' + b.unit : ''));
-            lines.push('    Achievement:  ' + b.pct.toFixed(1) + '% of yearly target');
+            lines.push('    Achievement:  ' + b.pct.toFixed(1) + '% of monthly target');
             lines.push('    KRs:          ' + b.krs.map(function(n) { return 'KR ' + n; }).join(', '));
             lines.push('');
         });
@@ -2981,7 +3169,7 @@ function buildDashboardEmailHTML(intro) {
                     '<td style="font-weight: 800; font-size: 15px; color: ' + b.color + ';">' + esc(b.label) + '</td>' +
                     '<td style="text-align: right; white-space: nowrap;"><span style="display: inline-block; padding: 4px 10px; background: ' + badgeBg + '; color: ' + badgeColor + '; border: 1px solid ' + badgeColor + '; border-radius: 999px; font-size: 10px; font-weight: 700;">' + esc(badgeTxt) + '</span></td>' +
                 '</tr></table>' +
-                '<div style="font-size: 13px; color: #475569; margin-bottom: 4px;">Achieved <strong style="color: ' + badgeColor + ';">' + b.pct.toFixed(1) + '%</strong> of yearly target</div>' +
+                '<div style="font-size: 13px; color: #475569; margin-bottom: 4px;">Achieved <strong style="color: ' + badgeColor + ';">' + b.pct.toFixed(1) + '%</strong> of monthly target</div>' +
                 '<div style="font-size: 11px; color: #94A3B8; margin-bottom: 14px;">(' + esc(formatNumber(b.totalTarget)) + (b.unit ? ' ' + esc(b.unit) : '') + ')</div>' +
                 '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; background: ' + b.color + '; border-radius: 8px;"><tr>' +
                     '<td style="padding: 12px 14px; color: #ffffff; font-size: 12px; font-weight: 700;">GWP Total</td>' +

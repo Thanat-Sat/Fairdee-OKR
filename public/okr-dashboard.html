@@ -177,6 +177,93 @@
         }
 
 
+        /* Run Rate Controls */
+        .run-rate-controls {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1.25rem;
+            padding: 0.875rem 1.25rem;
+            margin-bottom: 1.25rem;
+            background: #FFFBEB;
+            border: 1px solid #FDE68A;
+            border-radius: 10px;
+            font-size: 0.875rem;
+            color: #92400E;
+        }
+        .run-rate-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .run-rate-toggle input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: #D97706;
+        }
+        .run-rate-inputs {
+            display: inline-flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .run-rate-inputs label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+        }
+        .run-rate-inputs select,
+        .run-rate-inputs input[type="number"] {
+            padding: 4px 8px;
+            border: 1px solid #FCD34D;
+            border-radius: 6px;
+            background: white;
+            font-size: 0.875rem;
+            color: #92400E;
+            font-weight: 600;
+            font-family: inherit;
+        }
+        .run-rate-inputs input[type="number"] {
+            width: 64px;
+            text-align: center;
+        }
+        .run-rate-days-suffix {
+            color: #B45309;
+            font-weight: 500;
+        }
+        .run-rate-controls[data-active="false"] .run-rate-inputs {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        .monthly-progress-projection-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 0.5rem;
+            margin-top: 0.25rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.8125rem;
+        }
+        .run-rate-projection-label {
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        .run-rate-projection {
+            color: #B45309;
+            font-weight: 700;
+            font-family: 'Google Sans Text', sans-serif;
+        }
+        .run-rate-projection.over {
+            color: #16A34A;
+        }
+        .run-rate-projection.under {
+            color: #DC2626;
+        }
+
         /* Monthly Progress Styles */
         .monthly-grid {
             display: grid;
@@ -292,6 +379,40 @@
 
         .monthly-bar-fill.poor {
             background: linear-gradient(90deg, #ef4444, #dc2626);
+        }
+
+
+        /* Run rate projection underlay — sits behind the solid actual fill */
+        .monthly-bar-projection {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            border-radius: 8px;
+            transition: width 0.6s ease;
+            opacity: 0.55;
+            background-image: repeating-linear-gradient(
+                45deg,
+                rgba(255, 255, 255, 0.35) 0,
+                rgba(255, 255, 255, 0.35) 6px,
+                rgba(255, 255, 255, 0) 6px,
+                rgba(255, 255, 255, 0) 12px
+            );
+            background-color: #9CA3AF;
+            z-index: 1;
+        }
+        .monthly-bar-projection.excellent {
+            background-color: #10B981;
+        }
+        .monthly-bar-projection.good {
+            background-color: #F59E0B;
+        }
+        .monthly-bar-projection.poor {
+            background-color: #EF4444;
+        }
+        .monthly-bar-fill {
+            position: relative;
+            z-index: 2;
         }
 
 
@@ -497,7 +618,7 @@
                 <span class="sheet-sync-dot"></span>
                 <span>Fetching Google Sheets...</span>
             </div>
-            <a href="home.html" class="home-btn">← Home</a>
+            <a href="index.html" class="home-btn">← Home</a>
             <div class="user-bar-info">
                 <span class="user-bar-name user-email" id="userName">User</span>
             </div>
@@ -623,6 +744,25 @@
                 <button class="tab" onclick="switchTab(this, 'teamPerformance')">KAM Analysis</button>
                 <button class="tab" onclick="switchTab(this, 'fleetAnalysis')">Fleet Analysis</button>
                 <button class="tab" onclick="switchTab(this, 'actionItems')">Action Items</button>
+            </div>
+
+            <!-- Run Rate Controls (global — affects Cards, Table, and Monthly Progress views) -->
+            <div id="runRateControls" class="run-rate-controls" style="display: none;">
+                <label class="run-rate-toggle">
+                    <input type="checkbox" id="runRateCheckbox">
+                    <span>Show Run Rate</span>
+                </label>
+                <div class="run-rate-inputs">
+                    <label>
+                        <span>Month</span>
+                        <select id="runRateMonthSelect"></select>
+                    </label>
+                    <label>
+                        <span>Day</span>
+                        <input type="number" id="runRateDayInput" min="1" max="31" value="1">
+                        <span class="run-rate-days-suffix" id="runRateDaysSuffix">of 31</span>
+                    </label>
+                </div>
             </div>
 
 
