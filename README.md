@@ -116,6 +116,7 @@ The hub at `/` ([index.html](public/index.html)) is the entry point. It links to
 | OKR Dashboard | [okr-dashboard.html](public/okr-dashboard.html) | OKR app (powered by [script.js](public/script.js)) |
 | Monthly Metrics | [mm.html](public/mm.html) | MM app (tabbed iframe shell) |
 | Fairdee CRM | `https://crm.fairdee-crm.xyz/` | External — outside this repo |
+| Fairdee Fleet bot | `https://fairdee-fleet.web.app/` | External — outside this repo |
 
 The two applications are deliberately decoupled:
 

@@ -841,6 +841,11 @@
         }
         .run-rate-projection.over { color: #16A34A; }
         .run-rate-projection.under { color: #DC2626; }
+
+        /* Run rate projected number in the Current cell of the table view */
+        .run-rate-current .number-value { color: #B45309; }
+        .run-rate-current.over .number-value { color: #16A34A; }
+        .run-rate-current.under .number-value { color: #DC2626; }
         
         .progress-text {
             font-weight: 700;

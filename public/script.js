@@ -86,6 +86,32 @@ let hunterChartInstances = {};
 // END OF EMBEDDED TARGETS
 // ========================================
 
+// KRs whose values are percentages and should render with a "%" suffix
+// next to current/target wherever they appear.
+const PERCENTAGE_KRS = new Set([
+    '1.1.1',
+    '3.2',
+    '5.1.1', '5.1.2', '5.1.3', '5.1.4',
+    '5.2.1', '5.2.2',
+    '5.3.1', '5.3.2',
+    '5.4.1'
+]);
+
+function isPercentageKR(krName) {
+    if (!krName) return false;
+    const info = parseKRLevel(krName);
+    return PERCENTAGE_KRS.has(info.number);
+}
+
+// Render a KR current/target value, appending "%" for percentage-typed KRs.
+function formatKRValue(value, krName) {
+    if (value === null || value === undefined || (typeof value === 'number' && isNaN(value))) {
+        return 'N/A';
+    }
+    const formatted = formatNumber(value);
+    return isPercentageKR(krName) ? formatted + '%' : formatted;
+}
+
 let csvData = [];
 let filteredData = [];
 let allMonths = []; // All unique months found in data
@@ -1271,8 +1297,8 @@ function renderTopMovers() {
                 <div class="mover-stats">
                     <div class="mover-change positive">↑ ${item.change.toFixed(1)}%</div>
                     <div class="mover-details">
-                        <div><strong>Current:</strong> ${formatNumber(item.current)}</div>
-                        <div><strong>Previous:</strong> ${formatNumber(item.previous)}</div>
+                        <div><strong>Current:</strong> ${formatKRValue(item.current, item.kr_name)}</div>
+                        <div><strong>Previous:</strong> ${formatKRValue(item.previous, item.kr_name)}</div>
                         <div style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.8rem;">
                             ${item.goal_name} → ${item.objective_name}
                         </div>
@@ -1299,8 +1325,8 @@ function renderTopMovers() {
                 <div class="mover-stats">
                     <div class="mover-change negative">↓ ${Math.abs(item.change).toFixed(1)}%</div>
                     <div class="mover-details">
-                        <div><strong>Current:</strong> ${formatNumber(item.current)}</div>
-                        <div><strong>Previous:</strong> ${formatNumber(item.previous)}</div>
+                        <div><strong>Current:</strong> ${formatKRValue(item.current, item.kr_name)}</div>
+                        <div><strong>Previous:</strong> ${formatKRValue(item.previous, item.kr_name)}</div>
                         <div style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.8rem;">
                             ${item.goal_name} → ${item.objective_name}
                         </div>
@@ -1655,12 +1681,12 @@ function renderGoalHighlights() {
                         <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.75rem;">
                             <div>
                                 <div style="color: var(--text-muted); margin-bottom: 0.25rem;">CURRENT</div>
-                                <div style="font-weight: 700; color: var(--primary); font-family: 'Google Sans Text', sans-serif;">${formatNumber(bestKR.current)}</div>
+                                <div style="font-weight: 700; color: var(--primary); font-family: 'Google Sans Text', sans-serif;">${formatKRValue(bestKR.current, bestKR.kr_name)}</div>
                                 <div style="color: var(--text-muted); font-size: 0.7rem;">${bestKR.unit_name || ''}</div>
                             </div>
                             <div style="text-align: right;">
                                 <div style="color: var(--text-muted); margin-bottom: 0.25rem;">TARGET</div>
-                                <div style="font-weight: 700; color: var(--primary); font-family: 'Google Sans Text', sans-serif;">${formatNumber(bestKR.target)}</div>
+                                <div style="font-weight: 700; color: var(--primary); font-family: 'Google Sans Text', sans-serif;">${formatKRValue(bestKR.target, bestKR.kr_name)}</div>
                                 <div style="color: var(--text-muted); font-size: 0.7rem;">${bestKR.unit_name || ''}</div>
                             </div>
                         </div>
@@ -1675,12 +1701,12 @@ function renderGoalHighlights() {
                             <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.75rem;">
                                 <div>
                                     <div style="color: var(--text-muted); margin-bottom: 0.25rem;">CURRENT</div>
-                                    <div style="font-weight: 700; color: var(--primary); font-family: 'Google Sans Text', sans-serif;">${formatNumber(worstKR.current)}</div>
+                                    <div style="font-weight: 700; color: var(--primary); font-family: 'Google Sans Text', sans-serif;">${formatKRValue(worstKR.current, worstKR.kr_name)}</div>
                                     <div style="color: var(--text-muted); font-size: 0.7rem;">${worstKR.unit_name || ''}</div>
                                 </div>
                                 <div style="text-align: right;">
                                     <div style="color: var(--text-muted); margin-bottom: 0.25rem;">TARGET</div>
-                                    <div style="font-weight: 700; color: var(--primary); font-family: 'Google Sans Text', sans-serif;">${formatNumber(worstKR.target)}</div>
+                                    <div style="font-weight: 700; color: var(--primary); font-family: 'Google Sans Text', sans-serif;">${formatKRValue(worstKR.target, worstKR.kr_name)}</div>
                                     <div style="color: var(--text-muted); font-size: 0.7rem;">${worstKR.unit_name || ''}</div>
                                 </div>
                             </div>
@@ -1696,12 +1722,12 @@ function renderGoalHighlights() {
                             <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.75rem;">
                                 <div>
                                     <div style="color: var(--text-muted); margin-bottom: 0.25rem;">CURRENT</div>
-                                    <div style="font-weight: 700; color: var(--primary); font-family: 'Google Sans Text', sans-serif;">${formatNumber(biggestGrowth.current)}</div>
+                                    <div style="font-weight: 700; color: var(--primary); font-family: 'Google Sans Text', sans-serif;">${formatKRValue(biggestGrowth.current, biggestGrowth.kr_name)}</div>
                                     <div style="color: var(--text-muted); font-size: 0.7rem;">${biggestGrowth.unit_name || ''}</div>
                                 </div>
                                 <div style="text-align: right;">
                                     <div style="color: var(--text-muted); margin-bottom: 0.25rem;">TARGET</div>
-                                    <div style="font-weight: 700; color: var(--primary); font-family: 'Google Sans Text', sans-serif;">${formatNumber(biggestGrowth.target)}</div>
+                                    <div style="font-weight: 700; color: var(--primary); font-family: 'Google Sans Text', sans-serif;">${formatKRValue(biggestGrowth.target, biggestGrowth.kr_name)}</div>
                                     <div style="color: var(--text-muted); font-size: 0.7rem;">${biggestGrowth.unit_name || ''}</div>
                                 </div>
                             </div>
@@ -1911,12 +1937,12 @@ function renderOKRCards() {
                         <div class="kr-metrics">
                             <div class="kr-metric">
                                 <div class="kr-metric-label">Current</div>
-                                <div class="kr-metric-value ${numberClass}">${formatNumber(latestValue)}</div>
+                                <div class="kr-metric-value ${numberClass}">${formatKRValue(latestValue, row.kr_name)}</div>
                                 <div class="kr-unit">${row.unit_name || ''}</div>
                             </div>
                             <div class="kr-metric">
                                 <div class="kr-metric-label">Target</div>
-                                <div class="kr-metric-value ${numberClass}">${formatNumber(target)}</div>
+                                <div class="kr-metric-value ${numberClass}">${formatKRValue(target, row.kr_name)}</div>
                                 <div class="kr-unit">${row.unit_name || ''}</div>
                             </div>
                         </div>
@@ -1971,12 +1997,12 @@ function renderOKRCards() {
                                     <div class="kr-metrics">
                                         <div class="kr-metric">
                                             <div class="kr-metric-label">Current</div>
-                                            <div class="kr-metric-value ${childNumberClass}">${formatNumber(childLatestValue)}</div>
+                                            <div class="kr-metric-value ${childNumberClass}">${formatKRValue(childLatestValue, childRow.kr_name)}</div>
                                             <div class="kr-unit">${childRow.unit_name || ''}</div>
                                         </div>
                                         <div class="kr-metric">
                                             <div class="kr-metric-label">Target</div>
-                                            <div class="kr-metric-value ${childNumberClass}">${formatNumber(childTarget)}</div>
+                                            <div class="kr-metric-value ${childNumberClass}">${formatKRValue(childTarget, childRow.kr_name)}</div>
                                             <div class="kr-unit">${childRow.unit_name || ''}</div>
                                         </div>
                                     </div>
@@ -2084,8 +2110,17 @@ function renderDataTable() {
                         </td>
                         <td class="col-topic"><span class="topic-badge" style="background: ${getTopicBadgeColor(row.kr_topic_name)};">${row.kr_topic_name || ''}</span></td>
                         <td class="col-owner">${row.kr_owner_name || '<span class="unassigned">Unassigned</span>'}</td>
-                        <td class="col-current"><span class="number-value">${current !== null ? formatNumber(current) : 'N/A'}</span><span class="unit-text">${row.unit_name || ''}</span></td>
-                        <td class="col-target"><span class="number-value">${target > 0 ? formatNumber(target) : 'N/A'}</span><span class="unit-text">${row.unit_name || ''}</span></td>
+                        <td class="col-current">
+                            ${tblProjection ? `
+                                <div class="run-rate-current ${tblProjection.projectionClass}">
+                                    <span class="number-value">${formatKRValue(tblProjection.projectedActual, row.kr_name)}</span><span class="unit-text">${row.unit_name || ''}</span>
+                                    <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 500; margin-top: 0.15rem;">(Run Rate)</div>
+                                </div>
+                            ` : `
+                                <span class="number-value">${current !== null ? formatKRValue(current, row.kr_name) : 'N/A'}</span><span class="unit-text">${row.unit_name || ''}</span>
+                            `}
+                        </td>
+                        <td class="col-target"><span class="number-value">${target > 0 ? formatKRValue(target, row.kr_name) : 'N/A'}</span><span class="unit-text">${row.unit_name || ''}</span></td>
                         <td class="col-change"><span class="trend-badge ${changeTrendClass}">${changeDisplay}</span></td>
                         <td class="col-progress">
                             ${target > 0 ? `
