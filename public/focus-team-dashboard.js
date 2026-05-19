@@ -446,16 +446,41 @@ class FocusTeamUI {
         const checkbox  = document.getElementById('ftShowRunRate');
         const inputsDiv = document.getElementById('ftRunRateInputs');
         const dayInput  = document.getElementById('ftRunRateDay');
-        if (!checkbox || this._runRateWired) return;
+        if (this._runRateWired) return;
         this._runRateWired = true;
 
+        const syncFromGlobal = () => {
+            if (!window.globalRunRate || !window.globalRunRate.get) return;
+            const s = window.globalRunRate.get();
+            if (checkbox) checkbox.checked = !!s.enabled;
+            const parsed = window.globalRunRate.parseDate(s.date);
+            if (parsed && dayInput) dayInput.value = parsed.day;
+            if (inputsDiv) inputsDiv.style.display = s.enabled ? 'flex' : 'none';
+        };
+        syncFromGlobal();
+
+        if (window.globalRunRate && window.globalRunRate.subscribe) {
+            window.globalRunRate.subscribe(() => {
+                syncFromGlobal();
+                this.renderTierCharts();
+            });
+        }
+
+        if (!checkbox) return;
         checkbox.addEventListener('change', () => {
-            inputsDiv.style.display = checkbox.checked ? 'flex' : 'none';
-            this.renderTierCharts();
+            if (window.globalRunRate) window.globalRunRate.set({ enabled: checkbox.checked });
         });
         dayInput.addEventListener('input', () => {
             const v = parseInt(dayInput.value, 10);
-            if (!isNaN(v) && v >= 1 && v <= 31) this.renderTierCharts();
+            if (isNaN(v) || v < 1 || v > 31) return;
+            if (window.globalRunRate) {
+                const cur = window.globalRunRate.get();
+                const parsed = window.globalRunRate.parseDate(cur.date) || { year: new Date().getFullYear(), month: new Date().getMonth() + 1 };
+                const y = parsed.year;
+                const m = String(parsed.month).padStart(2, '0');
+                const d = String(v).padStart(2, '0');
+                window.globalRunRate.set({ date: `${y}-${m}-${d}` });
+            }
         });
     }
 

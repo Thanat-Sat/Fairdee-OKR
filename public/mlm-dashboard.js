@@ -377,15 +377,33 @@ class MLMUI {
         const quarterInput = document.getElementById('mlmRunRateQuarter');
         const eoyInput = document.getElementById('mlmRunRateEOY');
         const dateInput = document.getElementById('mlmRunRateDate');
-        if (!cb) return;
-        if (dateInput && !dateInput.value) {
-            dateInput.value = this.runRateDate;
+
+        // Mirror enabled + date from the global run-rate store (mm.html header)
+        const syncFromGlobal = () => {
+            if (!window.globalRunRate || !window.globalRunRate.get) return;
+            const s = window.globalRunRate.get();
+            this.showRunRate = !!s.enabled;
+            if (s.date) this.runRateDate = s.date;
+            if (cb) cb.checked = this.showRunRate;
+            if (dateInput) dateInput.value = this.runRateDate;
+            if (inputs) inputs.style.display = this.showRunRate ? 'flex' : 'none';
+        };
+        syncFromGlobal();
+
+        if (window.globalRunRate && window.globalRunRate.subscribe) {
+            window.globalRunRate.subscribe(() => {
+                syncFromGlobal();
+                this.renderTable();
+            });
         }
+
+        if (!cb) return;
+
         cb.addEventListener('change', () => {
-            this.showRunRate = cb.checked;
-            inputs.style.display = cb.checked ? 'flex' : 'none';
-            this.renderTable();
+            if (window.globalRunRate) window.globalRunRate.set({ enabled: cb.checked });
         });
+
+        // Quarter/EOY scope selectors remain local — they only affect this dashboard
         const bindSelection = (input, key) => {
             if (!input) return;
             input.checked = !!this.runRateSelections[key];
@@ -397,13 +415,14 @@ class MLMUI {
         bindSelection(monthInput, 'month');
         bindSelection(quarterInput, 'quarter');
         bindSelection(eoyInput, 'eoy');
+
         if (dateInput) {
-            const syncDate = () => {
-                this.runRateDate = dateInput.value || this.getDefaultRunRateDate();
-                if (this.showRunRate) this.renderTable();
+            const pushDate = () => {
+                const v = dateInput.value || this.getDefaultRunRateDate();
+                if (window.globalRunRate) window.globalRunRate.set({ date: v });
             };
-            dateInput.addEventListener('change', syncDate);
-            dateInput.addEventListener('input', syncDate);
+            dateInput.addEventListener('change', pushDate);
+            dateInput.addEventListener('input', pushDate);
         }
     }
 

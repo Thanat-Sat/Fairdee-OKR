@@ -280,6 +280,31 @@ class DashboardUI {
         this.chart = null;
     }
 
+    getRunRateState() {
+        if (window.globalRunRate && window.globalRunRate.get) return window.globalRunRate.get();
+        return { enabled: false, date: '' };
+    }
+
+    daysInMonth(monthStr) {
+        if (!monthStr) return 31;
+        const [y, m] = monthStr.split('-').map(Number);
+        return new Date(y, m, 0).getDate();
+    }
+
+    calcRunRate(actual, day, daysInMonth) {
+        if (actual == null || !day || day < 1 || !daysInMonth) return null;
+        const safeDay = Math.min(day, daysInMonth);
+        return (actual / safeDay) * daysInMonth;
+    }
+
+    setupRunRateControls() {
+        if (this._runRateBound) return;
+        this._runRateBound = true;
+        if (window.globalRunRate && window.globalRunRate.subscribe) {
+            window.globalRunRate.subscribe(() => this.renderChart());
+        }
+    }
+
     formatNumber(num) {
         if (num >= 1000000) {
             return (num / 1000000).toFixed(1) + 'M';
@@ -363,6 +388,7 @@ class DashboardUI {
         this.updateKPI('igGWP', 'igChange', currentData['IG'], previousData ? previousData['IG'] : 0, 'IG', latestMonth);
         this.updateKPI('fdGWP', 'fdChange', currentData['FD/AO'], previousData ? previousData['FD/AO'] : 0, 'FD/AO', latestMonth);
 
+        this.setupRunRateControls();
         this.renderChart();
         this.renderTable();
 
@@ -370,18 +396,96 @@ class DashboardUI {
         document.getElementById('dashboardContent').style.display = 'block';
     }
 
+    applyRunRateToChartData(chartData) {
+        // chartData.datasets: alternating actual/target per channel (0/1 Team Agent, 2/3 IG, 4/5 FD/AO)
+        const rr = this.getRunRateState();
+        if (!rr.enabled) return null;
+        const parsed = window.globalRunRate.parseDate(rr.date);
+        if (!parsed) return null;
+
+        const months = this.dataProcessor.getLastNMonths(7);
+        const projIdx = months.indexOf(parsed.monthKey);
+        if (projIdx === -1) return null;  // selected month not in displayed window — nothing to project
+
+        const projMonth = months[projIdx];
+        const dim = this.daysInMonth(projMonth);
+        const day = Math.max(1, Math.min(dim, parsed.day));
+
+        const actualIdxs = [0, 2, 4];
+        const projectedTotal = { actual: 0, target: 0 };
+        actualIdxs.forEach(i => {
+            const arr = chartData.datasets[i].data;
+            const raw = arr[projIdx];
+            const projected = this.calcRunRate(raw, day, dim);
+            if (projected != null) {
+                projectedTotal.actual += projected;
+                arr[projIdx] = projected;
+            }
+            const targets = chartData.datasets[i + 1].data;
+            if (targets[projIdx] != null) projectedTotal.target += targets[projIdx];
+
+            // Highlight only the projected point with an amber diamond
+            const radii  = arr.map((_, idx) => (idx === projIdx ? 8 : 4));
+            const styles = arr.map((_, idx) => (idx === projIdx ? 'rectRot' : 'circle'));
+            const ptBg   = arr.map((_, idx) => (idx === projIdx ? '#f59e0b' : chartData.datasets[i].borderColor));
+            chartData.datasets[i].pointRadius = radii;
+            chartData.datasets[i].pointHoverRadius = radii.map(r => r + 1);
+            chartData.datasets[i].pointStyle = styles;
+            chartData.datasets[i].pointBackgroundColor = ptBg;
+            chartData.datasets[i].label = `${chartData.datasets[i].label} (Run Rate)`;
+        });
+
+        return { day, daysInMonth: dim, projMonth, projectedTotal };
+    }
+
     renderChart() {
         const ctx = document.getElementById('trendChart').getContext('2d');
-        
+
         if (this.chart) {
             this.chart.destroy();
         }
 
         const chartData = this.dataProcessor.getChartData();
+        const banner = document.getElementById('chRunRateBanner');
+        const rrMeta = this.applyRunRateToChartData(chartData);
+        if (banner) {
+            banner.textContent = rrMeta
+                ? `→ projected for ${rrMeta.projMonth} (day ${rrMeta.day}/${rrMeta.daysInMonth}): ${this.formatNumber(rrMeta.projectedTotal.actual)} total`
+                : '';
+        }
 
+        const self = this;
         this.chart = new Chart(ctx, {
             type: 'line',
             data: chartData,
+            plugins: [{
+                id: 'channelValueLabels',
+                afterDatasetsDraw(chart) {
+                    const ctx2 = chart.ctx;
+                    // Only label the three actual lines (indices 0, 2, 4)
+                    const actualConfigs = [
+                        { idx: 0, color: '#4338CA' }, // Team Agent
+                        { idx: 2, color: '#BE185D' }, // IG
+                        { idx: 4, color: '#047857' }  // FD/AO
+                    ];
+                    actualConfigs.forEach(cfg => {
+                        const meta = chart.getDatasetMeta(cfg.idx);
+                        const data = chart.data.datasets[cfg.idx].data;
+                        if (!meta || !meta.data) return;
+                        meta.data.forEach((pt, i) => {
+                            const val = data[i];
+                            if (val == null || !Number.isFinite(val)) return;
+                            ctx2.save();
+                            ctx2.fillStyle = cfg.color;
+                            ctx2.font = 'bold 10px "Google Sans Text"';
+                            ctx2.textAlign = 'center';
+                            ctx2.textBaseline = 'bottom';
+                            ctx2.fillText(self.formatNumber(val), pt.x, pt.y - 8);
+                            ctx2.restore();
+                        });
+                    });
+                }
+            }],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
