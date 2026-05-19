@@ -956,7 +956,9 @@ function computeRunRateProjection(row, displayedMonth) {
     if (!monthlyTarget) return null;
     const day = Math.max(1, parseInt(runRateState.day, 10) || 1);
     const daysInMonth = daysInMonthFromLabel(displayedMonth);
-    const safeDay = Math.min(day, daysInMonth);
+    // Data lags 1 day → effective elapsed = day - 1
+    const safeDay = Math.max(0, Math.min(day - 1, daysInMonth));
+    if (safeDay <= 0) return null;
     const projectedActual = (actualValue / safeDay) * daysInMonth;
     const projectedPercent = calculateProgress(row.kr_name, projectedActual, monthlyTarget);
     let projectionClass = 'under';
@@ -1167,20 +1169,23 @@ function createMonthlyProgressCard(row, runRateOptions = null) {
             if (runRateOptions && runRateOptions.month === month && _runRateAllowed) {
                 const day = Math.max(1, parseInt(runRateOptions.day, 10) || 1);
                 const daysInMonth = daysInMonthFromLabel(month);
-                const safeDay = Math.min(day, daysInMonth);
-                const projectedActual = (actualValue / safeDay) * daysInMonth;
-                const projectedPercent = calculateProgress(krName, projectedActual, monthlyTarget);
-                let projectionClass = 'under';
-                if (projectedPercent >= 100) { projectionClass = 'over'; projectionBarClass = 'excellent'; }
-                else if (projectedPercent >= 90) { projectionClass = ''; projectionBarClass = 'good'; }
-                else { projectionBarClass = 'poor'; }
-                projectionPercent = projectedPercent;
-                projectionRowHtml = `
-                    <div class="monthly-progress-projection-row">
-                        <span class="run-rate-projection-label">Run rate (day ${safeDay}/${daysInMonth})</span>
-                        <span class="run-rate-projection ${projectionClass}">→ projected ${projectedPercent.toFixed(1)}% (${formatNumber(projectedActual)})</span>
-                    </div>
-                `;
+                // Data lags 1 day → effective elapsed = day - 1
+                const safeDay = Math.max(0, Math.min(day - 1, daysInMonth));
+                if (safeDay > 0) {
+                    const projectedActual = (actualValue / safeDay) * daysInMonth;
+                    const projectedPercent = calculateProgress(krName, projectedActual, monthlyTarget);
+                    let projectionClass = 'under';
+                    if (projectedPercent >= 100) { projectionClass = 'over'; projectionBarClass = 'excellent'; }
+                    else if (projectedPercent >= 90) { projectionClass = ''; projectionBarClass = 'good'; }
+                    else { projectionBarClass = 'poor'; }
+                    projectionPercent = projectedPercent;
+                    projectionRowHtml = `
+                        <div class="monthly-progress-projection-row">
+                            <span class="run-rate-projection-label">Run rate (data through day ${safeDay}/${daysInMonth})</span>
+                            <span class="run-rate-projection ${projectionClass}">→ projected ${projectedPercent.toFixed(1)}% (${formatNumber(projectedActual)})</span>
+                        </div>
+                    `;
+                }
             }
         } else if (monthlyTarget) {
             displayText = `Target: ${formatNumber(monthlyTarget)}`;
@@ -4082,10 +4087,12 @@ function renderHunterChart(type, data, options = {}) {
         const monthDate = new Date(lastMonth.replace(', ', ' '));
         const daysInMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
 
-        runRateProjected = (values[lastIdx] / dayOfMonth) * daysInMonth;
+        // Data lags 1 day → effective elapsed = dayOfMonth - 1
+        const elapsed = Math.max(0, Math.min(daysInMonth, dayOfMonth - 1));
+        runRateProjected = elapsed > 0 ? (values[lastIdx] / elapsed) * daysInMonth : null;
 
         // Growth vs previous month
-        if (lastIdx >= 1) {
+        if (lastIdx >= 1 && runRateProjected !== null) {
             const prev = values[lastIdx - 1];
             growthPct = ((runRateProjected - prev) / prev) * 100;
         }
@@ -4093,7 +4100,7 @@ function renderHunterChart(type, data, options = {}) {
         // Update banner displays
         const projEl = document.getElementById(`${type}ProjectedValue`);
         const growthEl = document.getElementById(`${type}GrowthBadge`);
-        if (projEl) projEl.textContent = runRateProjected.toFixed(2) + 'M THB';
+        if (projEl) projEl.textContent = runRateProjected !== null ? (runRateProjected.toFixed(2) + 'M THB') : '—';
         if (growthEl && growthPct !== null) {
             const sign = growthPct >= 0 ? '+' : '';
             growthEl.style.color = growthPct >= 0 ? '#16A34A' : '#DC2626';

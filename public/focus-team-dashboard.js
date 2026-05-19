@@ -439,7 +439,10 @@ class FocusTeamUI {
 
     calcRunRate(actual, dayOfMonth, daysInMonth) {
         if (!dayOfMonth || dayOfMonth <= 0) return null;
-        return actual * (daysInMonth / Math.min(dayOfMonth, daysInMonth));
+        // Data lags 1 day → effective elapsed = day - 1
+        const elapsed = Math.max(0, Math.min(daysInMonth, dayOfMonth - 1));
+        if (elapsed <= 0) return null;
+        return actual * (daysInMonth / elapsed);
     }
 
     initRunRateControls() {

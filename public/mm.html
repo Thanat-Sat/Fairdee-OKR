@@ -143,9 +143,10 @@
 
     <!-- Centralized Data Store -->
     <script src="dashboard-data-store.js"></script>
-    <script src="run-rate-global.js?v=1778066000000"></script>
+    <script src="run-rate-global.js?v=1778067000000"></script>
     <script>
-        // Mount the single global run rate toggle in the header
+        // Mount the single global Show Run Rate + Today Date panel in the header.
+        // Per-table scope chips (Month/Quarter/EOY) live inside the MLM and Channel iframes.
         document.addEventListener('DOMContentLoaded', () => {
             if (typeof window.mountRunRatePanel === 'function') {
                 window.mountRunRatePanel('mmRunRatePanel');

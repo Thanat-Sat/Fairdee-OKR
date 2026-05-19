@@ -42,7 +42,10 @@ class PerformanceRecap {
     calcRunRate(actual, dayOfMonth, daysInMonth) {
         if (!dayOfMonth || dayOfMonth <= 0) return null;
         const day = Math.min(dayOfMonth, daysInMonth);
-        return actual * (daysInMonth / day);
+        // Data lags 1 day → effective elapsed = day - 1
+        const elapsed = Math.max(0, Math.min(daysInMonth, day - 1));
+        if (elapsed <= 0) return null;
+        return actual * (daysInMonth / elapsed);
     }
 
     // Wire up run-rate checkbox and day input (called once from render)

@@ -300,8 +300,14 @@ class DashboardUI {
     setupRunRateControls() {
         if (this._runRateBound) return;
         this._runRateBound = true;
+        if (typeof window.mountRunRateScopePanel === 'function') {
+            window.mountRunRateScopePanel('chScopePanel', { scopes: ['month', 'quarter', 'eoy'] });
+        }
         if (window.globalRunRate && window.globalRunRate.subscribe) {
-            window.globalRunRate.subscribe(() => this.renderChart());
+            window.globalRunRate.subscribe(() => {
+                this.renderChart();
+                this.renderTable();
+            });
         }
     }
 
@@ -409,7 +415,9 @@ class DashboardUI {
 
         const projMonth = months[projIdx];
         const dim = this.daysInMonth(projMonth);
-        const day = Math.max(1, Math.min(dim, parsed.day));
+        // Data lags 1 day → elapsed = picked_day - 1
+        const day = Math.max(0, Math.min(dim, parsed.day - 1));
+        if (day <= 0) return null;
 
         const actualIdxs = [0, 2, 4];
         const projectedTotal = { actual: 0, target: 0 };
@@ -593,6 +601,28 @@ class DashboardUI {
         const qRR = dp.calculateQuarterRunRate(year, quarter, channelKey);
         const eRR = dp.calculateEOYRunRate(year, channelKey);
 
+        // Global run-rate scopes
+        const rr = (window.globalRunRate && window.globalRunRate.get) ? window.globalRunRate.get() : { enabled: false, applyTo: {} };
+        const scopes = (rr.enabled && rr.applyTo) ? rr.applyTo : { month: false, quarter: false, eoy: false };
+        const parsed = (rr.enabled && window.globalRunRate.parseDate) ? window.globalRunRate.parseDate(rr.date) : null;
+
+        // Month-scope: project the picked date's month (data lags 1 day, so elapsed = day - 1)
+        const projectedActuals = {};
+        if (scopes.month) {
+            ytdMonths.forEach(m => {
+                if (!parsed || parsed.monthKey !== m) return;
+                const raw = dp.getActualForChannel(m, channelKey);
+                if (raw == null || !Number.isFinite(raw)) return;
+                const dim = window.globalRunRate.daysInMonth(m);
+                const elapsed = window.globalRunRate.effectiveElapsedDays(parsed, dim);
+                if (elapsed <= 0) return;
+                projectedActuals[m] = (raw / elapsed) * dim;
+            });
+        }
+        const projStyle = `${cellPad} ${numAlign} color: #92400e; background: #fffbeb; font-family: 'Google Sans Text', monospace; font-size: 0.8125rem; font-weight: 700;`;
+        const scopeNumStyle = `${cellPad} ${numAlign} color: #92400e; background: #fffbeb; font-family: 'Google Sans Text', monospace; font-size: 0.8125rem; font-weight: 700;`;
+        const scopePctBg = 'background: #fffbeb;';
+
         // Target row
         html += `<tr><td style="${labelStyle}">Target</td>`;
         ytdMonths.forEach(m => {
@@ -601,24 +631,47 @@ class DashboardUI {
         html += `<td style="${numStyle}">${this.formatMB(qRR.target)}</td>`;
         html += `<td style="${numStyle}">${this.formatMB(eRR.target)}</td></tr>`;
 
-        // Actual row
+        // Actual row (projected cells highlighted amber)
         html += `<tr><td style="${labelStyle}">Actual</td>`;
         ytdMonths.forEach(m => {
-            html += `<td style="${numStyle}">${this.formatMB(dp.getActualForChannel(m, channelKey))}</td>`;
+            const projected = projectedActuals[m];
+            if (projected != null) {
+                const dimT = window.globalRunRate.daysInMonth(m);
+                const elapsedT = window.globalRunRate.effectiveElapsedDays(parsed, dimT);
+                html += `<td style="${projStyle}" title="Run rate projection — actuals through day ${elapsedT} of ${dimT} (today is day ${parsed.day}; data lags 1 day)">→ ${this.formatMB(projected)}</td>`;
+            } else {
+                html += `<td style="${numStyle}">${this.formatMB(dp.getActualForChannel(m, channelKey))}</td>`;
+            }
         });
-        html += `<td style="${numStyle}">${this.formatMB(qRR.actual)}</td>`;
-        html += `<td style="${numStyle}">${this.formatMB(eRR.actual)}</td></tr>`;
+        // Q2 column: highlight + arrow when Quarter scope is on
+        if (scopes.quarter) {
+            html += `<td style="${scopeNumStyle}" title="Run rate (Quarter scope)">→ ${this.formatMB(qRR.actual)}</td>`;
+        } else {
+            html += `<td style="${numStyle}">${this.formatMB(qRR.actual)}</td>`;
+        }
+        // EOY column: highlight + arrow when EOY scope is on
+        if (scopes.eoy) {
+            html += `<td style="${scopeNumStyle}" title="Run rate (EOY scope)">→ ${this.formatMB(eRR.actual)}</td>`;
+        } else {
+            html += `<td style="${numStyle}">${this.formatMB(eRR.actual)}</td>`;
+        }
+        html += `</tr>`;
 
-        // % row (italic, colored)
+        // % row (italic, colored) — uses projected actual where present
         html += `<tr><td style="${cellPad}"></td>`;
         ytdMonths.forEach(m => {
-            const p = this.formatPctCell(dp.getActualForChannel(m, channelKey), dp.getTargetForChannel(m, channelKey));
-            html += `<td style="${cellPad} ${numAlign} font-style: italic; color: ${p.color}; font-weight: 600;">${p.text}</td>`;
+            const projected = projectedActuals[m];
+            const actual = projected != null ? projected : dp.getActualForChannel(m, channelKey);
+            const p = this.formatPctCell(actual, dp.getTargetForChannel(m, channelKey));
+            const bg = projected != null ? scopePctBg : '';
+            html += `<td style="${cellPad} ${numAlign} font-style: italic; color: ${p.color}; font-weight: 600; ${bg}">${p.text}</td>`;
         });
         const pq = this.formatPctCell(qRR.actual, qRR.target);
-        html += `<td style="${cellPad} ${numAlign} font-style: italic; color: ${pq.color}; font-weight: 600;">${pq.text}</td>`;
+        const pqBg = scopes.quarter ? scopePctBg : '';
+        html += `<td style="${cellPad} ${numAlign} font-style: italic; color: ${pq.color}; font-weight: 600; ${pqBg}">${pq.text}</td>`;
         const pe = this.formatPctCell(eRR.actual, eRR.target);
-        html += `<td style="${cellPad} ${numAlign} font-style: italic; color: ${pe.color}; font-weight: 600;">${pe.text}</td></tr>`;
+        const peBg = scopes.eoy ? scopePctBg : '';
+        html += `<td style="${cellPad} ${numAlign} font-style: italic; color: ${pe.color}; font-weight: 600; ${peBg}">${pe.text}</td></tr>`;
 
         // Spacer row
         html += `<tr><td colspan="${ytdMonths.length + 3}" style="height: 0.5rem;"></td></tr>`;

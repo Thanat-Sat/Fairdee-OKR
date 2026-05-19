@@ -48,7 +48,10 @@
 
             <section class="mlm-section">
                 <div class="section-header">
-                    <h2>MLM Team Performance</h2>
+                    <h2 style="display:inline-flex; align-items:center; gap:0.75rem;">
+                        <span>MLM Team Performance</span>
+                        <span id="mlmScopePanel"></span>
+                    </h2>
                     <div class="section-header-actions">
                         <span id="dataStatus" style="font-size: 0.875rem; color: #10b981; align-self: center;">
                             <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -0.15em;"><polyline points="20 6 9 17 4 12"></polyline></svg> Data loaded from storage
@@ -62,32 +65,20 @@
                     </div>
                 </div>
 
-                <!-- Run Rate Controls -->
-                <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1rem; flex-wrap:wrap;">
+                <!-- Run Rate Controls — controls live in the mm.html header now;
+                     these elements stay hidden but the JS keeps mirroring the global state into them. -->
+                <div style="display:none; align-items:center; gap:1rem; margin-bottom:1rem; flex-wrap:wrap;">
                     <label style="display:flex; align-items:center; gap:0.45rem; cursor:pointer; font-weight:600; color:#1e293b; font-size:0.875rem; user-select:none;">
                         <input type="checkbox" id="mlmShowRunRate" style="width:15px; height:15px; accent-color:#f59e0b; cursor:pointer;">
                         Show Run Rate
                     </label>
                     <div id="mlmRunRateInputs" style="display:none; align-items:center; gap:0.75rem; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:0.5rem 0.75rem; flex-wrap:wrap;">
-                        <span style="font-size:0.8rem; color:#92400e; font-weight:600;">Apply To</span>
-                        <label style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; color:#92400e; font-weight:600; cursor:pointer;">
-                            <input type="checkbox" id="mlmRunRateMonth" checked
-                                style="width:14px; height:14px; accent-color:#f59e0b; cursor:pointer;">
-                            Month
-                        </label>
-                        <label style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; color:#92400e; font-weight:600; cursor:pointer;">
-                            <input type="checkbox" id="mlmRunRateQuarter"
-                                style="width:14px; height:14px; accent-color:#f59e0b; cursor:pointer;">
-                            Quarter
-                        </label>
-                        <label style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; color:#92400e; font-weight:600; cursor:pointer;">
-                            <input type="checkbox" id="mlmRunRateEOY"
-                                style="width:14px; height:14px; accent-color:#f59e0b; cursor:pointer;">
-                            EOY
-                        </label>
-                        <label for="mlmRunRateDate" style="font-size:0.8rem; color:#92400e; font-weight:600;">Today Date</label>
-                        <input type="date" id="mlmRunRateDate"
-                            style="padding:0.25rem 0.45rem; border:1px solid #fcd34d; border-radius:6px; font-family:'Google Sans Text',monospace; font-size:0.875rem; font-weight:600; background:white; color:#1e293b;">
+                        <span style="font-size:0.8rem; color:#92400e; font-weight:600;">Controlled by the header toggle ↑ (Month / Quarter / EOY / Date)</span>
+                        <!-- Hidden inputs kept for backwards-compatibility; values driven by global state -->
+                        <input type="checkbox" id="mlmRunRateMonth"   style="display:none;">
+                        <input type="checkbox" id="mlmRunRateQuarter" style="display:none;">
+                        <input type="checkbox" id="mlmRunRateEOY"     style="display:none;">
+                        <input type="date"     id="mlmRunRateDate"    style="display:none;">
                     </div>
                 </div>
 
@@ -150,7 +141,7 @@
 
     <script src="icons.js"></script>
     <script src="dashboard-copy.js?v=1778064200000"></script>
-    <script src="run-rate-global.js?v=1778066000000"></script>
-    <script src="mlm-dashboard.js?v=1778066100000"></script>
+    <script src="run-rate-global.js?v=1778067000000"></script>
+    <script src="mlm-dashboard.js?v=1778067000000"></script>
 </body>
 </html>

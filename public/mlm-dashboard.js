@@ -297,7 +297,9 @@ class MLMUI {
     }
 
     calcRunRate(actual, elapsedDays, daysInMonth) {
-        const day = Math.max(1, Math.min(elapsedDays, daysInMonth));
+        // Data lags 1 day → effective elapsed = elapsedDays - 1
+        const day = Math.max(0, Math.min(elapsedDays - 1, daysInMonth));
+        if (day <= 0) return null;
         return actual * (daysInMonth / day);
     }
 
@@ -331,7 +333,9 @@ class MLMUI {
         }, 0);
 
         const totalDays = Math.floor((endDate - startDate) / 86400000) + 1;
-        const elapsedUntil = new Date(Math.min(endDate.getTime(), projectionDate.getTime()));
+        // Data lags 1 day → subtract 1 day from the projection date
+        const lagAdjusted = new Date(projectionDate.getTime() - 86400000);
+        const elapsedUntil = new Date(Math.min(endDate.getTime(), lagAdjusted.getTime()));
         const elapsedDays = Math.max(1, Math.min(totalDays, Math.floor((elapsedUntil - startDate) / 86400000) + 1));
         return actualToDate * (totalDays / elapsedDays);
     }
@@ -371,6 +375,9 @@ class MLMUI {
     initRunRateControls() {
         if (this._runRateWired) return;
         this._runRateWired = true;
+        if (typeof window.mountRunRateScopePanel === 'function') {
+            window.mountRunRateScopePanel('mlmScopePanel', { scopes: ['month', 'quarter', 'eoy'] });
+        }
         const cb = document.getElementById('mlmShowRunRate');
         const inputs = document.getElementById('mlmRunRateInputs');
         const monthInput = document.getElementById('mlmRunRateMonth');
@@ -378,15 +385,22 @@ class MLMUI {
         const eoyInput = document.getElementById('mlmRunRateEOY');
         const dateInput = document.getElementById('mlmRunRateDate');
 
-        // Mirror enabled + date from the global run-rate store (mm.html header)
+        // Mirror enabled + date + scope from the global run-rate store (mm.html header)
         const syncFromGlobal = () => {
             if (!window.globalRunRate || !window.globalRunRate.get) return;
             const s = window.globalRunRate.get();
             this.showRunRate = !!s.enabled;
             if (s.date) this.runRateDate = s.date;
+            if (s.applyTo) {
+                this.runRateSelections.month   = !!s.applyTo.month;
+                this.runRateSelections.quarter = !!s.applyTo.quarter;
+                this.runRateSelections.eoy     = !!s.applyTo.eoy;
+            }
             if (cb) cb.checked = this.showRunRate;
             if (dateInput) dateInput.value = this.runRateDate;
-            if (inputs) inputs.style.display = this.showRunRate ? 'flex' : 'none';
+            if (monthInput)   monthInput.checked   = this.runRateSelections.month;
+            if (quarterInput) quarterInput.checked = this.runRateSelections.quarter;
+            if (eoyInput)     eoyInput.checked     = this.runRateSelections.eoy;
         };
         syncFromGlobal();
 
