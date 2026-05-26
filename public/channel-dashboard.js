@@ -462,42 +462,14 @@ class DashboardUI {
                 : '';
         }
 
-        const self = this;
         this.chart = new Chart(ctx, {
             type: 'line',
             data: chartData,
-            plugins: [{
-                id: 'channelValueLabels',
-                afterDatasetsDraw(chart) {
-                    const ctx2 = chart.ctx;
-                    // Only label the three actual lines (indices 0, 2, 4)
-                    const actualConfigs = [
-                        { idx: 0, color: '#4338CA' }, // Team Agent
-                        { idx: 2, color: '#BE185D' }, // IG
-                        { idx: 4, color: '#047857' }  // FD/AO
-                    ];
-                    actualConfigs.forEach(cfg => {
-                        const meta = chart.getDatasetMeta(cfg.idx);
-                        const data = chart.data.datasets[cfg.idx].data;
-                        if (!meta || !meta.data) return;
-                        meta.data.forEach((pt, i) => {
-                            const val = data[i];
-                            if (val == null || !Number.isFinite(val)) return;
-                            ctx2.save();
-                            ctx2.fillStyle = cfg.color;
-                            ctx2.font = 'bold 10px "Google Sans Text"';
-                            ctx2.textAlign = 'center';
-                            ctx2.textBaseline = 'bottom';
-                            ctx2.fillText(self.formatNumber(val), pt.x, pt.y - 8);
-                            ctx2.restore();
-                        });
-                    });
-                }
-            }],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 spanGaps: true,
+                layout: { padding: { top: 16 } },
                 plugins: {
                     legend: {
                         display: true,

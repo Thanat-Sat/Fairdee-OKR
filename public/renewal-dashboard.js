@@ -255,8 +255,8 @@ class RenewalUI {
             {
                 label: 'MLM Agent',
                 data: lastTwelveMonths.map(month => this.dataProcessor.getChannelRate('mlm_agent', month)),
-                borderColor: '#FF6B35',
-                backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                borderColor: '#6366F1',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
                 borderWidth: 2.5,
                 tension: 0.4,
                 pointRadius: 4,
@@ -265,8 +265,8 @@ class RenewalUI {
             {
                 label: 'Direct Agent',
                 data: lastTwelveMonths.map(month => this.dataProcessor.getChannelRate('direct_agent', month)),
-                borderColor: '#4ECDC4',
-                backgroundColor: 'rgba(78, 205, 196, 0.1)',
+                borderColor: '#10B981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
                 borderWidth: 2.5,
                 tension: 0.4,
                 pointRadius: 4,
@@ -275,8 +275,8 @@ class RenewalUI {
             {
                 label: 'AO Agent',
                 data: lastTwelveMonths.map(month => this.dataProcessor.getChannelRate('ao_agent', month)),
-                borderColor: '#95E1D3',
-                backgroundColor: 'rgba(149, 225, 211, 0.1)',
+                borderColor: '#F59E0B',
+                backgroundColor: 'rgba(245, 158, 11, 0.1)',
                 borderWidth: 2.5,
                 tension: 0.4,
                 pointRadius: 4,
@@ -285,8 +285,8 @@ class RenewalUI {
             {
                 label: 'Inspection Garage',
                 data: lastTwelveMonths.map(month => this.dataProcessor.getChannelRate('inspection_garage', month)),
-                borderColor: '#F38181',
-                backgroundColor: 'rgba(243, 129, 129, 0.1)',
+                borderColor: '#EC4899',
+                backgroundColor: 'rgba(236, 72, 153, 0.1)',
                 borderWidth: 2.5,
                 tension: 0.4,
                 pointRadius: 4,
@@ -298,6 +298,9 @@ class RenewalUI {
             this.chart.destroy();
         }
 
+        // Point value labels are drawn by the shared global plugin
+        // (chart-value-labels.js); here we just keep the % formatting to one
+        // decimal so near-equal channel rates stay distinguishable.
         this.chart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -307,11 +310,17 @@ class RenewalUI {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                layout: {
+                    padding: { top: 14, right: 10, left: 6 }
+                },
                 interaction: {
                     mode: 'index',
                     intersect: false,
                 },
                 plugins: {
+                    pointValueLabels: {
+                        formatter: value => value.toFixed(1) + '%'
+                    },
                     legend: {
                         display: false
                     },

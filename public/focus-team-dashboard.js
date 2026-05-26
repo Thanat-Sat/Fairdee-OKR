@@ -583,49 +583,7 @@ class FocusTeamUI {
                         ticks: { font: { family: 'Google Sans Text', size: 10 }, color: '#94a3b8', callback: v => self.formatMB(v) }
                     }
                 }
-            },
-            plugins: [{
-                id: 'valueLabels',
-                afterDraw(chart) {
-                    const ctx = chart.ctx;
-                    const meta0 = chart.getDatasetMeta(0); // target
-                    const meta1 = chart.getDatasetMeta(1); // actual / run rate
-
-                    targets.forEach((tgt, i) => {
-                        const ptT = meta0.data[i];
-                        const ptA = meta1.data[i];
-                        const tgtVal = targets[i];
-                        const actVal = actuals[i];
-
-                        // Determine label positions — separate them if too close
-                        const gap = ptT && ptA ? Math.abs(ptT.y - ptA.y) : 999;
-                        const THRESHOLD = 18;
-
-                        // Target label: prefer above; if close push it further up
-                        if (ptT && tgtVal !== null) {
-                            const yT = gap < THRESHOLD ? ptT.y - 22 : ptT.y - 12;
-                            ctx.save();
-                            ctx.fillStyle = '#b45309';
-                            ctx.font = 'bold 9px "Google Sans Text"';
-                            ctx.textAlign = 'center';
-                            ctx.fillText(self.formatMB(tgtVal), ptT.x, yT);
-                            ctx.restore();
-                        }
-
-                        // Actual / run rate label: prefer above; if close push below
-                        if (ptA && actVal !== null) {
-                            const yA = gap < THRESHOLD ? ptA.y + 18 : ptA.y - 12;
-                            const suffix = isRunRate ? ' ✦' : '';
-                            ctx.save();
-                            ctx.fillStyle = '#1e40af';
-                            ctx.font = 'bold 9px "Google Sans Text"';
-                            ctx.textAlign = 'center';
-                            ctx.fillText(self.formatMB(actVal) + suffix, ptA.x, yA);
-                            ctx.restore();
-                        }
-                    });
-                }
-            }]
+            }
         });
     }
 

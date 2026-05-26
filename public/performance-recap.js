@@ -394,6 +394,9 @@ class PerformanceRecap {
                     }
                 },
                 plugins: {
+                    pointValueLabels: {
+                        formatter: value => self.formatCurrency(value)
+                    },
                     legend: {
                         position: 'bottom',
                         labels: {
@@ -514,29 +517,7 @@ class PerformanceRecap {
                             ctx.restore();
                         }
                     }
-
-                    // Draw value labels LAST so they always appear on top
-                    meta.data.forEach((point, index) => {
-                        const value = actualData[index];
-                        const x = point.x;
-                        const y = point.y;
-                        const isRunRate = runRateValue !== null && index === selectedMonthIndex;
-                        const suffix = isRunRate ? ' MB ✦' : ' MB';
-                        const text = self.formatCurrency(value) + suffix;
-
-                        ctx.save();
-                        ctx.font = 'bold 10px "Google Sans Text"';
-                        ctx.textAlign = 'center';
-
-                        // White knockout behind text so it's readable over any line/arrow
-                        const tw = ctx.measureText(text).width;
-                        ctx.fillStyle = 'rgba(255,255,255,0.85)';
-                        ctx.fillRect(x - tw / 2 - 2, y - 24, tw + 4, 13);
-
-                        ctx.fillStyle = isRunRate ? '#b45309' : '#1e293b';
-                        ctx.fillText(text, x, y - 13);
-                        ctx.restore();
-                    });
+                    // Point value labels are drawn by the shared pointValueLabels plugin.
                 }
             }]
         });

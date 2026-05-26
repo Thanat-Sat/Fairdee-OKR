@@ -4145,44 +4145,9 @@ function renderHunterChart(type, data, options = {}) {
         });
     }
 
-    // Inline plugin: draw value labels above each data point
-    const pointLabelsPlugin = {
-        id: 'hunterPointLabels',
-        afterDatasetsDraw(chart) {
-            const ctx = chart.ctx;
-            chart.data.datasets.forEach((dataset, dsIdx) => {
-                if (dataset.label === '_connector') return;
-                const meta = chart.getDatasetMeta(dsIdx);
-                if (meta.hidden) return;
-                const isRunRate = dataset.label && dataset.label.startsWith('Run Rate');
-                const isTarget = dataset.label === 'Target';
-                meta.data.forEach((point, idx) => {
-                    const val = dataset.data[idx];
-                    if (val === null || val === undefined) return;
-                    ctx.save();
-                    ctx.font = `bold 11px "Google Sans Text", sans-serif`;
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'bottom';
-                    if (isRunRate) {
-                        ctx.fillStyle = '#D97706';
-                        ctx.fillText(val.toFixed(1) + 'M', point.x, point.y - 14);
-                    } else if (isTarget) {
-                        ctx.fillStyle = '#059669';
-                        ctx.fillText(val.toFixed(1) + 'M', point.x, point.y - 8);
-                    } else {
-                        ctx.fillStyle = '#1D4ED8';
-                        ctx.fillText(val.toFixed(1) + 'M', point.x, point.y - 8);
-                    }
-                    ctx.restore();
-                });
-            });
-        }
-    };
-
     hunterChartInstances[type] = new Chart(ctx, {
         type: 'line',
         data: { labels, datasets },
-        plugins: [pointLabelsPlugin],
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -4233,27 +4198,6 @@ function renderHunterChart(type, data, options = {}) {
             }
         },
         plugins: [{
-            id: 'hunterDataLabels',
-            afterDatasetsDraw: function(chart) {
-                var ctx = chart.ctx;
-                chart.data.datasets.forEach(function(dataset, datasetIndex) {
-                    var meta = chart.getDatasetMeta(datasetIndex);
-                    meta.data.forEach(function(element, index) {
-                        var value = dataset.data[index];
-                        if (value === null || value === undefined) return;
-                        var x = element.x;
-                        var y = element.y;
-                        ctx.save();
-                        ctx.fillStyle = dataset.borderColor;
-                        ctx.font = '600 11px "Google Sans Text", monospace';
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'bottom';
-                        ctx.fillText(value.toFixed(2) + 'M', x, y - 10);
-                        ctx.restore();
-                    });
-                });
-            }
-        }, {
             id: 'hunterMomArrow',
             afterDatasetsDraw: function(chart) {
                 // Draw MoM arrow between the last two COMPLETED months
@@ -6072,31 +6016,6 @@ function renderFleetChart(months, targets, actuals, currentMonthIdx, scaleFactor
                     ctx.fillRect(x - 25, yTop, 50, yBottom - yTop);
                     ctx.restore();
                 }
-            }
-        },
-        {
-            // Custom plugin to show data labels
-            id: 'dataLabels',
-            afterDatasetsDraw: function(chart) {
-                var ctx = chart.ctx;
-                chart.data.datasets.forEach(function(dataset, datasetIndex) {
-                    var meta = chart.getDatasetMeta(datasetIndex);
-                    meta.data.forEach(function(element, index) {
-                        var value = dataset.data[index];
-                        if (value === null || value === undefined) return;
-                        
-                        var x = element.x;
-                        var y = element.y;
-                        
-                        ctx.save();
-                        ctx.fillStyle = dataset.borderColor;
-                        ctx.font = '600 11px "Google Sans Text", sans-serif';
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'bottom';
-                        ctx.fillText(value.toFixed(1) + scaleLabel, x, y - 10);
-                        ctx.restore();
-                    });
-                });
             }
         }]
     });

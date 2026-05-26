@@ -2315,6 +2315,7 @@ details[open] > summary .fd-collapsible__chevron {
 .channel-dot.team { background: #6366F1; }
 .channel-dot.ig   { background: #EC4899; }
 .channel-dot.fd   { background: #10B981; }
+.channel-dot.ao   { background: #F59E0B; }
 
 /* ============================================================================
    CHART SECTION
@@ -2350,6 +2351,7 @@ details[open] > summary .fd-collapsible__chevron {
 .legend-dot.team { background: #6366F1; }
 .legend-dot.ig   { background: #EC4899; }
 .legend-dot.fd   { background: #10B981; }
+.legend-dot.ao   { background: #F59E0B; }
 
 /* ============================================================================
    SHARED TABLE STYLES (MLM, Regional, Agency, Segment, Renewal)
