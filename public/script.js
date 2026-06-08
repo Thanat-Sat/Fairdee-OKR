@@ -988,7 +988,9 @@ function computeRunRateProjection(row, displayedMonth) {
     if (!monthlyTarget) return null;
     const day = Math.max(1, parseInt(runRateState.day, 10) || 1);
     const daysInMonth = daysInMonthFromLabel(displayedMonth);
-    const safeDay = Math.min(day, daysInMonth);
+    // Data lags 1 day → effective elapsed = day - 1
+    const safeDay = Math.max(0, Math.min(day - 1, daysInMonth));
+    if (safeDay <= 0) return null;
     const projectedActual = (actualValue / safeDay) * daysInMonth;
     const projectedPercent = calculateProgress(row.kr_name, projectedActual, monthlyTarget);
     let projectionClass = 'under';
@@ -1225,20 +1227,23 @@ function createMonthlyProgressCard(row, runRateOptions = null) {
             if (runRateOptions && runRateOptions.month === month && _runRateAllowed) {
                 const day = Math.max(1, parseInt(runRateOptions.day, 10) || 1);
                 const daysInMonth = daysInMonthFromLabel(month);
-                const safeDay = Math.min(day, daysInMonth);
-                const projectedActual = (actualValue / safeDay) * daysInMonth;
-                const projectedPercent = calculateProgress(krName, projectedActual, monthlyTarget);
-                let projectionClass = 'under';
-                if (projectedPercent >= 100) { projectionClass = 'over'; projectionBarClass = 'excellent'; }
-                else if (projectedPercent >= 90) { projectionClass = ''; projectionBarClass = 'good'; }
-                else { projectionBarClass = 'poor'; }
-                projectionPercent = projectedPercent;
-                projectionRowHtml = `
-                    <div class="monthly-progress-projection-row">
-                        <span class="run-rate-projection-label">Run rate (day ${safeDay}/${daysInMonth})</span>
-                        <span class="run-rate-projection ${projectionClass}">→ projected ${projectedPercent.toFixed(1)}% (${formatNumber(projectedActual)})</span>
-                    </div>
-                `;
+                // Data lags 1 day → effective elapsed = day - 1
+                const safeDay = Math.max(0, Math.min(day - 1, daysInMonth));
+                if (safeDay > 0) {
+                    const projectedActual = (actualValue / safeDay) * daysInMonth;
+                    const projectedPercent = calculateProgress(krName, projectedActual, monthlyTarget);
+                    let projectionClass = 'under';
+                    if (projectedPercent >= 100) { projectionClass = 'over'; projectionBarClass = 'excellent'; }
+                    else if (projectedPercent >= 90) { projectionClass = ''; projectionBarClass = 'good'; }
+                    else { projectionBarClass = 'poor'; }
+                    projectionPercent = projectedPercent;
+                    projectionRowHtml = `
+                        <div class="monthly-progress-projection-row">
+                            <span class="run-rate-projection-label">Run rate (data through day ${safeDay}/${daysInMonth})</span>
+                            <span class="run-rate-projection ${projectionClass}">→ projected ${projectedPercent.toFixed(1)}% (${formatNumber(projectedActual)})</span>
+                        </div>
+                    `;
+                }
             }
         } else if (monthlyTarget) {
             displayText = `Target: ${formatNumber(monthlyTarget)}`;
@@ -4140,10 +4145,12 @@ function renderHunterChart(type, data, options = {}) {
         const monthDate = new Date(lastMonth.replace(', ', ' '));
         const daysInMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
 
-        runRateProjected = (values[lastIdx] / dayOfMonth) * daysInMonth;
+        // Data lags 1 day → effective elapsed = dayOfMonth - 1
+        const elapsed = Math.max(0, Math.min(daysInMonth, dayOfMonth - 1));
+        runRateProjected = elapsed > 0 ? (values[lastIdx] / elapsed) * daysInMonth : null;
 
         // Growth vs previous month
-        if (lastIdx >= 1) {
+        if (lastIdx >= 1 && runRateProjected !== null) {
             const prev = values[lastIdx - 1];
             growthPct = ((runRateProjected - prev) / prev) * 100;
         }
@@ -4151,7 +4158,7 @@ function renderHunterChart(type, data, options = {}) {
         // Update banner displays
         const projEl = document.getElementById(`${type}ProjectedValue`);
         const growthEl = document.getElementById(`${type}GrowthBadge`);
-        if (projEl) projEl.textContent = runRateProjected.toFixed(2) + 'M THB';
+        if (projEl) projEl.textContent = runRateProjected !== null ? (runRateProjected.toFixed(2) + 'M THB') : '—';
         if (growthEl && growthPct !== null) {
             const sign = growthPct >= 0 ? '+' : '';
             growthEl.style.color = growthPct >= 0 ? '#16A34A' : '#DC2626';
@@ -4196,44 +4203,9 @@ function renderHunterChart(type, data, options = {}) {
         });
     }
 
-    // Inline plugin: draw value labels above each data point
-    const pointLabelsPlugin = {
-        id: 'hunterPointLabels',
-        afterDatasetsDraw(chart) {
-            const ctx = chart.ctx;
-            chart.data.datasets.forEach((dataset, dsIdx) => {
-                if (dataset.label === '_connector') return;
-                const meta = chart.getDatasetMeta(dsIdx);
-                if (meta.hidden) return;
-                const isRunRate = dataset.label && dataset.label.startsWith('Run Rate');
-                const isTarget = dataset.label === 'Target';
-                meta.data.forEach((point, idx) => {
-                    const val = dataset.data[idx];
-                    if (val === null || val === undefined) return;
-                    ctx.save();
-                    ctx.font = `bold 11px "Google Sans Text", sans-serif`;
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'bottom';
-                    if (isRunRate) {
-                        ctx.fillStyle = '#D97706';
-                        ctx.fillText(val.toFixed(1) + 'M', point.x, point.y - 14);
-                    } else if (isTarget) {
-                        ctx.fillStyle = '#059669';
-                        ctx.fillText(val.toFixed(1) + 'M', point.x, point.y - 8);
-                    } else {
-                        ctx.fillStyle = '#1D4ED8';
-                        ctx.fillText(val.toFixed(1) + 'M', point.x, point.y - 8);
-                    }
-                    ctx.restore();
-                });
-            });
-        }
-    };
-
     hunterChartInstances[type] = new Chart(ctx, {
         type: 'line',
         data: { labels, datasets },
-        plugins: [pointLabelsPlugin],
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -4284,27 +4256,6 @@ function renderHunterChart(type, data, options = {}) {
             }
         },
         plugins: [{
-            id: 'hunterDataLabels',
-            afterDatasetsDraw: function(chart) {
-                var ctx = chart.ctx;
-                chart.data.datasets.forEach(function(dataset, datasetIndex) {
-                    var meta = chart.getDatasetMeta(datasetIndex);
-                    meta.data.forEach(function(element, index) {
-                        var value = dataset.data[index];
-                        if (value === null || value === undefined) return;
-                        var x = element.x;
-                        var y = element.y;
-                        ctx.save();
-                        ctx.fillStyle = dataset.borderColor;
-                        ctx.font = '600 11px "Google Sans Text", monospace';
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'bottom';
-                        ctx.fillText(value.toFixed(2) + 'M', x, y - 10);
-                        ctx.restore();
-                    });
-                });
-            }
-        }, {
             id: 'hunterMomArrow',
             afterDatasetsDraw: function(chart) {
                 // Draw MoM arrow between the last two COMPLETED months
@@ -6123,31 +6074,6 @@ function renderFleetChart(months, targets, actuals, currentMonthIdx, scaleFactor
                     ctx.fillRect(x - 25, yTop, 50, yBottom - yTop);
                     ctx.restore();
                 }
-            }
-        },
-        {
-            // Custom plugin to show data labels
-            id: 'dataLabels',
-            afterDatasetsDraw: function(chart) {
-                var ctx = chart.ctx;
-                chart.data.datasets.forEach(function(dataset, datasetIndex) {
-                    var meta = chart.getDatasetMeta(datasetIndex);
-                    meta.data.forEach(function(element, index) {
-                        var value = dataset.data[index];
-                        if (value === null || value === undefined) return;
-                        
-                        var x = element.x;
-                        var y = element.y;
-                        
-                        ctx.save();
-                        ctx.fillStyle = dataset.borderColor;
-                        ctx.font = '600 11px "Google Sans Text", sans-serif';
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'bottom';
-                        ctx.fillText(value.toFixed(1) + scaleLabel, x, y - 10);
-                        ctx.restore();
-                    });
-                });
             }
         }]
     });

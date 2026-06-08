@@ -42,32 +42,54 @@ class PerformanceRecap {
     calcRunRate(actual, dayOfMonth, daysInMonth) {
         if (!dayOfMonth || dayOfMonth <= 0) return null;
         const day = Math.min(dayOfMonth, daysInMonth);
-        return actual * (daysInMonth / day);
+        // Data lags 1 day → effective elapsed = day - 1
+        const elapsed = Math.max(0, Math.min(daysInMonth, day - 1));
+        if (elapsed <= 0) return null;
+        return actual * (daysInMonth / elapsed);
     }
 
     // Wire up run-rate checkbox and day input (called once from render)
+    // Now mirrors the global run-rate state set from mm.html shell.
     initRunRateControls() {
         const checkbox  = document.getElementById('showRunRate');
         const inputsDiv = document.getElementById('runRateInputs');
         const dayInput  = document.getElementById('runRateDay');
 
+        const syncFromGlobal = () => {
+            if (!window.globalRunRate || !window.globalRunRate.get) return;
+            const s = window.globalRunRate.get();
+            this.showRunRate = !!s.enabled;
+            const parsed = window.globalRunRate.parseDate(s.date);
+            if (parsed) this.runRateDay = parsed.day;
+            if (checkbox) checkbox.checked = this.showRunRate;
+            if (dayInput) dayInput.value = this.runRateDay;
+            if (inputsDiv) inputsDiv.style.display = this.showRunRate ? 'flex' : 'none';
+        };
+        syncFromGlobal();
+
+        if (window.globalRunRate && window.globalRunRate.subscribe) {
+            window.globalRunRate.subscribe(() => {
+                syncFromGlobal();
+                this.renderChart();
+            });
+        }
+
         if (!checkbox) return;
 
-        checkbox.checked = this.showRunRate;
-        dayInput.value   = this.runRateDay;
-        inputsDiv.style.display = this.showRunRate ? 'flex' : 'none';
-
+        // Local checkbox/day-input still work but now push to global state
         checkbox.addEventListener('change', () => {
-            this.showRunRate = checkbox.checked;
-            inputsDiv.style.display = this.showRunRate ? 'flex' : 'none';
-            this.renderChart();
+            if (window.globalRunRate) window.globalRunRate.set({ enabled: checkbox.checked });
         });
-
         dayInput.addEventListener('input', () => {
             const v = parseInt(dayInput.value, 10);
-            if (!isNaN(v) && v >= 1 && v <= 31) {
-                this.runRateDay = v;
-                this.renderChart();
+            if (isNaN(v) || v < 1 || v > 31) return;
+            if (window.globalRunRate) {
+                const cur = window.globalRunRate.get();
+                const parsed = window.globalRunRate.parseDate(cur.date) || { year: new Date().getFullYear(), month: new Date().getMonth() + 1 };
+                const y = parsed.year;
+                const m = String(parsed.month).padStart(2, '0');
+                const d = String(v).padStart(2, '0');
+                window.globalRunRate.set({ date: `${y}-${m}-${d}` });
             }
         });
     }
@@ -165,12 +187,15 @@ class PerformanceRecap {
             const result = await window.targetsDB.getAllTargets();
             if (result.success) {
                 this.targets = {};
+                const allTypes = new Set();
+                result.targets.forEach(t => allTypes.add(t.type));
                 result.targets
                     .filter(t => t.type === 'channel')
                     .forEach(t => {
                         this.targets[`${t.month}-${t.name}`] = t.value;
                     });
-                console.log('Channel targets loaded for recap:', Object.keys(this.targets).length);
+                console.log('[Recap] Channel targets loaded:', Object.keys(this.targets));
+                console.log('[Recap] Target types found in DB:', Array.from(allTypes));
             }
         } catch (e) {
             console.warn('Could not load channel targets:', e);
@@ -182,6 +207,9 @@ class PerformanceRecap {
         const channels = ['Team Agent', 'IG', 'FD/AO'];
         const values = channels.map(ch => this.targets[`${month}-${ch}`] || 0);
         const total = values.reduce((a, b) => a + b, 0);
+        if (total === 0) {
+            console.log(`[Recap] No target found for ${month}. Looked for keys:`, channels.map(ch => `${month}-${ch}`));
+        }
         return total > 0 ? total : null;
     }
 
@@ -366,6 +394,9 @@ class PerformanceRecap {
                     }
                 },
                 plugins: {
+                    pointValueLabels: {
+                        formatter: value => self.formatCurrency(value)
+                    },
                     legend: {
                         position: 'bottom',
                         labels: {
@@ -486,29 +517,7 @@ class PerformanceRecap {
                             ctx.restore();
                         }
                     }
-
-                    // Draw value labels LAST so they always appear on top
-                    meta.data.forEach((point, index) => {
-                        const value = actualData[index];
-                        const x = point.x;
-                        const y = point.y;
-                        const isRunRate = runRateValue !== null && index === selectedMonthIndex;
-                        const suffix = isRunRate ? ' MB ✦' : ' MB';
-                        const text = self.formatCurrency(value) + suffix;
-
-                        ctx.save();
-                        ctx.font = 'bold 10px "Google Sans Text"';
-                        ctx.textAlign = 'center';
-
-                        // White knockout behind text so it's readable over any line/arrow
-                        const tw = ctx.measureText(text).width;
-                        ctx.fillStyle = 'rgba(255,255,255,0.85)';
-                        ctx.fillRect(x - tw / 2 - 2, y - 24, tw + 4, 13);
-
-                        ctx.fillStyle = isRunRate ? '#b45309' : '#1e293b';
-                        ctx.fillText(text, x, y - 13);
-                        ctx.restore();
-                    });
+                    // Point value labels are drawn by the shared pointValueLabels plugin.
                 }
             }]
         });

@@ -184,19 +184,20 @@ class ExecutiveSummary {
         if (storeData.mlm) {
             const mlmData = storeData.mlm;
             const lastSixMonths = mlmData.months.slice(-6);
-            
+
             lastSixMonths.forEach(month => {
                 let total = 0;
                 Object.keys(mlmData.teams).forEach(team => {
                     total += mlmData.teams[team][month] || 0;
                 });
-                
+
                 const [year, monthNum] = month.split('-');
-                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
                 const monthLabel = `${monthNames[parseInt(monthNum) - 1]} ${year}`;
-                
+
                 this.data.monthlyTrend.push({
+                    monthKey: month,
                     month: monthLabel,
                     value: total
                 });
@@ -436,15 +437,23 @@ class ExecutiveSummary {
     renderMonthlyTrend() {
         const container = document.getElementById('trendChart');
         container.innerHTML = '';
-        
+
         if (this.data.monthlyTrend.length === 0) {
             container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #64748b;">No trend data available. Upload data in dashboards to see trends.</div>';
             return;
         }
 
-        // Simple bar chart
-        const maxValue = Math.max(...this.data.monthlyTrend.map(m => m.value));
-        
+        // Apply global run rate: project the picked-date's month
+        const rr = (window.globalRunRate && window.globalRunRate.get) ? window.globalRunRate.get() : { enabled: false };
+        const displayed = this.data.monthlyTrend.map(m => {
+            const projected = (rr.enabled && window.globalRunRate.projectForMonth)
+                ? window.globalRunRate.projectForMonth(m.monthKey, m.value)
+                : null;
+            return { ...m, displayValue: projected != null ? projected : m.value, isProjected: projected != null };
+        });
+
+        const maxValue = Math.max(...displayed.map(m => m.displayValue || 0)) || 1;
+
         const chartContainer = document.createElement('div');
         chartContainer.style.display = 'flex';
         chartContainer.style.alignItems = 'flex-end';
@@ -453,7 +462,7 @@ class ExecutiveSummary {
         chartContainer.style.gap = '1rem';
         chartContainer.style.padding = '1rem 0';
 
-        this.data.monthlyTrend.forEach(month => {
+        displayed.forEach(month => {
             const barContainer = document.createElement('div');
             barContainer.style.flex = '1';
             barContainer.style.display = 'flex';
@@ -463,22 +472,29 @@ class ExecutiveSummary {
 
             const bar = document.createElement('div');
             bar.style.width = '100%';
-            bar.style.backgroundColor = '#FF6B35';
             bar.style.borderRadius = '4px 4px 0 0';
-            bar.style.height = `${(month.value / maxValue) * 150}px`;
+            bar.style.height = `${(month.displayValue / maxValue) * 150}px`;
             bar.style.transition = 'height 0.3s ease';
-            
+            if (month.isProjected) {
+                bar.style.backgroundColor = '#f59e0b';
+                bar.style.backgroundImage = 'repeating-linear-gradient(45deg, rgba(255,255,255,0.35) 0, rgba(255,255,255,0.35) 6px, rgba(255,255,255,0) 6px, rgba(255,255,255,0) 12px)';
+                bar.title = 'Projected via run rate';
+            } else {
+                bar.style.backgroundColor = '#FF6B35';
+            }
+
             const value = document.createElement('div');
-            value.textContent = this.formatCurrency(month.value);
+            value.textContent = this.formatCurrency(month.displayValue);
             value.style.fontSize = '0.75rem';
             value.style.fontWeight = '700';
-            value.style.color = '#1e293b';
+            value.style.color = month.isProjected ? '#92400e' : '#1e293b';
             value.style.fontFamily = '"Google Sans Text", monospace';
+            if (month.isProjected) value.textContent += ' →';
 
             const label = document.createElement('div');
-            label.textContent = month.month;
+            label.textContent = month.month + (month.isProjected ? ' (proj.)' : '');
             label.style.fontSize = '0.75rem';
-            label.style.color = '#64748b';
+            label.style.color = month.isProjected ? '#92400e' : '#64748b';
             label.style.fontWeight = '600';
 
             barContainer.appendChild(value);
@@ -648,6 +664,13 @@ window.addEventListener('message', async function(event) {
 // Initialize when page loads
 window.addEventListener('DOMContentLoaded', async () => {
     console.log('Executive Summary Dashboard loading...');
+    if (window.globalRunRate && window.globalRunRate.subscribe) {
+        window.globalRunRate.subscribe(() => {
+            if (executiveSummary && executiveSummary.renderMonthlyTrend) {
+                executiveSummary.renderMonthlyTrend();
+            }
+        });
+    }
     await executiveSummary.render();
     console.log('Executive Summary Dashboard ready');
 });

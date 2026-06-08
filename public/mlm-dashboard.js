@@ -297,7 +297,9 @@ class MLMUI {
     }
 
     calcRunRate(actual, elapsedDays, daysInMonth) {
-        const day = Math.max(1, Math.min(elapsedDays, daysInMonth));
+        // Data lags 1 day → effective elapsed = elapsedDays - 1
+        const day = Math.max(0, Math.min(elapsedDays - 1, daysInMonth));
+        if (day <= 0) return null;
         return actual * (daysInMonth / day);
     }
 
@@ -331,7 +333,9 @@ class MLMUI {
         }, 0);
 
         const totalDays = Math.floor((endDate - startDate) / 86400000) + 1;
-        const elapsedUntil = new Date(Math.min(endDate.getTime(), projectionDate.getTime()));
+        // Data lags 1 day → subtract 1 day from the projection date
+        const lagAdjusted = new Date(projectionDate.getTime() - 86400000);
+        const elapsedUntil = new Date(Math.min(endDate.getTime(), lagAdjusted.getTime()));
         const elapsedDays = Math.max(1, Math.min(totalDays, Math.floor((elapsedUntil - startDate) / 86400000) + 1));
         return actualToDate * (totalDays / elapsedDays);
     }
@@ -371,21 +375,49 @@ class MLMUI {
     initRunRateControls() {
         if (this._runRateWired) return;
         this._runRateWired = true;
+        if (typeof window.mountRunRateScopePanel === 'function') {
+            window.mountRunRateScopePanel('mlmScopePanel', { scopes: ['month', 'quarter', 'eoy'] });
+        }
         const cb = document.getElementById('mlmShowRunRate');
         const inputs = document.getElementById('mlmRunRateInputs');
         const monthInput = document.getElementById('mlmRunRateMonth');
         const quarterInput = document.getElementById('mlmRunRateQuarter');
         const eoyInput = document.getElementById('mlmRunRateEOY');
         const dateInput = document.getElementById('mlmRunRateDate');
-        if (!cb) return;
-        if (dateInput && !dateInput.value) {
-            dateInput.value = this.runRateDate;
+
+        // Mirror enabled + date + scope from the global run-rate store (mm.html header)
+        const syncFromGlobal = () => {
+            if (!window.globalRunRate || !window.globalRunRate.get) return;
+            const s = window.globalRunRate.get();
+            this.showRunRate = !!s.enabled;
+            if (s.date) this.runRateDate = s.date;
+            if (s.applyTo) {
+                this.runRateSelections.month   = !!s.applyTo.month;
+                this.runRateSelections.quarter = !!s.applyTo.quarter;
+                this.runRateSelections.eoy     = !!s.applyTo.eoy;
+            }
+            if (cb) cb.checked = this.showRunRate;
+            if (dateInput) dateInput.value = this.runRateDate;
+            if (monthInput)   monthInput.checked   = this.runRateSelections.month;
+            if (quarterInput) quarterInput.checked = this.runRateSelections.quarter;
+            if (eoyInput)     eoyInput.checked     = this.runRateSelections.eoy;
+        };
+        syncFromGlobal();
+
+        if (window.globalRunRate && window.globalRunRate.subscribe) {
+            window.globalRunRate.subscribe(() => {
+                syncFromGlobal();
+                this.renderTable();
+            });
         }
+
+        if (!cb) return;
+
         cb.addEventListener('change', () => {
-            this.showRunRate = cb.checked;
-            inputs.style.display = cb.checked ? 'flex' : 'none';
-            this.renderTable();
+            if (window.globalRunRate) window.globalRunRate.set({ enabled: cb.checked });
         });
+
+        // Quarter/EOY scope selectors remain local — they only affect this dashboard
         const bindSelection = (input, key) => {
             if (!input) return;
             input.checked = !!this.runRateSelections[key];
@@ -397,13 +429,14 @@ class MLMUI {
         bindSelection(monthInput, 'month');
         bindSelection(quarterInput, 'quarter');
         bindSelection(eoyInput, 'eoy');
+
         if (dateInput) {
-            const syncDate = () => {
-                this.runRateDate = dateInput.value || this.getDefaultRunRateDate();
-                if (this.showRunRate) this.renderTable();
+            const pushDate = () => {
+                const v = dateInput.value || this.getDefaultRunRateDate();
+                if (window.globalRunRate) window.globalRunRate.set({ date: v });
             };
-            dateInput.addEventListener('change', syncDate);
-            dateInput.addEventListener('input', syncDate);
+            dateInput.addEventListener('change', pushDate);
+            dateInput.addEventListener('input', pushDate);
         }
     }
 

@@ -129,6 +129,10 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Run Rate is controlled globally from the shell header (mm.html) -->
+                <div id="chRunRateBanner" style="margin: 0 0 0.75rem 0; font-size:0.85rem; color:#92400e; font-weight:600;"></div>
+
                 <div class="chart-container">
                     <canvas id="trendChart"></canvas>
                 </div>
@@ -137,7 +141,10 @@
             <!-- Overall GWP Trend Section -->
             <section class="chart-section" id="tableSection">
                 <div class="section-header">
-                    <h2>Overall GWP trend</h2>
+                    <h2 style="display:inline-flex; align-items:center; gap:0.75rem;">
+                        <span>Overall GWP trend</span>
+                        <span id="chScopePanel"></span>
+                    </h2>
                 </div>
                 <div style="overflow-x: auto;">
                     <table id="channelTable" style="width: 100%; border-collapse: collapse; font-family: 'Google Sans Text', sans-serif; font-size: 0.875rem;">
@@ -199,8 +206,10 @@
     <script src="dashboard-data-store.js?v=1778059239583"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="chart-value-labels.js?v=1779000000000"></script>
     <script src="icons.js"></script>
     <script src="dashboard-copy.js?v=1778064200000"></script>
-    <script src="channel-dashboard.js?v=1778061958986"></script>
+    <script src="run-rate-global.js?v=1778067000000"></script>
+    <script src="channel-dashboard.js?v=1779000000000"></script>
 </body>
 </html>

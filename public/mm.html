@@ -42,10 +42,6 @@
                     <h1>Monthly Metrics Dashboard</h1>
                 </div>
                 <div class="user-menu">
-                    <div id="googleSheetSyncStatus" class="sheet-sync-status sheet-sync-loading">
-                        <span class="sheet-sync-dot"></span>
-                        <span>Checking Google Sheets...</span>
-                    </div>
                     <a href="index.html" class="home-btn">← Home</a>
                     <div class="month-selector-wrapper">
                         <label for="globalMonthSelect" class="month-selector-label">Month:</label>
@@ -67,12 +63,7 @@
                             <option value="">Year</option>
                         </select>
                     </div>
-                    <button id="refreshBtn" class="refresh-btn" title="Refresh all dashboards">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.2"/>
-                        </svg>
-                        Refresh
-                    </button>
+                    <div id="mmRunRatePanel" style="display:inline-flex;"></div>
                     <span id="userEmail" class="user-email"></span>
                     <button id="signOutBtn" class="sign-out-btn">Sign Out</button>
                 </div>
@@ -152,6 +143,16 @@
 
     <!-- Centralized Data Store -->
     <script src="dashboard-data-store.js"></script>
+    <script src="run-rate-global.js?v=1778067000000"></script>
+    <script>
+        // Mount the single global Show Run Rate + Today Date panel in the header.
+        // Per-table scope chips (Month/Quarter/EOY) live inside the MLM and Channel iframes.
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof window.mountRunRatePanel === 'function') {
+                window.mountRunRatePanel('mmRunRatePanel');
+            }
+        });
+    </script>
 
     <script src="app.js"></script>
 </body>

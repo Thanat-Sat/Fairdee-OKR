@@ -439,23 +439,51 @@ class FocusTeamUI {
 
     calcRunRate(actual, dayOfMonth, daysInMonth) {
         if (!dayOfMonth || dayOfMonth <= 0) return null;
-        return actual * (daysInMonth / Math.min(dayOfMonth, daysInMonth));
+        // Data lags 1 day → effective elapsed = day - 1
+        const elapsed = Math.max(0, Math.min(daysInMonth, dayOfMonth - 1));
+        if (elapsed <= 0) return null;
+        return actual * (daysInMonth / elapsed);
     }
 
     initRunRateControls() {
         const checkbox  = document.getElementById('ftShowRunRate');
         const inputsDiv = document.getElementById('ftRunRateInputs');
         const dayInput  = document.getElementById('ftRunRateDay');
-        if (!checkbox || this._runRateWired) return;
+        if (this._runRateWired) return;
         this._runRateWired = true;
 
+        const syncFromGlobal = () => {
+            if (!window.globalRunRate || !window.globalRunRate.get) return;
+            const s = window.globalRunRate.get();
+            if (checkbox) checkbox.checked = !!s.enabled;
+            const parsed = window.globalRunRate.parseDate(s.date);
+            if (parsed && dayInput) dayInput.value = parsed.day;
+            if (inputsDiv) inputsDiv.style.display = s.enabled ? 'flex' : 'none';
+        };
+        syncFromGlobal();
+
+        if (window.globalRunRate && window.globalRunRate.subscribe) {
+            window.globalRunRate.subscribe(() => {
+                syncFromGlobal();
+                this.renderTierCharts();
+            });
+        }
+
+        if (!checkbox) return;
         checkbox.addEventListener('change', () => {
-            inputsDiv.style.display = checkbox.checked ? 'flex' : 'none';
-            this.renderTierCharts();
+            if (window.globalRunRate) window.globalRunRate.set({ enabled: checkbox.checked });
         });
         dayInput.addEventListener('input', () => {
             const v = parseInt(dayInput.value, 10);
-            if (!isNaN(v) && v >= 1 && v <= 31) this.renderTierCharts();
+            if (isNaN(v) || v < 1 || v > 31) return;
+            if (window.globalRunRate) {
+                const cur = window.globalRunRate.get();
+                const parsed = window.globalRunRate.parseDate(cur.date) || { year: new Date().getFullYear(), month: new Date().getMonth() + 1 };
+                const y = parsed.year;
+                const m = String(parsed.month).padStart(2, '0');
+                const d = String(v).padStart(2, '0');
+                window.globalRunRate.set({ date: `${y}-${m}-${d}` });
+            }
         });
     }
 
@@ -555,49 +583,7 @@ class FocusTeamUI {
                         ticks: { font: { family: 'Google Sans Text', size: 10 }, color: '#94a3b8', callback: v => self.formatMB(v) }
                     }
                 }
-            },
-            plugins: [{
-                id: 'valueLabels',
-                afterDraw(chart) {
-                    const ctx = chart.ctx;
-                    const meta0 = chart.getDatasetMeta(0); // target
-                    const meta1 = chart.getDatasetMeta(1); // actual / run rate
-
-                    targets.forEach((tgt, i) => {
-                        const ptT = meta0.data[i];
-                        const ptA = meta1.data[i];
-                        const tgtVal = targets[i];
-                        const actVal = actuals[i];
-
-                        // Determine label positions — separate them if too close
-                        const gap = ptT && ptA ? Math.abs(ptT.y - ptA.y) : 999;
-                        const THRESHOLD = 18;
-
-                        // Target label: prefer above; if close push it further up
-                        if (ptT && tgtVal !== null) {
-                            const yT = gap < THRESHOLD ? ptT.y - 22 : ptT.y - 12;
-                            ctx.save();
-                            ctx.fillStyle = '#b45309';
-                            ctx.font = 'bold 9px "Google Sans Text"';
-                            ctx.textAlign = 'center';
-                            ctx.fillText(self.formatMB(tgtVal), ptT.x, yT);
-                            ctx.restore();
-                        }
-
-                        // Actual / run rate label: prefer above; if close push below
-                        if (ptA && actVal !== null) {
-                            const yA = gap < THRESHOLD ? ptA.y + 18 : ptA.y - 12;
-                            const suffix = isRunRate ? ' ✦' : '';
-                            ctx.save();
-                            ctx.fillStyle = '#1e40af';
-                            ctx.font = 'bold 9px "Google Sans Text"';
-                            ctx.textAlign = 'center';
-                            ctx.fillText(self.formatMB(actVal) + suffix, ptA.x, yA);
-                            ctx.restore();
-                        }
-                    });
-                }
-            }]
+            }
         });
     }
 

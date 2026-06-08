@@ -280,6 +280,37 @@ class DashboardUI {
         this.chart = null;
     }
 
+    getRunRateState() {
+        if (window.globalRunRate && window.globalRunRate.get) return window.globalRunRate.get();
+        return { enabled: false, date: '' };
+    }
+
+    daysInMonth(monthStr) {
+        if (!monthStr) return 31;
+        const [y, m] = monthStr.split('-').map(Number);
+        return new Date(y, m, 0).getDate();
+    }
+
+    calcRunRate(actual, day, daysInMonth) {
+        if (actual == null || !day || day < 1 || !daysInMonth) return null;
+        const safeDay = Math.min(day, daysInMonth);
+        return (actual / safeDay) * daysInMonth;
+    }
+
+    setupRunRateControls() {
+        if (this._runRateBound) return;
+        this._runRateBound = true;
+        if (typeof window.mountRunRateScopePanel === 'function') {
+            window.mountRunRateScopePanel('chScopePanel', { scopes: ['month', 'quarter', 'eoy'] });
+        }
+        if (window.globalRunRate && window.globalRunRate.subscribe) {
+            window.globalRunRate.subscribe(() => {
+                this.renderChart();
+                this.renderTable();
+            });
+        }
+    }
+
     formatNumber(num) {
         if (num >= 1000000) {
             return (num / 1000000).toFixed(1) + 'M';
@@ -363,6 +394,7 @@ class DashboardUI {
         this.updateKPI('igGWP', 'igChange', currentData['IG'], previousData ? previousData['IG'] : 0, 'IG', latestMonth);
         this.updateKPI('fdGWP', 'fdChange', currentData['FD/AO'], previousData ? previousData['FD/AO'] : 0, 'FD/AO', latestMonth);
 
+        this.setupRunRateControls();
         this.renderChart();
         this.renderTable();
 
@@ -370,14 +402,65 @@ class DashboardUI {
         document.getElementById('dashboardContent').style.display = 'block';
     }
 
+    applyRunRateToChartData(chartData) {
+        // chartData.datasets: alternating actual/target per channel (0/1 Team Agent, 2/3 IG, 4/5 FD/AO)
+        const rr = this.getRunRateState();
+        if (!rr.enabled) return null;
+        const parsed = window.globalRunRate.parseDate(rr.date);
+        if (!parsed) return null;
+
+        const months = this.dataProcessor.getLastNMonths(7);
+        const projIdx = months.indexOf(parsed.monthKey);
+        if (projIdx === -1) return null;  // selected month not in displayed window — nothing to project
+
+        const projMonth = months[projIdx];
+        const dim = this.daysInMonth(projMonth);
+        // Data lags 1 day → elapsed = picked_day - 1
+        const day = Math.max(0, Math.min(dim, parsed.day - 1));
+        if (day <= 0) return null;
+
+        const actualIdxs = [0, 2, 4];
+        const projectedTotal = { actual: 0, target: 0 };
+        actualIdxs.forEach(i => {
+            const arr = chartData.datasets[i].data;
+            const raw = arr[projIdx];
+            const projected = this.calcRunRate(raw, day, dim);
+            if (projected != null) {
+                projectedTotal.actual += projected;
+                arr[projIdx] = projected;
+            }
+            const targets = chartData.datasets[i + 1].data;
+            if (targets[projIdx] != null) projectedTotal.target += targets[projIdx];
+
+            // Highlight only the projected point with an amber diamond
+            const radii  = arr.map((_, idx) => (idx === projIdx ? 8 : 4));
+            const styles = arr.map((_, idx) => (idx === projIdx ? 'rectRot' : 'circle'));
+            const ptBg   = arr.map((_, idx) => (idx === projIdx ? '#f59e0b' : chartData.datasets[i].borderColor));
+            chartData.datasets[i].pointRadius = radii;
+            chartData.datasets[i].pointHoverRadius = radii.map(r => r + 1);
+            chartData.datasets[i].pointStyle = styles;
+            chartData.datasets[i].pointBackgroundColor = ptBg;
+            chartData.datasets[i].label = `${chartData.datasets[i].label} (Run Rate)`;
+        });
+
+        return { day, daysInMonth: dim, projMonth, projectedTotal };
+    }
+
     renderChart() {
         const ctx = document.getElementById('trendChart').getContext('2d');
-        
+
         if (this.chart) {
             this.chart.destroy();
         }
 
         const chartData = this.dataProcessor.getChartData();
+        const banner = document.getElementById('chRunRateBanner');
+        const rrMeta = this.applyRunRateToChartData(chartData);
+        if (banner) {
+            banner.textContent = rrMeta
+                ? `→ projected for ${rrMeta.projMonth} (day ${rrMeta.day}/${rrMeta.daysInMonth}): ${this.formatNumber(rrMeta.projectedTotal.actual)} total`
+                : '';
+        }
 
         this.chart = new Chart(ctx, {
             type: 'line',
@@ -386,6 +469,7 @@ class DashboardUI {
                 responsive: true,
                 maintainAspectRatio: false,
                 spanGaps: true,
+                layout: { padding: { top: 16 } },
                 plugins: {
                     legend: {
                         display: true,
@@ -489,6 +573,28 @@ class DashboardUI {
         const qRR = dp.calculateQuarterRunRate(year, quarter, channelKey);
         const eRR = dp.calculateEOYRunRate(year, channelKey);
 
+        // Global run-rate scopes
+        const rr = (window.globalRunRate && window.globalRunRate.get) ? window.globalRunRate.get() : { enabled: false, applyTo: {} };
+        const scopes = (rr.enabled && rr.applyTo) ? rr.applyTo : { month: false, quarter: false, eoy: false };
+        const parsed = (rr.enabled && window.globalRunRate.parseDate) ? window.globalRunRate.parseDate(rr.date) : null;
+
+        // Month-scope: project the picked date's month (data lags 1 day, so elapsed = day - 1)
+        const projectedActuals = {};
+        if (scopes.month) {
+            ytdMonths.forEach(m => {
+                if (!parsed || parsed.monthKey !== m) return;
+                const raw = dp.getActualForChannel(m, channelKey);
+                if (raw == null || !Number.isFinite(raw)) return;
+                const dim = window.globalRunRate.daysInMonth(m);
+                const elapsed = window.globalRunRate.effectiveElapsedDays(parsed, dim);
+                if (elapsed <= 0) return;
+                projectedActuals[m] = (raw / elapsed) * dim;
+            });
+        }
+        const projStyle = `${cellPad} ${numAlign} color: #92400e; background: #fffbeb; font-family: 'Google Sans Text', monospace; font-size: 0.8125rem; font-weight: 700;`;
+        const scopeNumStyle = `${cellPad} ${numAlign} color: #92400e; background: #fffbeb; font-family: 'Google Sans Text', monospace; font-size: 0.8125rem; font-weight: 700;`;
+        const scopePctBg = 'background: #fffbeb;';
+
         // Target row
         html += `<tr><td style="${labelStyle}">Target</td>`;
         ytdMonths.forEach(m => {
@@ -497,24 +603,47 @@ class DashboardUI {
         html += `<td style="${numStyle}">${this.formatMB(qRR.target)}</td>`;
         html += `<td style="${numStyle}">${this.formatMB(eRR.target)}</td></tr>`;
 
-        // Actual row
+        // Actual row (projected cells highlighted amber)
         html += `<tr><td style="${labelStyle}">Actual</td>`;
         ytdMonths.forEach(m => {
-            html += `<td style="${numStyle}">${this.formatMB(dp.getActualForChannel(m, channelKey))}</td>`;
+            const projected = projectedActuals[m];
+            if (projected != null) {
+                const dimT = window.globalRunRate.daysInMonth(m);
+                const elapsedT = window.globalRunRate.effectiveElapsedDays(parsed, dimT);
+                html += `<td style="${projStyle}" title="Run rate projection — actuals through day ${elapsedT} of ${dimT} (today is day ${parsed.day}; data lags 1 day)">→ ${this.formatMB(projected)}</td>`;
+            } else {
+                html += `<td style="${numStyle}">${this.formatMB(dp.getActualForChannel(m, channelKey))}</td>`;
+            }
         });
-        html += `<td style="${numStyle}">${this.formatMB(qRR.actual)}</td>`;
-        html += `<td style="${numStyle}">${this.formatMB(eRR.actual)}</td></tr>`;
+        // Q2 column: highlight + arrow when Quarter scope is on
+        if (scopes.quarter) {
+            html += `<td style="${scopeNumStyle}" title="Run rate (Quarter scope)">→ ${this.formatMB(qRR.actual)}</td>`;
+        } else {
+            html += `<td style="${numStyle}">${this.formatMB(qRR.actual)}</td>`;
+        }
+        // EOY column: highlight + arrow when EOY scope is on
+        if (scopes.eoy) {
+            html += `<td style="${scopeNumStyle}" title="Run rate (EOY scope)">→ ${this.formatMB(eRR.actual)}</td>`;
+        } else {
+            html += `<td style="${numStyle}">${this.formatMB(eRR.actual)}</td>`;
+        }
+        html += `</tr>`;
 
-        // % row (italic, colored)
+        // % row (italic, colored) — uses projected actual where present
         html += `<tr><td style="${cellPad}"></td>`;
         ytdMonths.forEach(m => {
-            const p = this.formatPctCell(dp.getActualForChannel(m, channelKey), dp.getTargetForChannel(m, channelKey));
-            html += `<td style="${cellPad} ${numAlign} font-style: italic; color: ${p.color}; font-weight: 600;">${p.text}</td>`;
+            const projected = projectedActuals[m];
+            const actual = projected != null ? projected : dp.getActualForChannel(m, channelKey);
+            const p = this.formatPctCell(actual, dp.getTargetForChannel(m, channelKey));
+            const bg = projected != null ? scopePctBg : '';
+            html += `<td style="${cellPad} ${numAlign} font-style: italic; color: ${p.color}; font-weight: 600; ${bg}">${p.text}</td>`;
         });
         const pq = this.formatPctCell(qRR.actual, qRR.target);
-        html += `<td style="${cellPad} ${numAlign} font-style: italic; color: ${pq.color}; font-weight: 600;">${pq.text}</td>`;
+        const pqBg = scopes.quarter ? scopePctBg : '';
+        html += `<td style="${cellPad} ${numAlign} font-style: italic; color: ${pq.color}; font-weight: 600; ${pqBg}">${pq.text}</td>`;
         const pe = this.formatPctCell(eRR.actual, eRR.target);
-        html += `<td style="${cellPad} ${numAlign} font-style: italic; color: ${pe.color}; font-weight: 600;">${pe.text}</td></tr>`;
+        const peBg = scopes.eoy ? scopePctBg : '';
+        html += `<td style="${cellPad} ${numAlign} font-style: italic; color: ${pe.color}; font-weight: 600; ${peBg}">${pe.text}</td></tr>`;
 
         // Spacer row
         html += `<tr><td colspan="${ytdMonths.length + 3}" style="height: 0.5rem;"></td></tr>`;
