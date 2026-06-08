@@ -455,6 +455,12 @@ function processOKRParsedData(results, sourceName) {
 
     monthlyTargets.clear();
 
+    // Accumulators: collect ALL values per (krKey, month) and per (krName, month)
+    // so KRs split into sub-rows (e.g. KR-5.1.4: Type-1 / Non-Type-1 API / Non-Type-1 non-API)
+    // can be averaged at the end instead of the last sub-row overwriting earlier ones.
+    const valueAccumulators = new Map();   // krKey -> Map<month, number[]>
+    const targetAccumulators = new Map();  // krName -> Map<month, number[]>
+
     results.data.forEach(row => {
         const krName = row[cols.kr_name] || row.kr_name;
         if (!krName || !krName.trim()) return;
@@ -517,26 +523,52 @@ function processOKRParsedData(results, sourceName) {
         const krUnitName = unitNameVal.toString().toLowerCase();
         const isPercentKR = krUnitName.includes('%') || krUnitName.includes('percent');
 
-        // Store monthly result value
+        // Store monthly result value (accumulate; we'll average after the loop)
         if (monthStr && valueStr) {
             let value = parseFloat(valueStr.toString().replace(/,/g, ''));
             if (!isNaN(value)) {
                 if (isPercentKR && Math.abs(value) <= 1) value = value * 100;
-                groupedData.get(krKey).monthlyData.set(monthStr.trim(), value);
+                if (!valueAccumulators.has(krKey)) valueAccumulators.set(krKey, new Map());
+                const monthMap = valueAccumulators.get(krKey);
+                const m = monthStr.trim();
+                if (!monthMap.has(m)) monthMap.set(m, []);
+                monthMap.get(m).push(value);
             }
         }
 
-        // Extract monthly target from the same row
+        // Extract monthly target from the same row (accumulate; average after the loop)
         const monthlyTargetStr = row[cols.monthly_target] || row.monthly_target || '';
         if (monthlyTargetStr && monthStr) {
             let monthlyTargetVal = parseFloat(monthlyTargetStr.toString().replace(/,/g, ''));
             if (!isNaN(monthlyTargetVal)) {
                 if (isPercentKR && Math.abs(monthlyTargetVal) <= 1) monthlyTargetVal = monthlyTargetVal * 100;
                 const krTrimmed = krName.trim();
-                if (!monthlyTargets.has(krTrimmed)) monthlyTargets.set(krTrimmed, new Map());
-                monthlyTargets.get(krTrimmed).set(monthStr.trim(), monthlyTargetVal);
+                if (!targetAccumulators.has(krTrimmed)) targetAccumulators.set(krTrimmed, new Map());
+                const monthMap = targetAccumulators.get(krTrimmed);
+                const m = monthStr.trim();
+                if (!monthMap.has(m)) monthMap.set(m, []);
+                monthMap.get(m).push(monthlyTargetVal);
             }
         }
+    });
+
+    // Average accumulated values into the final monthlyData / monthlyTargets stores.
+    // KRs with a single sub-row reduce to that one value (avg of 1 = same).
+    valueAccumulators.forEach((monthMap, krKey) => {
+        const entry = groupedData.get(krKey);
+        if (!entry) return;
+        monthMap.forEach((values, month) => {
+            const avg = values.reduce((s, v) => s + v, 0) / values.length;
+            entry.monthlyData.set(month, avg);
+        });
+    });
+    targetAccumulators.forEach((monthMap, krName) => {
+        if (!monthlyTargets.has(krName)) monthlyTargets.set(krName, new Map());
+        const krTargetMap = monthlyTargets.get(krName);
+        monthMap.forEach((values, month) => {
+            const avg = values.reduce((s, v) => s + v, 0) / values.length;
+            krTargetMap.set(month, avg);
+        });
     });
 
     console.log('Filtered rows:', filteredRowCount);
@@ -1076,11 +1108,37 @@ function renderMonthlyProgress() {
         ? { month: runRateState.month, day: runRateState.day }
         : null;
 
+    // Group rows by kr_name so KRs split into multiple sub-rows
+    // (e.g. KR-5.1.4 has Non Type-1 API / Non Type-1 non API / Type-1)
+    // render as ONE card with each month's actual averaged across sub-rows.
+    const rowsByKR = new Map();
     filteredData.forEach(row => {
-        const krName = row.kr_name;
+        if (!rowsByKR.has(row.kr_name)) rowsByKR.set(row.kr_name, []);
+        rowsByKR.get(row.kr_name).push(row);
+    });
+
+    rowsByKR.forEach((rows, krName) => {
         if (!monthlyTargets.has(krName)) return; // Skip if no monthly targets
 
-        const card = createMonthlyProgressCard(row, runRateOptions);
+        let displayRow = rows[0];
+        if (rows.length > 1) {
+            const monthsSeen = new Set();
+            rows.forEach(r => {
+                if (r.monthlyData) r.monthlyData.forEach((_v, m) => monthsSeen.add(m));
+            });
+            const averagedMonthlyData = new Map();
+            monthsSeen.forEach(month => {
+                const values = rows
+                    .map(r => r.monthlyData?.get(month))
+                    .filter(v => typeof v === 'number' && !isNaN(v));
+                if (values.length === 0) return;
+                const avg = values.reduce((s, v) => s + v, 0) / values.length;
+                averagedMonthlyData.set(month, avg);
+            });
+            displayRow = Object.assign({}, rows[0], { monthlyData: averagedMonthlyData });
+        }
+
+        const card = createMonthlyProgressCard(displayRow, runRateOptions);
         grid.appendChild(card);
     });
 
