@@ -4210,7 +4210,7 @@ function renderHunterChart(type, data, options = {}) {
             responsive: true,
             maintainAspectRatio: false,
             layout: {
-                padding: { top: 20, left: 24, right: 24, bottom: 4 }
+                padding: { top: 56, left: 24, right: 24, bottom: 4 }
             },
             plugins: {
                 legend: {
@@ -4284,41 +4284,49 @@ function renderHunterChart(type, data, options = {}) {
 
                 var mom = ((currVal - prevVal) / prevVal) * 100;
                 var isUp = mom >= 0;
-                // Early Retention always red; First Transacting uses direction color
-                var color = type === 'earlyRetention' ? '#EF4444' : (isUp ? '#10B981' : '#EF4444');
+                // Arrow color reflects direction for both charts: green for growth, red for decline.
+                var color = isUp ? '#10B981' : '#EF4444';
                 var pctText = (isUp ? '+' : '') + mom.toFixed(1) + '%';
 
                 var ctx = chart.ctx;
                 ctx.save();
 
-                // Curved arrow path: control point arcs upward (or downward)
+                // Clearance above the data-label pills (~point.y - 11 ± 7).
+                // Endpoint sits well above the label; curve apex above that;
+                // percentage text sits at the very top.
+                var pointClearance = 30;
+                var apexLift = 24;
+                var labelLift = 14;
+
                 var cpX = (x1 + x2) / 2;
-                var cpY = Math.min(y1, y2) - 40;
+                var cpY = Math.min(y1, y2) - pointClearance - apexLift;
+                var endY1 = y1 - pointClearance;
+                var endY2 = y2 - pointClearance;
 
                 // Draw curved line
                 ctx.beginPath();
-                ctx.moveTo(x1, y1 - 8);
-                ctx.quadraticCurveTo(cpX, cpY, x2, y2 - 8);
+                ctx.moveTo(x1, endY1);
+                ctx.quadraticCurveTo(cpX, cpY, x2, endY2);
                 ctx.strokeStyle = color;
                 ctx.lineWidth = 2;
                 ctx.setLineDash([]);
                 ctx.stroke();
 
                 // Arrowhead at end point
-                var angle = Math.atan2((y2 - 8) - cpY, x2 - cpX);
+                var angle = Math.atan2(endY2 - cpY, x2 - cpX);
                 var headLen = 10;
                 ctx.beginPath();
-                ctx.moveTo(x2, y2 - 8);
-                ctx.lineTo(x2 - headLen * Math.cos(angle - 0.4), y2 - 8 - headLen * Math.sin(angle - 0.4));
-                ctx.moveTo(x2, y2 - 8);
-                ctx.lineTo(x2 - headLen * Math.cos(angle + 0.4), y2 - 8 - headLen * Math.sin(angle + 0.4));
+                ctx.moveTo(x2, endY2);
+                ctx.lineTo(x2 - headLen * Math.cos(angle - 0.4), endY2 - headLen * Math.sin(angle - 0.4));
+                ctx.moveTo(x2, endY2);
+                ctx.lineTo(x2 - headLen * Math.cos(angle + 0.4), endY2 - headLen * Math.sin(angle + 0.4));
                 ctx.strokeStyle = color;
                 ctx.lineWidth = 2;
                 ctx.stroke();
 
-                // Percentage label near the midpoint of the curve
+                // Percentage label near the apex of the curve
                 var labelX = cpX;
-                var labelY = cpY - 10;
+                var labelY = cpY - labelLift;
                 ctx.font = 'bold 13px "Google Sans Text", sans-serif';
                 ctx.fillStyle = color;
                 ctx.textAlign = 'center';
