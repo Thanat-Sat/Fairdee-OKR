@@ -114,6 +114,12 @@ class PerformanceRecap {
         return num.toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' THB';
     }
 
+    // Show values in millions of baht, matching the source sheet (e.g. "2.4 MB", "-0.3 MB").
+    formatMB(num) {
+        if (num === null || num === undefined || isNaN(num)) return '—';
+        return (num / 1000000).toFixed(1) + ' MB';
+    }
+
     formatMonthLabel(monthStr) {
         if (!monthStr) return '';
         const [year, month] = monthStr.split('-');
@@ -202,9 +208,9 @@ class PerformanceRecap {
         }
     }
 
-    // Get total target for a month (sum across all channels)
+    // Get total target for a month (sum across channels, excluding inspection_garage / "IG")
     getMonthlyTarget(month) {
-        const channels = ['Team Agent', 'IG', 'FD/AO'];
+        const channels = ['Team Agent', 'FD/AO'];
         const values = channels.map(ch => this.targets[`${month}-${ch}`] || 0);
         const total = values.reduce((a, b) => a + b, 0);
         if (total === 0) {
@@ -296,10 +302,12 @@ class PerformanceRecap {
             this.chart.destroy();
         }
 
-        // Use channel Total if available, otherwise fall back to calculated GWP
+        // Use channel Total if available, otherwise fall back to calculated GWP.
+        // inspection_garage (classified as the "IG" channel) is excluded from this chart.
         const actualData = months.map(m => {
             if (this.data.channel && this.data.channel.data && this.data.channel.data[m]) {
-                return this.data.channel.data[m]['Total'] || 0;
+                const ch = this.data.channel.data[m];
+                return (ch['Total'] || 0) - (ch['IG'] || 0);
             }
             return this.calculateMonthlyGWP(m);
         });
@@ -833,10 +841,10 @@ class PerformanceRecap {
                 <tr>
                     ${idx === 0 ? `<td rowspan="${this.segments.length}" class="month-cell">${monthDisplay}</td>` : ''}
                     <td class="segment-name">${segment}</td>
-                    <td class="col-first ${segData.first < 0 ? 'negative' : 'positive'}">${this.formatCurrencyTHB(segData.first)}</td>
-                    <td class="col-retained ${segData.retained < 0 ? 'negative' : 'positive'}">${this.formatCurrencyTHB(segData.retained)}</td>
-                    <td class="col-resurrected ${segData.resurrected < 0 ? 'negative' : 'positive'}">${this.formatCurrencyTHB(segData.resurrected)}</td>
-                    <td class="${segData.total < 0 ? 'negative' : ''}">${this.formatCurrencyTHB(segData.total)}</td>
+                    <td class="col-first ${segData.first < 0 ? 'negative' : 'positive'}">${this.formatMB(segData.first)}</td>
+                    <td class="col-retained ${segData.retained < 0 ? 'negative' : 'positive'}">${this.formatMB(segData.retained)}</td>
+                    <td class="col-resurrected ${segData.resurrected < 0 ? 'negative' : 'positive'}">${this.formatMB(segData.resurrected)}</td>
+                    <td class="${segData.total < 0 ? 'negative' : ''}">${this.formatMB(segData.total)}</td>
                 </tr>
             `;
         });
@@ -846,10 +854,10 @@ class PerformanceRecap {
             <tr class="total-row">
                 <td class="month-cell">Totals for ${monthDisplay}</td>
                 <td></td>
-                <td class="col-first ${grandTotal.first < 0 ? 'negative' : 'positive'}">${this.formatCurrencyTHB(grandTotal.first)}</td>
-                <td class="col-retained ${grandTotal.retained < 0 ? 'negative' : 'positive'}">${this.formatCurrencyTHB(grandTotal.retained)}</td>
-                <td class="col-resurrected ${grandTotal.resurrected < 0 ? 'negative' : 'positive'}">${this.formatCurrencyTHB(grandTotal.resurrected)}</td>
-                <td><strong>${this.formatCurrencyTHB(grandTotal.total)}</strong></td>
+                <td class="col-first ${grandTotal.first < 0 ? 'negative' : 'positive'}">${this.formatMB(grandTotal.first)}</td>
+                <td class="col-retained ${grandTotal.retained < 0 ? 'negative' : 'positive'}">${this.formatMB(grandTotal.retained)}</td>
+                <td class="col-resurrected ${grandTotal.resurrected < 0 ? 'negative' : 'positive'}">${this.formatMB(grandTotal.resurrected)}</td>
+                <td><strong>${this.formatMB(grandTotal.total)}</strong></td>
             </tr>
         `;
         

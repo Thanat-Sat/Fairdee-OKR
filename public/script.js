@@ -19,10 +19,25 @@ const LESS_IS_BETTER_KRS = new Set([
     'KR-5.4.2'
 ]);
 
+// Per-KR overrides set from the Settings tab and persisted to Firestore.
+// Map<kr_name, { percent: bool, lowerBetter: bool }>. When an override exists it wins
+// over the hardcoded defaults below.
+let krConfigOverrides = new Map();
+
+function defaultIsLowerBetter(krName) {
+    return LESS_IS_BETTER_KRS.has(krName);
+}
+
+function krIsLowerBetter(krName) {
+    const o = krConfigOverrides.get(krName);
+    if (o && typeof o.lowerBetter === 'boolean') return o.lowerBetter;
+    return defaultIsLowerBetter(krName);
+}
+
 // Central progress calculation — handles both normal and "less is better" KRs
 function calculateProgress(krName, current, target) {
     if (target === null || target === undefined || current === null || current === undefined) return 0;
-    if (LESS_IS_BETTER_KRS.has(krName)) {
+    if (krIsLowerBetter(krName)) {
         // Lower current = better. Formula: (target / actual) * 100
         // e.g. target=40, actual=42 → (40/42)*100 = 95.2%
         // e.g. target=0.2, actual=-86 → actual<=0, treat as fully achieved (100%)
@@ -97,10 +112,29 @@ const PERCENTAGE_KRS = new Set([
     '5.4.1'
 ]);
 
-function isPercentageKR(krName) {
+// Default percent detection (ignores Settings overrides): hardcoded list + unit text.
+function defaultIsPercent(krName, row) {
     if (!krName) return false;
     const info = parseKRLevel(krName);
-    return PERCENTAGE_KRS.has(info.number);
+    if (PERCENTAGE_KRS.has(info.number)) return true;
+    const r = row || (Array.isArray(csvData) ? csvData.find(x => x.kr_name === krName) : null);
+    if (r) {
+        const u = (r.unit_name || '').toString().toLowerCase();
+        if (u.includes('%') || u.includes('percent')) return true;
+    }
+    return false;
+}
+
+// Override-aware percent check used everywhere a KR is rendered.
+function krIsPercent(krName, row) {
+    const o = krConfigOverrides.get(krName);
+    if (o && typeof o.percent === 'boolean') return o.percent;
+    return defaultIsPercent(krName, row);
+}
+
+function isPercentageKR(krName) {
+    if (!krName) return false;
+    return krIsPercent(krName, null);
 }
 
 // Render a KR current/target value, appending "%" for percentage-typed KRs.
@@ -732,6 +766,7 @@ function renderAll() {
     renderOKRCards();
     renderDataTable();
     renderActionItems();
+    renderSettings();
     renderMonthlyProgress();
     renderHunterAnalysis();
     if (teamPerfRawData && teamPerfRawData.length > 0) {
@@ -762,8 +797,558 @@ function getLatestValue(row) {
             return row.monthlyData.get(allMonths[i]);
         }
     }
-    
+
     return null;
+}
+
+// True for KRs whose value is a ratio/percentage — summing months is meaningless,
+// so year-to-date uses an average. Override-aware (Settings tab), then unit/hardcoded.
+function isPercentKR(row) {
+    return krIsPercent(row && row.kr_name, row);
+}
+
+// Build a YTD unit label from the monthly one, e.g. "GWP in monthly" -> "GWP YTD".
+function ytdUnitLabel(unitName) {
+    const u = (unitName || '').toString().trim();
+    if (!u) return 'YTD';
+    if (/monthly/i.test(u)) {
+        return u.replace(/\bin\s+monthly\b/i, 'YTD').replace(/\bmonthly\b/i, 'YTD').trim();
+    }
+    return `${u} (YTD)`;
+}
+
+// Year-to-date actual: sum of the row's monthly values from the start of the
+// effective month's year up to and including that month (selected or latest).
+function getYTDValue(row) {
+    if (!row || !row.monthlyData) return null;
+    const effMonth = getEffectiveMonthForRow(row);
+    const effNorm = normalizeMonth(effMonth);
+    if (!effNorm) return null;
+    const effYear = effNorm.slice(0, 4);
+    let sum = 0;
+    let found = false;
+    for (const m of allMonths) {
+        const norm = normalizeMonth(m);
+        if (!norm || norm.slice(0, 4) !== effYear || norm > effNorm) continue;
+        if (row.monthlyData.has(m)) {
+            sum += row.monthlyData.get(m);
+            found = true;
+        }
+    }
+    return found ? sum : null;
+}
+
+// Year-to-date average of the row's monthly values (start of year up to the effective
+// month). Used for percentage/rate KRs, where summing months is meaningless.
+function getYTDAverage(row) {
+    if (!row || !row.monthlyData) return null;
+    const effMonth = getEffectiveMonthForRow(row);
+    const effNorm = normalizeMonth(effMonth);
+    if (!effNorm) return null;
+    const effYear = effNorm.slice(0, 4);
+    let sum = 0;
+    let count = 0;
+    for (const m of allMonths) {
+        const norm = normalizeMonth(m);
+        if (!norm || norm.slice(0, 4) !== effYear || norm > effNorm) continue;
+        if (row.monthlyData.has(m)) {
+            const v = row.monthlyData.get(m);
+            if (typeof v === 'number' && !isNaN(v)) { sum += v; count++; }
+        }
+    }
+    return count > 0 ? sum / count : null;
+}
+
+// ========================================
+// FULL YEAR TARGETS (settable per KR, persisted to Firestore)
+// The source sheet has no annual target, so users set it via the "Set Full Year Targets"
+// modal. We store them in the existing `targets` collection (which already has working
+// security rules) tagged with type 'okr_full_year', rather than a brand-new collection.
+// ========================================
+let fullYearTargets = new Map(); // Map<kr_name, number>
+
+// Dedicated collection for ALL OKR-dashboard config — kept separate from the shared
+// `targets` collection (which holds channel/monthly-metrics business data).
+// Doc kinds (distinguished by `type` and id prefix):
+//   fyt__<KR>  type 'okr_full_year'     — full-year target per KR
+//   cfg__<KR>  type 'okr_kr_config'     — per-KR display config (% / lower-is-better)
+//   access     type 'okr_settings_access' — Settings-page allowed-email list
+const OKR_SETTINGS_COLLECTION = 'okr_settings';
+const FULL_YEAR_TARGET_TYPE = 'okr_full_year';
+const KR_CONFIG_TYPE = 'okr_kr_config';
+const SETTINGS_ACCESS_TYPE = 'okr_settings_access';
+const SETTINGS_ACCESS_DOC_ID = 'access';
+
+// '/' is not allowed in doc ids, so encode the KR name.
+function fyTargetDocId(krName) { return 'fyt__' + encodeURIComponent((krName || '').toString().trim()); }
+function krConfigDocId(krName) { return 'cfg__' + encodeURIComponent((krName || '').toString().trim()); }
+
+function getFullYearTarget(row) {
+    const v = fullYearTargets.get(row.kr_name);
+    return (typeof v === 'number' && !isNaN(v)) ? v : null;
+}
+
+// Build a full-year unit label from the monthly one, e.g. "GWP in monthly" -> "GWP full year".
+function fullYearUnitLabel(unitName) {
+    const u = (unitName || '').toString().trim();
+    if (!u) return 'Full year';
+    if (/monthly/i.test(u)) {
+        return u.replace(/\bin\s+monthly\b/i, 'full year').replace(/\bmonthly\b/i, 'full year').trim();
+    }
+    return `${u} (full year)`;
+}
+
+// Escape a string for safe use inside a double-quoted HTML attribute.
+function escAttr(str) {
+    return (str === null || str === undefined ? '' : String(str))
+        .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// One read of the okr_settings collection populates all three in-memory stores.
+async function loadOkrSettings() {
+    if (typeof db === 'undefined' || !db) return;
+    try {
+        const snap = await db.collection(OKR_SETTINGS_COLLECTION).get();
+        fullYearTargets.clear();
+        krConfigOverrides.clear();
+        settingsAllowedExtra.clear();
+        snap.forEach(doc => {
+            const d = doc.data() || {};
+            if (d.type === FULL_YEAR_TARGET_TYPE) {
+                const value = typeof d.value === 'number' ? d.value : parseFloat(d.value);
+                if (d.name && !isNaN(value)) fullYearTargets.set(d.name, value);
+            } else if (d.type === KR_CONFIG_TYPE) {
+                if (d.name) krConfigOverrides.set(d.name, { percent: !!d.percent, lowerBetter: !!d.lowerBetter });
+            } else if (d.type === SETTINGS_ACCESS_TYPE || doc.id === SETTINGS_ACCESS_DOC_ID) {
+                (Array.isArray(d.emails) ? d.emails : []).forEach(e => {
+                    const v = String(e || '').trim().toLowerCase();
+                    if (v) settingsAllowedExtra.add(v);
+                });
+            }
+        });
+        applySettingsAccess();
+        if (csvData && csvData.length) renderAll();
+    } catch (e) {
+        console.warn('Could not load OKR settings from Firestore:', e);
+    }
+}
+
+// Persist a batch of full-year targets. Updates the UI optimistically, then writes to
+// Firestore. `updates` is an array of { krName, value } — value === null clears the target.
+async function saveFullYearTargetsBatch(updates) {
+    if (!updates || !updates.length) return;
+    updates.forEach(u => {
+        if (u.value === null || u.value === undefined) fullYearTargets.delete(u.krName);
+        else fullYearTargets.set(u.krName, u.value);
+    });
+    renderAll();
+    if (typeof db === 'undefined' || !db) {
+        console.warn('Firestore not available; full year targets not persisted.');
+        return;
+    }
+    const user = (typeof auth !== 'undefined' && auth) ? auth.currentUser : null;
+    try {
+        await Promise.all(updates.map(u => {
+            const ref = db.collection(OKR_SETTINGS_COLLECTION).doc(fyTargetDocId(u.krName));
+            if (u.value === null || u.value === undefined) return ref.delete();
+            return ref.set({
+                type: FULL_YEAR_TARGET_TYPE,
+                name: u.krName,
+                value: u.value,
+                updatedBy: user ? user.uid : null,
+                updatedByEmail: user ? (user.email || null) : null,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+        }));
+    } catch (e) {
+        console.error('Failed to save full year targets:', e);
+        alert('Could not save full year targets: ' + (e && (e.message || e.code) || 'unknown error') +
+            '\n\nThey may reset on reload.');
+    }
+}
+
+// Persist a batch of KR config overrides. `updates` is an array of
+// { krName, percent, lowerBetter } or { krName, remove: true } to revert to defaults.
+async function saveKRConfigBatch(updates) {
+    if (!updates || !updates.length) return;
+    updates.forEach(u => {
+        if (u.remove) krConfigOverrides.delete(u.krName);
+        else krConfigOverrides.set(u.krName, { percent: !!u.percent, lowerBetter: !!u.lowerBetter });
+    });
+    renderAll();
+    if (typeof db === 'undefined' || !db) {
+        console.warn('Firestore not available; KR config not persisted.');
+        return;
+    }
+    const user = (typeof auth !== 'undefined' && auth) ? auth.currentUser : null;
+    try {
+        await Promise.all(updates.map(u => {
+            const ref = db.collection(OKR_SETTINGS_COLLECTION).doc(krConfigDocId(u.krName));
+            if (u.remove) return ref.delete();
+            return ref.set({
+                type: KR_CONFIG_TYPE,
+                name: u.krName,
+                percent: !!u.percent,
+                lowerBetter: !!u.lowerBetter,
+                updatedBy: user ? user.uid : null,
+                updatedByEmail: user ? (user.email || null) : null,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+        }));
+    } catch (e) {
+        console.error('Failed to save KR config:', e);
+        alert('Could not save KR settings: ' + (e && (e.message || e.code) || 'unknown error'));
+    }
+}
+
+// ----- Settings page access control -----
+// Two permanent admins (hardcoded) plus extra emails managed from the Settings page.
+const SETTINGS_ADMIN_EMAILS = new Set([
+    'thanat.s@fairdee.co.th',
+    'nichakan@fairdee.co.th'
+]);
+let settingsAllowedExtra = new Set(); // lowercased emails loaded from Firestore
+
+function canAccessSettings() {
+    const email = ((typeof auth !== 'undefined' && auth && auth.currentUser && auth.currentUser.email) || '').toLowerCase();
+    if (!email) return false;
+    return SETTINGS_ADMIN_EMAILS.has(email) || settingsAllowedExtra.has(email);
+}
+// Show/hide the Settings tab based on the signed-in user.
+function applySettingsAccess() {
+    const tab = document.getElementById('settingsTab');
+    if (tab) tab.style.display = canAccessSettings() ? '' : 'none';
+}
+
+// Persist the extra allowed-emails list to Firestore.
+async function saveSettingsAccess(emails) {
+    settingsAllowedExtra = new Set(emails.map(e => String(e || '').trim().toLowerCase()).filter(Boolean));
+    applySettingsAccess();
+    if (typeof db === 'undefined' || !db) return;
+    const user = (typeof auth !== 'undefined' && auth) ? auth.currentUser : null;
+    try {
+        await db.collection(OKR_SETTINGS_COLLECTION).doc(SETTINGS_ACCESS_DOC_ID).set({
+            type: SETTINGS_ACCESS_TYPE,
+            emails: Array.from(settingsAllowedExtra),
+            updatedBy: user ? user.uid : null,
+            updatedByEmail: user ? (user.email || null) : null,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+    } catch (e) {
+        console.error('Failed to save settings access list:', e);
+        alert('Could not save the access list: ' + (e && (e.message || e.code) || 'unknown error'));
+    }
+}
+
+// Load all OKR settings once the user is authenticated (Firestore reads need the auth token).
+(function initOkrSettings() {
+    if (typeof auth !== 'undefined' && auth) {
+        auth.onAuthStateChanged(function(user) { if (user) loadOkrSettings(); });
+    } else {
+        loadOkrSettings();
+    }
+})();
+
+// ============================================================================
+// SETTINGS TAB — configure per-KR: show as %, lower-is-better, and full-year target.
+// ============================================================================
+function renderSettings() {
+    const container = document.getElementById('settingsContainer');
+    if (!container) return;
+
+    // Access-controlled page.
+    if (!canAccessSettings()) {
+        container.innerHTML = '<div class="settings-empty">You don\'t have access to this page.</div>';
+        return;
+    }
+
+    // One row per unique KR (in data order).
+    const seen = new Set();
+    const krs = [];
+    (csvData || []).forEach(row => {
+        if (!row.kr_name || seen.has(row.kr_name)) return;
+        seen.add(row.kr_name);
+        krs.push(row);
+    });
+
+    // Access-control section: admins (locked) + editable extra emails.
+    const adminChips = Array.from(SETTINGS_ADMIN_EMAILS).map(e =>
+        `<span class="settings-chip locked" title="Built-in admin">${escAttr(e)}</span>`).join('');
+    const extraChips = Array.from(settingsAllowedExtra).map(e =>
+        `<span class="settings-chip" data-email="${escAttr(e)}">${escAttr(e)}<button type="button" class="settings-chip-x" aria-label="Remove">&times;</button></span>`).join('');
+    const accessHTML = `
+        <div class="settings-card">
+            <h2 class="settings-title">Access control</h2>
+            <p class="settings-sub">These users can open this Settings page. The two built-in admins can't be removed. Adding or removing an email saves automatically.</p>
+            <div class="settings-emails" id="settingsEmails">${adminChips}${extraChips}</div>
+            <div class="settings-email-add">
+                <input type="email" id="settingsEmailInput" placeholder="name@fairdee.co.th">
+                <button type="button" class="btn-set-targets" id="settingsEmailAddBtn">Add email</button>
+            </div>
+        </div>`;
+
+    if (!krs.length) {
+        container.innerHTML = accessHTML +
+            '<div class="settings-empty">Load data first to configure KRs.</div>';
+        wireSettingsAccessUI(container);
+        return;
+    }
+
+    const rowsHTML = krs.map(row => {
+        const kr = row.kr_name;
+        const title = getShortTitle(row.kr_title_name || '');
+        const pct = krIsPercent(kr, row);
+        const low = krIsLowerBetter(kr);
+        const fy = fullYearTargets.has(kr) ? fullYearTargets.get(kr) : '';
+        return `
+            <tr class="settings-row" data-kr="${escAttr(kr)}">
+                <td class="settings-kr">
+                    <span class="settings-kr-name">${escAttr(kr)}</span>
+                    ${title ? `<span class="settings-kr-title">${escAttr(title)}</span>` : ''}
+                </td>
+                <td class="settings-center"><input type="checkbox" class="settings-pct" ${pct ? 'checked' : ''}></td>
+                <td class="settings-center"><input type="checkbox" class="settings-low" ${low ? 'checked' : ''}></td>
+                <td class="settings-center"><input type="number" class="settings-fy" value="${fy}" step="any" inputmode="decimal" placeholder="—"></td>
+            </tr>`;
+    }).join('');
+
+    container.innerHTML = accessHTML + `
+        <div class="settings-card">
+            <div class="settings-head">
+                <div>
+                    <h2 class="settings-title">KR Settings</h2>
+                    <p class="settings-sub">Choose which KRs display as a percentage, which are "lower is better", and set each KR's target. The Target column is the full-year total for non-% KRs, and the YTD-average target for % KRs (leave blank to use the monthly target).</p>
+                </div>
+                <button type="button" class="btn-set-targets" id="settingsSaveBtn">Save changes</button>
+            </div>
+            <div class="settings-table-wrap">
+                <table class="settings-table">
+                    <thead>
+                        <tr>
+                            <th>KR</th>
+                            <th class="settings-center">Show as %</th>
+                            <th class="settings-center">Lower is better</th>
+                            <th class="settings-center">Target<br><span class="settings-th-sub">full-year / YTD-avg</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>${rowsHTML}</tbody>
+                </table>
+            </div>
+        </div>`;
+
+    wireSettingsAccessUI(container);
+
+    container.querySelector('#settingsSaveBtn').addEventListener('click', saveSettings);
+}
+
+// Wire the "Add email" / remove-chip controls of the access section.
+// Adding/removing persists to Firestore immediately (independent of the KR Save button).
+function wireSettingsAccessUI(container) {
+    const emailsEl = container.querySelector('#settingsEmails');
+    const input = container.querySelector('#settingsEmailInput');
+    const addBtn = container.querySelector('#settingsEmailAddBtn');
+    if (!emailsEl || !input || !addBtn) return;
+
+    function currentEmails() {
+        return Array.from(emailsEl.querySelectorAll('.settings-chip[data-email]'))
+            .map(c => c.getAttribute('data-email'));
+    }
+    async function persist() {
+        const prev = addBtn.textContent;
+        addBtn.disabled = true; addBtn.textContent = 'Saving...';
+        await saveSettingsAccess(currentEmails());
+        addBtn.disabled = false; addBtn.textContent = prev;
+    }
+
+    async function addEmail() {
+        const email = (input.value || '').trim().toLowerCase();
+        if (!email) return;
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { alert('Please enter a valid email address.'); return; }
+        if (SETTINGS_ADMIN_EMAILS.has(email) || emailsEl.querySelector(`.settings-chip[data-email="${CSS.escape(email)}"]`)) {
+            input.value = '';
+            return; // already present
+        }
+        const chip = document.createElement('span');
+        chip.className = 'settings-chip';
+        chip.setAttribute('data-email', email);
+        chip.innerHTML = `${escAttr(email)}<button type="button" class="settings-chip-x" aria-label="Remove">&times;</button>`;
+        emailsEl.appendChild(chip);
+        input.value = '';
+        await persist();
+    }
+
+    addBtn.addEventListener('click', addEmail);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addEmail(); } });
+    emailsEl.addEventListener('click', async e => {
+        const x = e.target.closest('.settings-chip-x');
+        if (x) { x.closest('.settings-chip').remove(); await persist(); }
+    });
+}
+
+async function saveSettings() {
+    const container = document.getElementById('settingsContainer');
+    if (!container) return;
+    const btn = container.querySelector('#settingsSaveBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+
+    const cfgUpdates = [];
+    const fyUpdates = [];
+
+    container.querySelectorAll('.settings-row').forEach(tr => {
+        const kr = tr.getAttribute('data-kr');
+        const row = (csvData || []).find(r => r.kr_name === kr) || null;
+        const pct = tr.querySelector('.settings-pct').checked;
+        const low = tr.querySelector('.settings-low').checked;
+
+        // KR config: store an override only when it differs from the computed default.
+        const matchesDefault = (pct === defaultIsPercent(kr, row) && low === defaultIsLowerBetter(kr));
+        const cur = krConfigOverrides.get(kr);
+        if (matchesDefault) {
+            if (cur) cfgUpdates.push({ krName: kr, remove: true });
+        } else if (!cur || cur.percent !== pct || cur.lowerBetter !== low) {
+            cfgUpdates.push({ krName: kr, percent: pct, lowerBetter: low });
+        }
+
+        // Target — full-year total for additive KRs, YTD-avg target for % KRs. Same field.
+        const raw = (tr.querySelector('.settings-fy').value || '').trim();
+        const had = fullYearTargets.has(kr);
+        if (raw === '') {
+            if (had) fyUpdates.push({ krName: kr, value: null });
+        } else {
+            const val = parseFloat(raw.replace(/,/g, ''));
+            if (!isNaN(val) && (!had || fullYearTargets.get(kr) !== val)) fyUpdates.push({ krName: kr, value: val });
+        }
+    });
+
+    // Collect the access-list emails from the chips.
+    const emails = Array.from(container.querySelectorAll('.settings-chip[data-email]'))
+        .map(c => c.getAttribute('data-email'));
+
+    // Each save call re-renders; run config first, then targets, then the access list.
+    await saveKRConfigBatch(cfgUpdates);
+    await saveFullYearTargetsBatch(fyUpdates);
+    await saveSettingsAccess(emails);
+    renderSettings();
+}
+
+// Build the YTD metric box(es) for a KR card.
+// - Percentage/rate KRs get a single "YTD avg" box (averaging months, not summing).
+// - Additive KRs get a "YTD" (sum) box plus the Full Year Target box.
+// Returns '' when there's no monthly history to summarise.
+function buildYTDMetricsHTML(row) {
+    if (isPercentKR(row)) {
+        const ytdAvg = getYTDAverage(row);
+        if (ytdAvg === null) return '';
+        // YTD-avg target: settable (Settings tab) with a fallback to the KR's monthly target.
+        const setTgt = getFullYearTarget(row);
+        const monthlyTgt = getTarget(row);
+        const ytdAvgTarget = (setTgt && setTgt > 0) ? setTgt : (monthlyTgt > 0 ? monthlyTgt : null);
+        const numberClass = getNumberPairLengthClass(ytdAvg, ytdAvgTarget !== null ? ytdAvgTarget : ytdAvg);
+        const unit = ytdUnitLabel(row.unit_name);
+        return `
+            <div class="kr-metric">
+                <div class="kr-metric-label">YTD avg</div>
+                <div class="kr-metric-value ${numberClass}">${formatKRValue(ytdAvg, row.kr_name)}</div>
+                <div class="kr-unit">${unit}</div>
+            </div>
+            <div class="kr-metric">
+                <div class="kr-metric-label">YTD avg target</div>
+                <div class="kr-metric-value ${numberClass}">${ytdAvgTarget !== null ? formatKRValue(ytdAvgTarget, row.kr_name) : '<span class="fy-unset">—</span>'}</div>
+                <div class="kr-unit">${unit}</div>
+            </div>
+        `;
+    }
+    const ytdValue = getYTDValue(row);
+    if (ytdValue === null) return '';
+    const fyTarget = getFullYearTarget(row);
+    const numberClass = getNumberPairLengthClass(ytdValue, fyTarget !== null ? fyTarget : ytdValue);
+    const ytdUnit = ytdUnitLabel(row.unit_name);
+    const fyUnit = fullYearUnitLabel(row.unit_name);
+    const krAttr = escAttr(row.kr_name);
+    return `
+        <div class="kr-metric">
+            <div class="kr-metric-label">YTD</div>
+            <div class="kr-metric-value ${numberClass}">${formatKRValue(ytdValue, row.kr_name)}</div>
+            <div class="kr-unit">${ytdUnit}</div>
+        </div>
+        <div class="kr-metric kr-fytarget" data-kr="${krAttr}">
+            <div class="kr-metric-label">Full Year Target</div>
+            <div class="kr-metric-value ${numberClass}">${fyTarget !== null ? formatKRValue(fyTarget, row.kr_name) : '<span class="fy-unset">—</span>'}</div>
+            <div class="kr-unit">${fyUnit}</div>
+        </div>
+    `;
+}
+
+// Build the progress section for a KR card: a Monthly bar (actual vs monthly target,
+// with run-rate projection) and, when a full-year target is set, a YTD bar
+// (year-to-date actual vs the settable full-year target). Returns '' if neither applies.
+function buildProgressSection(row) {
+    const current = getLatestValue(row);
+    const target = getTarget(row);
+    const displayedMonth = getEffectiveMonthForRow(row);
+    const projection = computeRunRateProjection(row, displayedMonth);
+    const barClass = p => (p >= 75 ? 'high' : p >= 50 ? 'medium' : 'low');
+    let bars = '';
+
+    // Monthly progress
+    if (target > 0) {
+        const progress = Math.min(calculateProgress(row.kr_name, current, target), 100);
+        bars += `
+            <div class="progress-block">
+                <div class="progress-block-head">
+                    <span class="progress-block-label">Monthly</span>
+                    <span class="progress-block-pct">${progress.toFixed(1)}% achieved${projection ? ` <span class="run-rate-projection ${projection.projectionClass}">→ projected ${projection.projectedPercent.toFixed(1)}% (day ${projection.day}/${projection.daysInMonth})</span>` : ''}</span>
+                </div>
+                <div class="progress-bar-container">
+                    ${projection ? `<div class="progress-bar-projection ${projection.projectionBarClass}" style="width: ${Math.min(projection.projectedPercent, 100)}%" title="Run rate projection: ${projection.projectedPercent.toFixed(1)}%"></div>` : ''}
+                    <div class="progress-bar ${barClass(progress)}" style="width: ${progress}%"></div>
+                </div>
+            </div>`;
+    }
+
+    if (isPercentKR(row)) {
+        // Percentage/rate KRs: YTD average vs the YTD-avg target (settable, else monthly target).
+        const ytdAvg = getYTDAverage(row);
+        const setTgt = getFullYearTarget(row);
+        const ytdAvgTarget = (setTgt && setTgt > 0) ? setTgt : target;
+        if (ytdAvg !== null && ytdAvgTarget > 0) {
+            const ytdProgress = Math.min(calculateProgress(row.kr_name, ytdAvg, ytdAvgTarget), 100);
+            bars += `
+                <div class="progress-block">
+                    <div class="progress-block-head">
+                        <span class="progress-block-label">YTD avg</span>
+                        <span class="progress-block-pct">${ytdProgress.toFixed(1)}% achieved</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar ${barClass(ytdProgress)}" style="width: ${ytdProgress}%"></div>
+                    </div>
+                </div>`;
+        }
+    } else {
+        // Additive KRs: YTD sum vs the settable full-year target. The bar always shows;
+        // when no full-year target is set yet it renders empty with a prompt.
+        const ytdValue = getYTDValue(row);
+        if (ytdValue !== null) {
+            const fyTarget = getFullYearTarget(row);
+            const hasTarget = fyTarget && fyTarget > 0;
+            const ytdProgress = hasTarget ? Math.min(calculateProgress(row.kr_name, ytdValue, fyTarget), 100) : 0;
+            const caption = hasTarget
+                ? `${ytdProgress.toFixed(1)}% of full year`
+                : `<span class="progress-muted">No full year target set</span>`;
+            bars += `
+                <div class="progress-block">
+                    <div class="progress-block-head">
+                        <span class="progress-block-label">YTD</span>
+                        <span class="progress-block-pct">${caption}</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar ${barClass(ytdProgress)}" style="width: ${ytdProgress}%"></div>
+                    </div>
+                </div>`;
+        }
+    }
+
+    return bars ? `<div class="progress-section" style="width: 100%;">${bars}</div>` : '';
 }
 
 // Get previous value (relative to selected month)
@@ -877,6 +1462,14 @@ function getShortTitle(text) {
         return trimmed.substring(0, 50) + '...';
     }
     return trimmed;
+}
+
+// Like getShortTitle but without the 50-char truncation — used where the full title should show.
+function getFullTitle(text) {
+    if (!text) return '';
+    const match = text.match(/\[(.*?)\]/);
+    if (match) return match[1];
+    return text.trim();
 }
 
 // Parse KR level
@@ -1938,7 +2531,7 @@ function renderOKRCards() {
         goalSection.className = 'goal-section';
         const firstObjName = Object.keys(hierarchy[goalName])[0];
         const firstKR = hierarchy[goalName][firstObjName]?.krs[0];
-        const goalTitle = firstKR ? getShortTitle(firstKR.kr_title_name) : '';
+        const goalTitle = firstKR ? getFullTitle(firstKR.kr_title_name) : '';
         const goalHeader = document.createElement('div');
         goalHeader.className = 'goal-header';
         goalHeader.innerHTML = `${goalName}${goalTitle ? ` <span style="color: var(--text-secondary); font-weight: 600; font-size: 0.8em;">- ${goalTitle}</span>` : ''}`;
@@ -1999,7 +2592,7 @@ function renderOKRCards() {
                         </div>
                         <div class="kr-metrics">
                             <div class="kr-metric">
-                                <div class="kr-metric-label">Current</div>
+                                <div class="kr-metric-label">Monthly</div>
                                 <div class="kr-metric-value ${numberClass}">${formatKRValue(latestValue, row.kr_name)}</div>
                                 <div class="kr-unit">${row.unit_name || ''}</div>
                             </div>
@@ -2008,18 +2601,9 @@ function renderOKRCards() {
                                 <div class="kr-metric-value ${numberClass}">${formatKRValue(target, row.kr_name)}</div>
                                 <div class="kr-unit">${row.unit_name || ''}</div>
                             </div>
+                            ${buildYTDMetricsHTML(row)}
                         </div>
-                        ${target > 0 ? `
-                            <div class="progress-section" style="width: 100%;">
-                                <div class="progress-bar-container">
-                                    ${projection ? `<div class="progress-bar-projection ${projection.projectionBarClass}" style="width: ${Math.min(projection.projectedPercent, 100)}%" title="Run rate projection: ${projection.projectedPercent.toFixed(1)}%"></div>` : ''}
-                                    <div class="progress-bar ${progressClass}" style="width: ${progress}%"></div>
-                                </div>
-                                <div style="text-align: center; margin-top: 10px; color: var(--text-muted); font-size: 0.9em;">
-                                    ${progress.toFixed(1)}% achieved${projection ? ` <span class="run-rate-projection ${projection.projectionClass}">→ projected ${projection.projectedPercent.toFixed(1)}% (day ${projection.day}/${projection.daysInMonth})</span>` : ''}
-                                </div>
-                            </div>
-                        ` : ''}
+                        ${buildProgressSection(row)}
                     `;
                     krContainer.appendChild(card);
                     
@@ -2059,7 +2643,7 @@ function renderOKRCards() {
                                     </div>
                                     <div class="kr-metrics">
                                         <div class="kr-metric">
-                                            <div class="kr-metric-label">Current</div>
+                                            <div class="kr-metric-label">Monthly</div>
                                             <div class="kr-metric-value ${childNumberClass}">${formatKRValue(childLatestValue, childRow.kr_name)}</div>
                                             <div class="kr-unit">${childRow.unit_name || ''}</div>
                                         </div>
@@ -2068,18 +2652,9 @@ function renderOKRCards() {
                                             <div class="kr-metric-value ${childNumberClass}">${formatKRValue(childTarget, childRow.kr_name)}</div>
                                             <div class="kr-unit">${childRow.unit_name || ''}</div>
                                         </div>
+                                        ${buildYTDMetricsHTML(childRow)}
                                     </div>
-                                    ${childTarget > 0 ? `
-                                        <div class="progress-section" style="width: 100%;">
-                                            <div class="progress-bar-container">
-                                                ${childProjection ? `<div class="progress-bar-projection ${childProjection.projectionBarClass}" style="width: ${Math.min(childProjection.projectedPercent, 100)}%" title="Run rate projection: ${childProjection.projectedPercent.toFixed(1)}%"></div>` : ''}
-                                                <div class="progress-bar ${childProgressClass}" style="width: ${childProgress}%"></div>
-                                            </div>
-                                            <div style="text-align: center; margin-top: 10px; color: var(--text-muted); font-size: 0.9em;">
-                                                ${childProgress.toFixed(1)}% achieved${childProjection ? ` <span class="run-rate-projection ${childProjection.projectionClass}">→ projected ${childProjection.projectedPercent.toFixed(1)}% (day ${childProjection.day}/${childProjection.daysInMonth})</span>` : ''}
-                                            </div>
-                                        </div>
-                                    ` : ''}
+                                    ${buildProgressSection(childRow)}
                                 `;
                                 childrenGrid.appendChild(childCard);
                             });
@@ -4990,6 +5565,14 @@ function renderTeamPerformanceDynamic() {
     
     html += '</div>';
     
+    // Monthly contribution stacked chart
+    html += '<div class="chart-section" style="margin-bottom: 2rem;">';
+    html += '<div class="chart-card">';
+    html += '<h3 class="chart-title">Monthly Contribution by Channel</h3>';
+    html += '<div style="position: relative; height: 380px;"><canvas id="dynKamContributionChart"></canvas></div>';
+    html += '</div>';
+    html += '</div>';
+    
     // Charts section
     html += '<div class="chart-section" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">';
     
@@ -5072,6 +5655,7 @@ function renderTeamPerformanceDynamic() {
     
     // Render charts after DOM update
     setTimeout(function() {
+        renderDynContributionChart('dynKamContributionChart', trendMonths, focusTrend, midtierTrend);
         renderDynTrendChart('dynFocusTrendChart', trendMonths, focusTrend, '#FF6B35', 'Focus Team GWP');
         renderDynTrendChart('dynMidtierTrendChart', trendMonths, midtierTrend, '#00D9A3', 'Mid-Tier GWP');
         renderDynDistChart('dynFocusDistChart', focusArr, '#FF6B35');
@@ -5126,6 +5710,62 @@ function buildTeamTable(title, teams, totalGwp) {
     
     html += '</tbody></table></div>';
     return html;
+}
+
+function renderDynContributionChart(canvasId, months, focusValues, midtierValues) {
+    var canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    
+    var ctx = canvas.getContext('2d');
+    var labels = months.map(function(m) { return formatYYYYMM(m); });
+    
+    teamPerfChartInstances[canvasId] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'focus_team',
+                    data: focusValues,
+                    backgroundColor: '#FF6B35',
+                    borderRadius: 6,
+                    maxBarThickness: 46
+                },
+                {
+                    label: 'mid-tier_team',
+                    data: midtierValues,
+                    backgroundColor: '#00D9A3',
+                    borderRadius: 6,
+                    maxBarThickness: 46
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: { top: 22 } },
+            plugins: {
+                legend: { display: true, position: 'bottom', labels: { usePointStyle: true, padding: 14 } },
+                barValueLabels: { formatter: function(v) { return v.toFixed(1) + ' MB'; }, stacked: true, color: '#fff', totals: true },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + ' MB';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    title: { display: true, text: 'GWP (MB)' },
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                },
+                x: { stacked: true, grid: { display: false } }
+            }
+        }
+    });
 }
 
 function renderDynTrendChart(canvasId, months, values, color, label) {
@@ -5210,8 +5850,10 @@ function renderDynDistChart(canvasId, teams, baseColor) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            layout: { padding: { top: 22 } },
             plugins: {
                 legend: { display: false },
+                barValueLabels: { formatter: function(v) { return v.toFixed(1); } },
                 tooltip: {
                     callbacks: {
                         label: function(context) {

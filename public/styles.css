@@ -499,19 +499,19 @@
             align-items: flex-start;
             gap: 1.5rem;
         }
-        
+
         .okr-card.horizontal-layout .kr-header {
-            flex: 1;
+            flex: 0 0 100%;
             min-width: 200px;
         }
-        
+
         .okr-card.horizontal-layout .kr-metrics {
-            flex: 1;
+            flex: 1 1 48%;
             margin-bottom: 0;
             min-width: 300px;
             gap: 2rem;
         }
-        
+
         .okr-card.horizontal-layout .kr-metric {
             flex: 0 0 auto;
             min-width: 120px;
@@ -521,10 +521,12 @@
             align-items: center;
             justify-content: center;
         }
-        
+
         .okr-card.horizontal-layout .progress-section {
-            flex-basis: 100%;
-            margin-top: 0.5rem;
+            flex: 1 1 48%;
+            min-width: 280px;
+            margin-top: 0;
+            align-self: center;
         }
         
         .kr-metric {
@@ -550,7 +552,7 @@
         }
         
         .kr-metric-value {
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             font-weight: 700;
             font-family: 'Google Sans Text', sans-serif;
             color: var(--primary);
@@ -652,7 +654,335 @@
         .progress-bar.low {
             background: #EF4444;  /* Red for low progress */
         }
-        
+
+        /* Stacked Monthly + YTD progress bars */
+        .progress-section .progress-block + .progress-block {
+            margin-top: 0.9rem;
+        }
+
+        .progress-block-head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 0.35rem;
+        }
+
+        .progress-block-label {
+            font-size: 1rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        .progress-block-meta {
+            display: flex;
+            align-items: baseline;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            text-align: right;
+        }
+
+        .progress-block-nums {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--primary);
+            font-family: 'Google Sans Text', sans-serif;
+            white-space: nowrap;
+        }
+
+        .progress-block-pct {
+            font-size: 1rem;
+            color: var(--text-muted);
+            text-align: right;
+        }
+
+        .progress-block .progress-bar-container {
+            margin-top: 0;
+        }
+
+        .progress-muted {
+            color: var(--text-muted);
+        }
+
+        .kr-fytarget .fy-unset {
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        /* "Set Full Year Targets" toolbar button */
+        .btn-set-targets {
+            padding: 0.55rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent, #FF6B35);
+            background: rgba(255, 107, 53, 0.08);
+            border: 1px solid rgba(255, 107, 53, 0.4);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+        .btn-set-targets:hover {
+            background: rgba(255, 107, 53, 0.16);
+        }
+
+        /* Settings tab */
+        .settings-card {
+            background: var(--card-bg, #fff);
+            border: 1px solid var(--border, #e2e8f0);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-sm);
+        }
+        .settings-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .settings-title {
+            margin: 0 0 0.35rem;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .settings-sub {
+            margin: 0;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            max-width: 640px;
+        }
+        .settings-empty {
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-muted);
+        }
+        .settings-table-wrap {
+            overflow-x: auto;
+        }
+        .settings-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+        .settings-table th {
+            text-align: left;
+            padding: 0.6rem 0.75rem;
+            border-bottom: 2px solid var(--border, #e2e8f0);
+            color: var(--text-muted);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .settings-table td {
+            padding: 0.55rem 0.75rem;
+            border-bottom: 1px solid var(--border, #eef2f7);
+        }
+        .settings-center { text-align: center; }
+        .settings-th-sub {
+            font-weight: 400;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-transform: none;
+        }
+        .settings-kr {
+            display: flex;
+            flex-direction: column;
+        }
+        .settings-kr-name { font-weight: 700; color: var(--primary); }
+        .settings-kr-title { font-size: 0.78rem; color: var(--text-muted); }
+        .settings-table input[type="checkbox"] {
+            width: 17px; height: 17px; cursor: pointer; accent-color: var(--accent, #FF6B35);
+        }
+        .settings-fy {
+            width: 150px;
+            padding: 0.35rem 0.5rem;
+            font-size: 0.85rem;
+            text-align: right;
+            border: 1px solid var(--border, #cbd5e1);
+            border-radius: 6px;
+            outline: none;
+        }
+        .settings-fy:focus { border-color: var(--accent, #FF6B35); }
+        .settings-fy:disabled { background: #f1f5f9; color: #94a3b8; }
+
+        /* Access-control chips */
+        .settings-emails {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 0.9rem;
+        }
+        .settings-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.3rem 0.6rem;
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: var(--primary);
+            background: var(--bg, #f1f5f9);
+            border: 1px solid var(--border, #e2e8f0);
+            border-radius: 999px;
+        }
+        .settings-chip.locked {
+            color: var(--text-muted);
+            border-style: dashed;
+        }
+        .settings-chip-x {
+            border: none;
+            background: none;
+            color: var(--text-muted);
+            font-size: 1.05rem;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0;
+        }
+        .settings-chip-x:hover { color: #ef4444; }
+        .settings-email-add {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .settings-email-add input {
+            flex: 0 1 320px;
+            padding: 0.5rem 0.7rem;
+            font-size: 0.875rem;
+            border: 1px solid var(--border, #cbd5e1);
+            border-radius: 8px;
+            outline: none;
+        }
+        .settings-email-add input:focus { border-color: var(--accent, #FF6B35); }
+
+        /* Bulk full-year-targets modal */
+        .fyt-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+
+        .fyt-modal {
+            background: var(--card-bg, #fff);
+            border-radius: 14px;
+            width: 100%;
+            max-width: 560px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .fyt-modal-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.1rem 1.4rem;
+            border-bottom: 1px solid var(--border, #e2e8f0);
+        }
+        .fyt-modal-head h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .fyt-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            line-height: 1;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .fyt-modal-sub {
+            padding: 0.75rem 1.4rem 0;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .fyt-modal-body {
+            padding: 0.75rem 1.4rem 1rem;
+            overflow-y: auto;
+        }
+
+        .fyt-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.55rem 0;
+            border-bottom: 1px solid var(--border, #eef2f7);
+        }
+        .fyt-row-label {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        .fyt-kr {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 0.9rem;
+        }
+        .fyt-title {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .fyt-input {
+            flex: 0 0 170px;
+            padding: 0.4rem 0.55rem;
+            font-size: 0.9rem;
+            font-family: 'Google Sans Text', sans-serif;
+            font-weight: 600;
+            text-align: right;
+            border: 1px solid var(--border, #cbd5e1);
+            border-radius: 8px;
+            outline: none;
+        }
+        .fyt-input:focus {
+            border-color: var(--accent, #FF6B35);
+        }
+
+        .fyt-modal-foot {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.6rem;
+            padding: 1rem 1.4rem;
+            border-top: 1px solid var(--border, #e2e8f0);
+        }
+        .fyt-modal-foot button {
+            padding: 0.5rem 1.2rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .fyt-cancel {
+            color: var(--text-muted);
+            background: var(--bg, #f8fafc);
+            border-color: var(--border, #e2e8f0);
+        }
+        .fyt-save {
+            color: #fff;
+            background: var(--accent, #FF6B35);
+        }
+        .fyt-save:disabled {
+            opacity: 0.6;
+            cursor: default;
+        }
+
         /* Data Table - Redesigned */
         .table-container {
             background: var(--card-bg);
@@ -1295,7 +1625,7 @@
 .kr-metric-value {
     margin-left: auto !important;
     margin-right: auto !important;
-    font-size: 1.5rem !important;
+    font-size: 1.25rem !important;
     font-weight: 700 !important;
 }
 

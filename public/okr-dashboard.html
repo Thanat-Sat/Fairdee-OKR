@@ -25,7 +25,7 @@
 
     <!-- Chart.js for visualizations -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="chart-value-labels.js?v=1779000000000"></script>
+    <script src="chart-value-labels.js?v=1782200000000"></script>
 
 
     <!-- jsPDF for PDF export -->
@@ -34,7 +34,7 @@
 
 
     <!-- External CSS -->
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=1781900000000">
 
 
     <style>
@@ -798,6 +798,7 @@
                 <button class="tab" onclick="switchTab(this, 'teamPerformance')">KAM Analysis</button>
                 <button class="tab" onclick="switchTab(this, 'fleetAnalysis')">Fleet Analysis</button>
                 <button class="tab" onclick="switchTab(this, 'actionItems')">Action Items</button>
+                <button class="tab" id="settingsTab" style="display: none;" onclick="switchTab(this, 'settings')">Settings</button>
             </div>
 
             <!-- Run Rate Controls (global — affects Cards, Table, and Monthly Progress views) -->
@@ -967,6 +968,11 @@
             </div>
 
 
+            <!-- Settings View (access-controlled) -->
+            <div class="tab-content" id="settings">
+                <div id="settingsContainer"></div>
+            </div>
+
             <!-- Fleet Analysis View -->
             <div class="tab-content" id="fleetAnalysis">
                 <div id="fleetAnalysisContainer">
@@ -1091,6 +1097,6 @@
     <!-- External JavaScript -->
     <script src="icons.js"></script>
     <script src="dashboard-copy.js?v=1778064200000"></script>
-    <script src="script.js?v=1779000000000"></script>
+    <script src="script.js?v=1782300000000"></script>
 </body>
 </html>

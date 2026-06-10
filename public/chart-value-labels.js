@@ -171,4 +171,68 @@
 
     Chart.register(plugin);
     window.PointValueLabelsPlugin = plugin;
+
+    // ------------------------------------------------------------------
+    // Bar value labels — draws the value above each bar. Opt-IN per chart
+    // via options.plugins.barValueLabels (so it never touches a bar chart
+    // that doesn't ask for it). Optional { formatter, color }.
+    // ------------------------------------------------------------------
+    const barPlugin = {
+        id: 'barValueLabels',
+        afterDatasetsDraw(chart, args, opts) {
+            if (chart.config.type !== 'bar') return;
+            if (!opts || opts.enabled === false) return; // opt-in
+            const { ctx } = chart;
+            const format = resolveFormatter(chart, opts);
+            const stacked = opts.stacked === true;
+            ctx.save();
+            ctx.font = "600 11px 'Google Sans Text', sans-serif";
+            ctx.fillStyle = opts.color || (stacked ? '#fff' : '#334155');
+            ctx.textAlign = 'center';
+            ctx.textBaseline = stacked ? 'middle' : 'bottom';
+            chart.data.datasets.forEach((ds, di) => {
+                const meta = chart.getDatasetMeta(di);
+                if (!meta || meta.hidden) return;
+                meta.data.forEach((el, i) => {
+                    const v = rawValue(ds.data[i]);
+                    if (!el || v === null || isNaN(v) || v === 0) return;
+                    if (stacked) {
+                        // Center the value inside its segment; skip segments too short to fit.
+                        const top = el.y, base = (el.base !== undefined ? el.base : el.y);
+                        if (Math.abs(base - top) < 14) return;
+                        ctx.fillText(format(v), el.x, (top + base) / 2);
+                    } else {
+                        ctx.fillText(format(v), el.x, el.y - 4);
+                    }
+                });
+            });
+
+            // Column total above each stacked bar (opt-in via opts.totals).
+            if (stacked && opts.totals) {
+                ctx.fillStyle = opts.totalColor || '#1e293b';
+                ctx.textBaseline = 'bottom';
+                ctx.font = "700 12px 'Google Sans Text', sans-serif";
+                const count = chart.data.labels ? chart.data.labels.length : 0;
+                for (let i = 0; i < count; i++) {
+                    let sum = 0, topY = Infinity, x = null;
+                    chart.data.datasets.forEach((ds, di) => {
+                        const meta = chart.getDatasetMeta(di);
+                        if (!meta || meta.hidden) return;
+                        const el = meta.data[i];
+                        const v = rawValue(ds.data[i]);
+                        if (!el || v === null || isNaN(v)) return;
+                        sum += v;
+                        if (el.y < topY) topY = el.y;
+                        x = el.x;
+                    });
+                    if (x === null || !isFinite(topY) || sum === 0) continue;
+                    ctx.fillText(format(sum), x, topY - 5);
+                }
+            }
+            ctx.restore();
+        }
+    };
+
+    Chart.register(barPlugin);
+    window.BarValueLabelsPlugin = barPlugin;
 })();

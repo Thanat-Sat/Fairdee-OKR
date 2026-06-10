@@ -473,12 +473,55 @@ class MLMUI {
 
     renderTable() {
         const lastSixMonths = this.dataProcessor.getLastNMonths(6);
-        
+
         // Render header
         this.renderTableHeader(lastSixMonths);
-        
+
         // Render body
         this.renderTableBody(lastSixMonths);
+
+        // Bar chart of each channel's monthly contribution (deferred so the canvas
+        // is laid out / visible before Chart.js measures it).
+        setTimeout(() => this.renderContributionChart(lastSixMonths), 60);
+    }
+
+    // Grouped bar chart: x = months, one bar per channel/team, value label above each bar.
+    renderContributionChart(months) {
+        const canvas = document.getElementById('mlmContributionChart');
+        if (!canvas || typeof Chart === 'undefined') return;
+
+        const dp = this.dataProcessor;
+        const labels = months.map(m => dp.formatMonthLabel(m));
+        const palette = ['#FF6B35', '#00D9A3', '#2563EB', '#F59E0B', '#8B5CF6',
+                         '#EC4899', '#10B981', '#6366F1', '#EF4444', '#14B8A6'];
+
+        const datasets = dp.teams.map((team, i) => ({
+            label: team,
+            data: months.map(m => ((dp.mlmData[team] && dp.mlmData[team][m]) || 0) / 1000000),
+            backgroundColor: palette[i % palette.length],
+            borderRadius: 6,
+            maxBarThickness: 46
+        }));
+
+        if (this.contributionChart) this.contributionChart.destroy();
+        this.contributionChart = new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: { labels: labels, datasets: datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: { top: 22 } },
+                plugins: {
+                    legend: { display: true, position: 'bottom', labels: { usePointStyle: true, padding: 14 } },
+                    barValueLabels: { formatter: (v) => v.toFixed(1) + ' MB', stacked: true, color: '#fff', totals: true },
+                    tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + c.parsed.y.toFixed(2) + ' MB' } }
+                },
+                scales: {
+                    y: { stacked: true, beginAtZero: true, title: { display: true, text: 'GWP (MB)' }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                    x: { stacked: true, grid: { display: false } }
+                }
+            }
+        });
     }
 
     renderTableHeader(months) {

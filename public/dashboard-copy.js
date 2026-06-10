@@ -160,10 +160,58 @@
         }
     }
 
+    // Temporarily unclip any scrollable containers inside the target so html2canvas
+    // captures the FULL content (all rows/columns), not just what's on screen.
+    // Returns a restore() function that puts the inline styles back exactly as they were.
+    function expandScrollContainers(target) {
+        const props = ['overflow', 'overflowX', 'overflowY', 'maxHeight', 'maxWidth', 'height', 'width', 'boxShadow'];
+        const inner = [...target.querySelectorAll('*')].filter(el => {
+            const style = window.getComputedStyle(el);
+            const scrolls = /(auto|scroll|hidden)/.test(style.overflow + style.overflowX + style.overflowY);
+            const clipped = el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1;
+            return scrolls && clipped;
+        });
+
+        // Always include the capture target itself, so its background/border wraps the
+        // full (now-unclipped) content instead of leaving a ghost frame behind it.
+        const candidates = [target, ...inner];
+
+        const saved = candidates.map(el => {
+            const original = {};
+            props.forEach(prop => { original[prop] = el.style[prop]; });
+            return { el, original };
+        });
+
+        saved.forEach(({ el }) => {
+            el.style.overflow = 'visible';
+            el.style.overflowX = 'visible';
+            el.style.overflowY = 'visible';
+            el.style.maxHeight = 'none';
+            el.style.maxWidth = 'none';
+            el.style.width = 'max-content';
+            el.style.height = 'auto';
+            // Drop the offset drop-shadow so it doesn't render as a frame in the snapshot.
+            el.style.boxShadow = 'none';
+        });
+
+        return function restore() {
+            saved.forEach(({ el, original }) => {
+                props.forEach(prop => { el.style[prop] = original[prop]; });
+            });
+        };
+    }
+
     async function copySnapshot(target, button) {
+        let restoreScroll = null;
         try {
             setButtonState(button, 'loading');
             const html2canvas = await loadHtml2Canvas();
+
+            // Unclip scroll containers and force a reflow so scrollWidth/scrollHeight
+            // reflect the full content before we measure and capture.
+            restoreScroll = expandScrollContainers(target);
+            void target.scrollWidth;
+
             const canvas = await html2canvas(target, {
                 backgroundColor: '#ffffff',
                 scale: Math.min(window.devicePixelRatio || 1, 2),
@@ -175,6 +223,9 @@
                 ignoreElements: el => el.classList?.contains('copy-snapshot-btn') ||
                     el.classList?.contains('copy-snapshot-floating')
             });
+
+            restoreScroll();
+            restoreScroll = null;
 
             const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
             if (!blob) throw new Error('Could not render snapshot');
@@ -189,6 +240,7 @@
             ]);
             setButtonState(button, 'done');
         } catch (error) {
+            if (restoreScroll) restoreScroll();
             console.error('Copy snapshot failed:', error);
             setButtonState(button, 'idle');
             alert(error.message || 'Could not copy this snapshot.');
