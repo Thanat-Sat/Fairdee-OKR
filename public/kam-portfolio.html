@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="assets/fairdee-favicon.png">
+    <title>KAM Portfolio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Text:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        :root {
+            --kp-orange: #FF6B35;
+            --kp-teal: #00D9A3;
+            --kp-slate: #64748B;
+            --kp-navy: #0A0E27;
+            --kp-border: #E8ECF0;
+        }
+        body { background: #FAFBFC; font-family: 'Google Sans Text', sans-serif; color: #0A0E27; margin: 0; }
+        .kp-wrap { padding: 1.5rem 2rem; max-width: 1500px; margin: 0 auto; }
+        .kp-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+        .kp-title { font-size: 1.5rem; font-weight: 800; margin: 0; color: var(--kp-navy); }
+        .kp-sub { color: #5F6C7B; font-size: 0.85rem; margin: 0.25rem 0 1.25rem; }
+        .kp-toolbar { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem; }
+        .kp-toolbar input[type="text"], .kp-toolbar select {
+            padding: 0.5rem 0.75rem; border: 1px solid var(--kp-border); border-radius: 8px;
+            font-family: inherit; font-size: 0.85rem; background: #fff; color: #0A0E27;
+        }
+        .kp-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-left: auto; }
+        .kp-chip { font-size: 0.78rem; font-weight: 700; padding: 0.35rem 0.7rem; border-radius: 999px; color: #fff; }
+        .kp-chip.focus { background: var(--kp-orange); }
+        .kp-chip.keyman { background: var(--kp-teal); color: #0A0E27; }
+        .kp-chip.non { background: var(--kp-slate); }
+        .kp-chip.unset { background: #CBD5E1; color: #334155; }
+        .kp-status { font-size: 0.8rem; font-weight: 600; min-height: 1.1em; }
+        .kp-status.saving { color: #B45309; }
+        .kp-status.saved { color: #047857; }
+        .kp-status.error { color: #B91C1C; }
+        .kp-card { background: #fff; border: 1px solid var(--kp-border); border-radius: 12px; box-shadow: 0 4px 12px rgba(10,14,39,0.06); overflow: auto; }
+        table.kp-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        table.kp-table thead { background: linear-gradient(135deg, #0A0E27 0%, #1A1F3A 100%); color: #fff; position: sticky; top: 0; z-index: 2; }
+        table.kp-table th { padding: 0.8rem 0.9rem; text-align: left; font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
+        table.kp-table th.num, table.kp-table td.num { text-align: right; font-family: 'Google Sans Text', monospace; }
+        table.kp-table td { padding: 0.6rem 0.9rem; border-bottom: 1px solid var(--kp-border); }
+        table.kp-table tbody tr:hover { background: #FAFBFC; }
+        tr.kp-group td { background: #EEF2F7; border-top: 2px solid #CBD5E1; border-bottom: 1px solid #CBD5E1; padding: 0.55rem 0.9rem; }
+        tr.kp-group:hover td { background: #EEF2F7; }
+        .kp-group-name { font-weight: 800; color: var(--kp-navy); font-size: 0.9rem; }
+        .kp-group-meta { color: #5F6C7B; font-size: 0.78rem; font-weight: 600; margin-left: 0.6rem; }
+        .kp-code { font-family: 'Google Sans Text', monospace; color: #5F6C7B; font-size: 0.82rem; }
+        .kp-pic-input, .kp-name-input { width: 130px; padding: 0.4rem 0.55rem; border: 1px solid var(--kp-border); border-radius: 7px; font-family: inherit; font-size: 0.82rem; background: #fff; }
+        .kp-name-input { width: 150px; font-weight: 600; }
+        .kp-pic-input:focus, .kp-name-input:focus { outline: 2px solid rgba(255,107,53,0.35); border-color: var(--kp-orange); }
+        .kp-seg-select { padding: 0.4rem 0.5rem; border: 1px solid var(--kp-border); border-radius: 7px; font-family: inherit; font-size: 0.82rem; background: #fff; font-weight: 600; }
+        .kp-seg-select[data-seg="FOCUS_KEYMAN"] { color: var(--kp-orange); border-color: var(--kp-orange); }
+        .kp-seg-select[data-seg="KEYMAN"] { color: #0e9c78; border-color: var(--kp-teal); }
+        .kp-seg-select[data-seg="NON_FOCUS"] { color: var(--kp-slate); border-color: var(--kp-slate); }
+        .kp-grade { display: inline-block; min-width: 1.5rem; text-align: center; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 6px; }
+        .kp-grade.A { background: #DCFCE7; color: #166534; }
+        .kp-grade.B { background: #DBEAFE; color: #1E40AF; }
+        .kp-grade.C { background: #FEF3C7; color: #92400E; }
+        .kp-grade.D { background: #FEE2E2; color: #991B1B; }
+        .kp-empty { padding: 2.5rem; text-align: center; color: #5F6C7B; }
+        .kp-loading { padding: 2.5rem; text-align: center; color: #5F6C7B; }
+        .kp-back { font-size: 0.85rem; color: #5F6C7B; text-decoration: none; }
+        .kp-header-bar { display: flex; align-items: center; justify-content: space-between; padding: 1rem 2rem; background: #fff; border-bottom: 1px solid var(--kp-border); }
+        .kp-header-bar img { height: 28px; }
+        .kp-rate-bad { color: #B91C1C; }
+        .kp-rate-ok { color: #047857; }
+    </style>
+</head>
+<body>
+    <!-- Light header (hidden when embedded in the KAM workspace iframe) -->
+    <div class="kp-header-bar" id="kpHeaderBar">
+        <img src="assets/fairdee-logo.png" alt="Fairdee">
+        <a href="index.html" class="kp-back">← Back to Hub</a>
+    </div>
+
+    <div class="kp-wrap">
+        <div class="kp-head">
+            <div>
+                <h1 class="kp-title">KAM Portfolio</h1>
+                <p class="kp-sub">Assign the PIC (person in charge) and segment for each KAM team. Changes save automatically.</p>
+            </div>
+            <div class="kp-chips" id="kpChips"></div>
+        </div>
+
+        <div class="kp-toolbar">
+            <input type="text" id="kpSearch" placeholder="Search code, name, or PIC…" autocomplete="off">
+            <select id="kpSegFilter">
+                <option value="">All segments</option>
+                <option value="FOCUS_KEYMAN">Focus Keyman</option>
+                <option value="KEYMAN">Keyman</option>
+                <option value="NON_FOCUS">Non-Keyman</option>
+                <option value="__UNSET__">Unassigned</option>
+            </select>
+            <span class="kp-status" id="kpStatus"></span>
+        </div>
+
+        <div class="kp-card">
+            <table class="kp-table">
+                <thead>
+                    <tr>
+                        <th>PIC</th>
+                        <th>Team Code</th>
+                        <th>Name</th>
+                        <th>Segment</th>
+                        <th class="num">Latest GWP</th>
+                        <th class="num">Target</th>
+                        <th class="num">Rate</th>
+                        <th>Grade</th>
+                        <th class="num">Active</th>
+                        <th class="num">Members</th>
+                        <th>Latest Month</th>
+                    </tr>
+                </thead>
+                <tbody id="kpBody">
+                    <tr><td colspan="11" class="kp-loading">Loading KAM portfolio…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <datalist id="kpPicList"></datalist>
+
+    <!-- Firebase + libs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+    <script>
+    (function () {
+        'use strict';
+
+        var SHEET_ID = '1M51L7xRu_Y8MRO5ziDVZ4pbWtqi0Mxb1-oJ6WyfwKU0';
+        var GID = '1419040956';
+        // Reuse the collection the app already has Firestore write access to, and
+        // namespace the portfolio docs inside it with a prefixed document id. This
+        // avoids needing a new security rule for a separate collection.
+        var COLLECTION = 'okr_settings';
+        var DOC_PREFIX = 'kam_portfolio__';
+
+        // Code -> display name (subset known; falls back to code)
+        var NAME_MAP = {
+            'FM-19867': 'ทรงวุฒิ', 'FM-19729': 'Jack', 'FM-21975': 'ถาวร', 'FM-21511': 'ตาล',
+            'FM-23437': 'คนอง', 'FM-19134': 'ประวิทย์', 'FM-23277': 'ปัน', 'FM-23273': 'เมธิชัย',
+            'FM-19119': 'คมกฤษณ์', 'FM-42800': 'บ๊วย', 'FM-28595': 'พิมพาภรณ์', 'FM-21461': 'ธนพร',
+            'FM-23332': 'ดิน', 'FM-20898': 'บิ๊ก'
+        };
+        var SEG_LABEL = { FOCUS_KEYMAN: 'Focus Keyman', KEYMAN: 'Keyman', NON_FOCUS: 'Non-Keyman' };
+
+        var rows = [];          // derived display rows for the selected month
+        var assignments = {};   // code -> {pic, segment}
+        var monthlyByCode = {}; // code -> { 'YYYY-MM': {gwp,target,rate,grade,active,members} }
+        var latestCompleteMonth = null;
+        var selMonth = null;    // selected month (YYYY-MM) from the workspace header
+        var rrEnabled = false, rrDay = null, rrMonth = null; // run-rate state
+
+        // Seed month + run-rate from the shared stores the header writes
+        (function () {
+            var sm = localStorage.getItem('dashboard_selected_month');
+            if (sm && /^\d{4}-\d{2}$/.test(sm)) selMonth = sm;
+            try {
+                var rr = JSON.parse(localStorage.getItem('fairdee_run_rate_v1') || '{}');
+                rrEnabled = !!rr.enabled;
+                if (rr.date && /^\d{4}-\d{2}-\d{2}$/.test(rr.date)) { rrDay = parseInt(rr.date.slice(8, 10), 10); rrMonth = rr.date.slice(0, 7); }
+            } catch (e) {}
+        })();
+
+        // React to the workspace header's universal controls
+        window.addEventListener('message', function (e) {
+            var d = e.data || {};
+            if (d.type === 'monthChange' && d.month) {
+                selMonth = d.month;
+                if (monthlyByCode && Object.keys(monthlyByCode).length) { deriveRows(); render(); }
+            } else if (d.type === 'runRateChange') {
+                rrEnabled = !!d.enabled; rrDay = parseInt(d.day, 10) || rrDay; rrMonth = d.month || rrMonth;
+                if (monthlyByCode && Object.keys(monthlyByCode).length) { deriveRows(); render(); }
+            }
+        });
+
+        // Hide the standalone header when embedded in the KAM workspace iframe
+        if (window.self !== window.top) {
+            var hb = document.getElementById('kpHeaderBar');
+            if (hb) hb.style.display = 'none';
+        }
+
+        function num(v) { return parseFloat(String(v == null ? '' : v).replace(/,/g, '')) || 0; }
+        function fmtMoney(v) { return v ? Math.round(v).toLocaleString('en-US') : '0'; }
+        function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+        function setStatus(kind, text) {
+            var el = document.getElementById('kpStatus');
+            el.className = 'kp-status ' + (kind || '');
+            el.textContent = text || '';
+        }
+
+        // ---- Load assignments from Firestore, then the sheet ----
+        function start() {
+            if (typeof db === 'undefined') { setTimeout(start, 100); return; }
+            db.collection(COLLECTION).get()
+                .then(function (snap) {
+                    snap.forEach(function (doc) {
+                        if (doc.id.indexOf(DOC_PREFIX) !== 0) return;
+                        assignments[doc.id.slice(DOC_PREFIX.length)] = doc.data() || {};
+                    });
+                })
+                .catch(function (e) { console.warn('Portfolio assignments load failed:', e); })
+                .finally(fetchSheet);
+        }
+
+        function fetchSheet() {
+            var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&gid=' + GID;
+            fetch(url)
+                .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+                .then(function (csv) {
+                    Papa.parse(csv, {
+                        header: true, skipEmptyLines: true,
+                        transformHeader: function (h) { return h.trim(); },
+                        complete: function (res) { processSheet(res.data); },
+                        error: function (err) { showError(err.message); }
+                    });
+                })
+                .catch(function (e) { showError(e.message); });
+        }
+
+        function yyyymmOf(ts) {
+            var d = new Date(ts);
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+        }
+
+        function processSheet(data) {
+            var now = new Date();
+            var curYM = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+            monthlyByCode = {};
+            var completeMonths = {};
+            data.forEach(function (r) {
+                var code = (r.team_anchor_code || '').trim();
+                if (!code) return;
+                var ts = Date.parse(r.month);
+                if (isNaN(ts)) return;
+                var ym = yyyymmOf(ts);
+                if (ym === curYM) return; // skip in-progress current month
+                completeMonths[ym] = true;
+                (monthlyByCode[code] = monthlyByCode[code] || {})[ym] = {
+                    code: code, ym: ym,
+                    gwp: num(r.gwp),
+                    target: num(r.gwp_target_amt),
+                    rate: num(r.rate_to_target_gwp),
+                    grade: (r.actual_score_grade || r.forecast_score_grade || '').trim(),
+                    active: num(r.active_agent),
+                    members: num(r.team_member)
+                };
+            });
+            latestCompleteMonth = Object.keys(completeMonths).sort().pop() || null;
+            if (!selMonth) selMonth = latestCompleteMonth;
+            deriveRows();
+            render();
+        }
+
+        // Pick each team's row for the selected month (or latest available ≤ it),
+        // and apply the run-rate projection when active for that month.
+        function deriveRows() {
+            var target = selMonth || latestCompleteMonth;
+            var factor = runRateFactor(target);
+            rows = Object.keys(monthlyByCode).map(function (code) {
+                var months = monthlyByCode[code];
+                var ym = months[target] ? target : Object.keys(months).filter(function (m) { return m <= target; }).sort().pop();
+                if (!ym) ym = Object.keys(months).sort().pop();
+                var src = months[ym];
+                var a = assignments[code] || {};
+                var gwp = src.gwp * (ym === target ? factor : 1);
+                var rate = src.target > 0 ? gwp / src.target : src.rate;
+                return {
+                    code: code, name: a.name || NAME_MAP[code] || '', pic: a.pic || '', segment: a.segment || '',
+                    gwp: gwp, gwpActual: src.gwp, projected: (ym === target && factor !== 1),
+                    target: src.target, rate: rate, grade: src.grade, active: src.active, members: src.members,
+                    monthLabel: formatYM(ym)
+                };
+            }).sort(function (a, b) { return b.gwp - a.gwp; });
+        }
+
+        function runRateFactor(ym) {
+            if (!rrEnabled || !ym || rrMonth !== ym) return 1;
+            var p = ym.split('-');
+            var dim = new Date(parseInt(p[0], 10), parseInt(p[1], 10), 0).getDate();
+            var elapsed = Math.max(0, Math.min((rrDay || 1) - 1, dim));
+            return elapsed > 0 ? dim / elapsed : 1;
+        }
+
+        function formatYM(ym) {
+            if (!ym) return '–';
+            var p = ym.split('-');
+            return new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, 1)
+                .toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        }
+
+        function showError(msg) {
+            document.getElementById('kpBody').innerHTML =
+                '<tr><td colspan="11" class="kp-empty">Could not load portfolio: ' + esc(msg) + '</td></tr>';
+        }
+
+        // ---- Render ----
+        function render() {
+            var q = (document.getElementById('kpSearch').value || '').toLowerCase().trim();
+            var segFilter = document.getElementById('kpSegFilter').value;
+            var body = document.getElementById('kpBody');
+
+            var visible = rows.filter(function (d) {
+                if (q && (d.code + ' ' + d.name + ' ' + d.pic).toLowerCase().indexOf(q) === -1) return false;
+                if (segFilter === '__UNSET__') return !d.segment;
+                if (segFilter) return d.segment === segFilter;
+                return true;
+            });
+
+            if (!visible.length) {
+                body.innerHTML = '<tr><td colspan="11" class="kp-empty">No teams match your filter.</td></tr>';
+            } else {
+                // Group rows by PIC; named PICs alphabetically, "No PIC" last
+                var groups = {};
+                visible.forEach(function (d) {
+                    var key = d.pic || '';
+                    (groups[key] = groups[key] || []).push(d);
+                });
+                var keys = Object.keys(groups).sort(function (a, b) {
+                    if (a === '') return 1;
+                    if (b === '') return -1;
+                    return a.toLowerCase() < b.toLowerCase() ? -1 : 1;
+                });
+                var SEG_ORDER = { FOCUS_KEYMAN: 0, KEYMAN: 1, NON_FOCUS: 2 };
+                body.innerHTML = keys.map(function (key) {
+                    var members = groups[key];
+                    // Within each PIC: Focus Keyman first, then Keyman, Non-Keyman, unset
+                    members.sort(function (a, b) {
+                        var pa = SEG_ORDER[a.segment] != null ? SEG_ORDER[a.segment] : 3;
+                        var pb = SEG_ORDER[b.segment] != null ? SEG_ORDER[b.segment] : 3;
+                        if (pa !== pb) return pa - pb;
+                        return b.gwp - a.gwp;
+                    });
+                    var total = members.reduce(function (s, d) { return s + d.gwp; }, 0);
+                    var head = '<tr class="kp-group"><td colspan="11">' +
+                        '<span class="kp-group-name">' + esc(key || 'No PIC assigned') + '</span>' +
+                        '<span class="kp-group-meta">' + members.length + ' team' + (members.length !== 1 ? 's' : '') +
+                        ' · GWP ' + fmtMoney(total) + '</span></td></tr>';
+                    return head + members.map(rowHtml).join('');
+                }).join('');
+            }
+
+            // Wire inputs
+            body.querySelectorAll('.kp-name-input').forEach(function (inp) {
+                inp.addEventListener('change', function () { onAssign(inp.dataset.code, { name: inp.value.trim() }); });
+            });
+            body.querySelectorAll('.kp-pic-input').forEach(function (inp) {
+                inp.addEventListener('change', function () { onAssign(inp.dataset.code, { pic: inp.value.trim() }); });
+            });
+            body.querySelectorAll('.kp-seg-select').forEach(function (sel) {
+                sel.addEventListener('change', function () {
+                    sel.setAttribute('data-seg', sel.value);
+                    onAssign(sel.dataset.code, { segment: sel.value });
+                });
+            });
+
+            updateChips();
+            updatePicList();
+        }
+
+        function rowHtml(d) {
+            var gradeBase = d.grade ? d.grade.charAt(0).toUpperCase() : '';
+            // Show only the base letter (A++ / A+ → A), keep full grade in tooltip
+            var grade = d.grade ? '<span class="kp-grade ' + gradeBase + '" title="' + esc(d.grade) + '">' + esc(gradeBase) + '</span>' : '–';
+            var rateCls = d.rate >= 0.9 ? 'kp-rate-ok' : (d.rate ? 'kp-rate-bad' : '');
+            var rate = d.rate ? '<span class="' + rateCls + '">' + (d.rate * 100).toFixed(0) + '%</span>' : '–';
+            // GWP cell: when projected, show actual struck through + projected in amber
+            var gwpCell = d.projected
+                ? '<span style="color:#94A3B8; text-decoration:line-through;">' + fmtMoney(d.gwpActual) + '</span> <span style="color:#E8A33D; font-weight:700;">' + fmtMoney(d.gwp) + '</span>'
+                : fmtMoney(d.gwp);
+            var segOpts = ['<option value="">—</option>'].concat(
+                Object.keys(SEG_LABEL).map(function (k) {
+                    return '<option value="' + k + '"' + (d.segment === k ? ' selected' : '') + '>' + SEG_LABEL[k] + '</option>';
+                })).join('');
+            return '<tr>' +
+                '<td><input class="kp-pic-input" list="kpPicList" data-code="' + esc(d.code) + '" value="' + esc(d.pic) + '" placeholder="Set PIC…"></td>' +
+                '<td class="kp-code">' + esc(d.code) + '</td>' +
+                '<td><input class="kp-name-input" data-code="' + esc(d.code) + '" value="' + esc(d.name) + '" placeholder="Set name…"></td>' +
+                '<td><select class="kp-seg-select" data-code="' + esc(d.code) + '" data-seg="' + esc(d.segment) + '">' + segOpts + '</select></td>' +
+                '<td class="num">' + gwpCell + '</td>' +
+                '<td class="num">' + (d.target ? fmtMoney(d.target) : '–') + '</td>' +
+                '<td class="num">' + rate + '</td>' +
+                '<td>' + grade + '</td>' +
+                '<td class="num">' + d.active + '</td>' +
+                '<td class="num">' + d.members + '</td>' +
+                '<td>' + esc(d.monthLabel) + '</td>' +
+                '</tr>';
+        }
+
+        function updateChips() {
+            var counts = { FOCUS_KEYMAN: 0, KEYMAN: 0, NON_FOCUS: 0, UNSET: 0 };
+            rows.forEach(function (d) { counts[d.segment || 'UNSET']++; });
+            document.getElementById('kpChips').innerHTML =
+                '<span class="kp-chip focus">Focus Keyman: ' + counts.FOCUS_KEYMAN + '</span>' +
+                '<span class="kp-chip keyman">Keyman: ' + counts.KEYMAN + '</span>' +
+                '<span class="kp-chip non">Non-Keyman: ' + counts.NON_FOCUS + '</span>' +
+                '<span class="kp-chip unset">Unassigned: ' + counts.UNSET + '</span>';
+        }
+
+        function updatePicList() {
+            var pics = {};
+            rows.forEach(function (d) { if (d.pic) pics[d.pic] = true; });
+            document.getElementById('kpPicList').innerHTML =
+                Object.keys(pics).sort().map(function (p) { return '<option value="' + esc(p) + '">'; }).join('');
+        }
+
+        // ---- Persist a single assignment ----
+        function onAssign(code, patch) {
+            var row = rows.find(function (d) { return d.code === code; });
+            if (!row) return;
+            if ('name' in patch) row.name = patch.name;
+            if ('pic' in patch) row.pic = patch.pic;
+            if ('segment' in patch) row.segment = patch.segment;
+            assignments[code] = Object.assign({}, assignments[code], patch);
+
+            updateChips();
+            updatePicList();
+            // Re-render when PIC changes (moves to new group) or segment changes
+            // (re-sorts within the group: Focus Keyman on top)
+            if ('pic' in patch || 'segment' in patch) setTimeout(render, 0);
+
+            setStatus('saving', 'Saving ' + code + '…');
+            db.collection(COLLECTION).doc(DOC_PREFIX + code).set({
+                name: row.name || '',
+                pic: row.pic || '',
+                segment: row.segment || '',
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true })
+                .then(function () { setStatus('saved', 'Saved ' + code); setTimeout(function () { setStatus('', ''); }, 1500); })
+                .catch(function (e) { setStatus('error', 'Save failed: ' + e.message); });
+        }
+
+        document.getElementById('kpSearch').addEventListener('input', render);
+        document.getElementById('kpSegFilter').addEventListener('change', render);
+
+        start();
+    })();
+    </script>
+</body>
+</html>

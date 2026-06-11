@@ -25,7 +25,7 @@
 
     <!-- Chart.js for visualizations -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="chart-value-labels.js?v=1782200000000"></script>
+    <script src="chart-value-labels.js?v=1786000900000"></script>
 
 
     <!-- jsPDF for PDF export -->
@@ -638,6 +638,54 @@
     </style>
 </head>
 <body>
+    <!-- Embed mode (?embed=kam): show ONLY the KAM Analysis tab content, hide the
+         dashboard chrome (header, filters, tab bar, other tabs) so it can be framed
+         inside the KAM workspace. The Google Sheets toast banner is kept. -->
+    <style>
+        body.embed-mode #userBar,
+        body.embed-mode .filter-section,
+        body.embed-mode .tabs,
+        body.embed-mode #uploadSection,
+        body.embed-mode #authLoadingOverlay,
+        body.embed-mode #executiveSummary,
+        body.embed-mode #krStatusSection,
+        body.embed-mode #goalHighlights,
+        body.embed-mode #runRateControls,
+        body.embed-mode .teamPerfTopControls { display: none !important; }
+        body.embed-mode .tab-content { display: none !important; }
+        body.embed-mode #teamPerformance { display: block !important; }
+        body.embed-mode .container { padding-top: 1rem !important; }
+    </style>
+    <script>
+        (function () {
+            var params = new URLSearchParams(window.location.search);
+            if (params.get('embed') !== 'kam') return;
+            document.body.classList.add('embed-mode');
+            // The KAM tab is shown via CSS, so switchTab() never runs and never
+            // triggers the segmentation chart draw. Force it once data is in and
+            // the frame is laid out. Keep polling until the sheet fetch finishes,
+            // then render twice (covers any late layout settle) and stop.
+            var rendered = 0;
+            function tryRenderSeg() {
+                if (typeof refreshSegContributionChart === 'function' && window.segContribData) {
+                    refreshSegContributionChart();
+                    rendered++;
+                    return rendered >= 2; // render once more after data lands, then stop
+                }
+                return false;
+            }
+            function startPolling() {
+                var tries = 0;
+                var timer = setInterval(function () {
+                    tries++;
+                    if (tryRenderSeg() || tries > 60) clearInterval(timer);
+                }, 400);
+            }
+            if (document.readyState === 'complete') startPolling();
+            else window.addEventListener('load', startPolling);
+        })();
+    </script>
+
     <!-- Auth Loading Overlay - shown until Firebase confirms login -->
     <div id="authLoadingOverlay" class="auth-loading-overlay">
         <div class="auth-loading-content">
@@ -961,6 +1009,22 @@
                     </div>
                     <!-- Dynamic content rendered here after upload -->
                     <div id="teamPerfDynamicContent" style="display: none;"></div>
+
+                    <!-- Contribution GWP (Segmentation) — auto-fetched from Google Sheets.
+                         Sits under the Mid-Tier Team Performance Detail table. -->
+                    <div id="segContributionSection" style="margin-top: 2.5rem;">
+                        <div style="background: var(--card-bg); border-radius: 12px; padding: 1.5rem 2rem; box-shadow: var(--shadow-md); border: 1px solid var(--border); margin-bottom: 1.5rem;">
+                            <div style="margin-bottom: 0.5rem;">
+                                <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--primary); margin: 0;">Contribution GWP (Segmentation)</h2>
+                            </div>
+                            <!-- Hidden: fetch progress is shown via the global toast (Fetching Google Sheets · X of N) -->
+                            <div id="segContribStatus" class="upload-status" style="display: none;"></div>
+                            <div style="position: relative; height: 440px;">
+                                <canvas id="segContributionChart"></canvas>
+                            </div>
+                        </div>
+                        <div id="segContributionTableContainer"></div>
+                    </div>
                 </div>
             </div>
             <div class="tab-content" id="actionItems">
@@ -984,11 +1048,6 @@
                 </div>
             </div>
 
-
-            <!-- Reset Button -->
-            <div style="text-align: center; margin-top: 2rem;">
-                <button class="btn-reset" onclick="resetDashboard()">Upload New Files</button>
-            </div>
         </div>
     </div>
 
@@ -1097,6 +1156,6 @@
     <!-- External JavaScript -->
     <script src="icons.js"></script>
     <script src="dashboard-copy.js?v=1778064200000"></script>
-    <script src="script.js?v=1782300000000"></script>
+    <script src="script.js?v=1786001300000"></script>
 </body>
 </html>

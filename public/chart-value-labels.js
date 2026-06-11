@@ -193,6 +193,7 @@
             chart.data.datasets.forEach((ds, di) => {
                 const meta = chart.getDatasetMeta(di);
                 if (!meta || meta.hidden) return;
+                if (ds._skipValueLabel) return; // opt-out per dataset
                 meta.data.forEach((el, i) => {
                     const v = rawValue(ds.data[i]);
                     if (!el || v === null || isNaN(v) || v === 0) return;

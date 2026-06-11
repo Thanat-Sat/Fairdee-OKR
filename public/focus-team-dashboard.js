@@ -465,6 +465,7 @@ class FocusTeamUI {
         if (window.globalRunRate && window.globalRunRate.subscribe) {
             window.globalRunRate.subscribe(() => {
                 syncFromGlobal();
+                this.renderTable();
                 this.renderTierCharts();
             });
         }
@@ -773,6 +774,12 @@ class FocusTeamUI {
         console.log('=== RENDERING FOCUS TEAM TABLE ===');
         console.log('Months to render:', months);
 
+        // Run-rate state (shared store) — project the current month's actuals
+        const rr = (window.globalRunRate && window.globalRunRate.get) ? window.globalRunRate.get() : null;
+        const rrParsed = (rr && rr.enabled && window.globalRunRate.parseDate) ? window.globalRunRate.parseDate(rr.date) : null;
+        const rrMonthKey = rrParsed ? rrParsed.monthKey : null;
+        const rrDay = rrParsed ? rrParsed.day : null;
+
         this.dataProcessor.teams.forEach((team, index) => {
             const row = document.createElement('tr');
             row.style.backgroundColor = index % 2 === 0 ? 'white' : '#f8fafc';
@@ -807,9 +814,16 @@ class FocusTeamUI {
             row.appendChild(tdCode);
             
             // Monthly data
+            const monthActuals = {};
             months.forEach(month => {
                 const target = this.dataProcessor.getTarget(month, team.code);
-                const actual = this.dataProcessor.teamData[team.code]?.[month] || 0;
+                let actual = this.dataProcessor.teamData[team.code]?.[month] || 0;
+                let isProjected = false;
+                if (rrMonthKey && month === rrMonthKey && rrDay) {
+                    const projected = this.calcRunRate(actual, rrDay, this.getDaysInMonth(month));
+                    if (projected != null) { actual = projected; isProjected = true; }
+                }
+                monthActuals[month] = actual;
                 const percentage = this.dataProcessor.calculatePercentage(actual, target);
                 
                 // Target cell
@@ -830,9 +844,10 @@ class FocusTeamUI {
                 
                 const actualDiv = document.createElement('div');
                 actualDiv.textContent = this.formatNumber(actual);
-                actualDiv.style.color = '#1e293b';
-                actualDiv.style.fontWeight = '600';
+                actualDiv.style.color = isProjected ? '#EA580C' : '#1e293b';
+                actualDiv.style.fontWeight = isProjected ? '700' : '600';
                 actualDiv.style.fontSize = '0.95rem';
+                if (isProjected) actualDiv.title = 'Run rate projected (day ' + rrDay + ')';
                 tdActual.appendChild(actualDiv);
                 
                 if (target) {
@@ -855,9 +870,13 @@ class FocusTeamUI {
                 row.appendChild(tdActual);
             });
             
-            // Growth
-            const growth = months.length >= 2 ? 
+            // Growth (uses projected actuals when run rate is on)
+            let growth = months.length >= 2 ?
                 this.dataProcessor.calculateGrowth(months[1], months[0], team.code) : null;
+            if (growth !== null && rrMonthKey) {
+                const prev = monthActuals[months[0]], cur = monthActuals[months[1]];
+                growth = (prev > 0) ? ((cur - prev) / prev) * 100 : null;
+            }
             const tdGrowth = document.createElement('td');
             tdGrowth.textContent = this.formatPercentage(growth);
             tdGrowth.style.padding = '14px 12px';
@@ -1149,10 +1168,14 @@ window.addEventListener('dashboardDataUpdated', function(event) {
     }
 });
 
-// Listen for month changes from parent frame
+// Listen for month / run-rate changes from the KAM workspace header
 window.addEventListener('message', function(event) {
-    if (event.data && event.data.type === 'monthChange' && focusTeamUI) {
+    var d = event.data || {};
+    if (d.type === 'monthChange' && focusTeamUI) {
         focusTeamUI.render();
+    } else if (d.type === 'runRateChange' && window.globalRunRate) {
+        // Drive the shared run-rate store; the subscribe re-renders the tier charts
+        window.globalRunRate.set({ enabled: !!d.enabled, date: d.date || window.globalRunRate.get().date });
     }
 });
 

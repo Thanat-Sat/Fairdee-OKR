@@ -155,13 +155,14 @@ let selectedMonth = ''; // Currently selected month
 // LOADING PROGRESS TRACKER
 // ========================================
 let _loadedCount = 0;
-const _totalSources = 5;
+const _totalSources = 6;
 const _sheetFetchStatusIds = [
     'dataFileStatus',
     'firstTransactingStatus',
     'earlyRetentionStatus',
     'teamPerfFileStatusMain',
-    'fleetFetchStatus'
+    'fleetFetchStatus',
+    'segContribStatus'
 ];
 
 function _formatSyncTime(date) {
@@ -753,6 +754,10 @@ function switchTab(button, tabId) {
     document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
     button.classList.add('active');
     document.getElementById(tabId).classList.add('active');
+    // Charts created while a tab is hidden render at zero size — redraw on show.
+    if (tabId === 'teamPerformance' && typeof refreshSegContributionChart === 'function') {
+        setTimeout(refreshSegContributionChart, 50);
+    }
 }
 
 // Render all views
@@ -1598,6 +1603,28 @@ function computeRunRateProjection(row, displayedMonth) {
     };
 }
 
+// Convert a run-rate month label ("June, 2026") to YYYY-MM ("2026-06")
+function monthLabelToYYYYMM(label) {
+    if (!label) return '';
+    const d = new Date(String(label).replace(', ', ' 1, '));
+    if (isNaN(d.getTime())) return '';
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+
+// Run-rate projection factor for a team-performance month (YYYY-MM). Returns 1
+// (no projection) unless run rate is enabled AND this is the picked month.
+// Projects partial-month actuals to a full month: daysInMonth / elapsed.
+function teamPerfRunRateFactor(yyyymm) {
+    if (!runRateState.enabled || !yyyymm) return 1;
+    if (monthLabelToYYYYMM(runRateState.month) !== yyyymm) return 1;
+    const parts = yyyymm.split('-');
+    const dim = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10), 0).getDate();
+    const day = Math.max(1, parseInt(runRateState.day, 10) || 1);
+    const elapsed = Math.max(0, Math.min(day - 1, dim)); // data lags 1 day
+    if (elapsed <= 0) return 1;
+    return dim / elapsed;
+}
+
 function setupRunRateControls() {
     const panel = document.getElementById('runRateControls');
     const checkbox = document.getElementById('runRateCheckbox');
@@ -1646,6 +1673,10 @@ function setupRunRateControls() {
         renderMonthlyProgress();
         if (typeof renderOKRCards === 'function') renderOKRCards();
         if (typeof renderDataTable === 'function') renderDataTable();
+        // KAM Analysis (team performance) cards/charts also respond to run rate
+        if (typeof renderTeamPerformanceDynamic === 'function' && teamPerfRawData && teamPerfRawData.length) {
+            renderTeamPerformanceDynamic();
+        }
     };
 
     if (!panel.dataset.bound) {
@@ -4364,7 +4395,7 @@ function resetDashboard() {
     var textEl = document.getElementById('dataLoadingText');
     if (bar) bar.style.display = 'flex';
     if (fill) fill.style.width = '0%';
-    if (countEl) countEl.textContent = '0 / 5';
+    if (countEl) countEl.textContent = '0 / ' + _totalSources;
     if (textEl) textEl.textContent = 'Fetching data from Google Sheets...';
     _setOkrSheetSyncStatus('loading', 'Fetching Google Sheets...');
     _setOkrProgressBanner('show', 'Fetching Google Sheets · 0 of ' + _totalSources, 0);
@@ -4375,6 +4406,7 @@ function resetDashboard() {
     fetchEarlyRetentionData();
     fetchTeamPerfData();
     fetchFleetData();
+    fetchSegmentationContribution();
 }
 
 // ========================================
@@ -5460,7 +5492,14 @@ function renderTeamPerformanceDynamic() {
     // Convert to sorted arrays
     var focusArr = Object.values(focusTeams).sort(function(a, b) { return b.gwp - a.gwp; });
     var midtierArr = Object.values(midtierTeams).sort(function(a, b) { return b.gwp - a.gwp; });
-    
+
+    // Run rate: project the selected (partial) month's GWP to a full month.
+    var rrFactor = teamPerfRunRateFactor(selectedYYYYMM);
+    if (rrFactor !== 1) {
+        focusArr.forEach(function(t) { t.gwp *= rrFactor; });
+        midtierArr.forEach(function(t) { t.gwp *= rrFactor; });
+    }
+
     var totalFocusGwp = focusArr.reduce(function(s, t) { return s + t.gwp; }, 0);
     var totalMidtierGwp = midtierArr.reduce(function(s, t) { return s + t.gwp; }, 0);
     var totalActiveAgentFocus = focusArr.reduce(function(s, t) { return s + t.activeAgent; }, 0);
@@ -5504,8 +5543,19 @@ function renderTeamPerformanceDynamic() {
         focusTrend.push(fTotal / 1000000);
         midtierTrend.push(mTotal / 1000000);
     });
-    
-    var displayMonth = formatYYYYMM(selectedYYYYMM);
+
+    // focusTrend/midtierTrend stay ACTUAL. For the line charts we use projected
+    // copies (current month scaled); the contribution bar chart shows actual +
+    // a separate run-rate uplift segment.
+    var focusTrendProj = focusTrend.slice();
+    var midtierTrendProj = midtierTrend.slice();
+    if (rrFactor !== 1 && focusTrendProj.length) {
+        focusTrendProj[focusTrendProj.length - 1] *= rrFactor;
+        midtierTrendProj[midtierTrendProj.length - 1] *= rrFactor;
+    }
+
+    var displayMonth = formatYYYYMM(selectedYYYYMM) + (rrFactor !== 1 ? ' · Run rate' : '');
+    var rrTag = rrFactor !== 1 ? ' <span style="color: #EA580C; font-weight: 700; font-size: 0.8em;">(Run Rate)</span>' : '';
     var focusGwpMB = (totalFocusGwp / 1000000).toFixed(2);
     var midtierGwpMB = (totalMidtierGwp / 1000000).toFixed(2);
     
@@ -5513,7 +5563,7 @@ function renderTeamPerformanceDynamic() {
     var html = '';
     
     // Re-upload button + month selector
-    html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">';
+    html += '<div class="teamPerfTopControls" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">';
     html += '<div style="display: flex; align-items: center; gap: 1rem;">';
     html += '<label style="font-weight: 600; font-size: 0.875rem; color: var(--text-primary); display: inline-flex; align-items: center; gap: 0.4rem;"><span style="display: inline-flex;">' + ((window.ICONS && window.ICONS.calendar) || '') + '</span> View Month:</label>';
     html += '<select id="teamPerfMonthSelect" onchange="onTeamPerfMonthChange()" class="filter-select month-select" style="width: auto; min-width: 180px;">';
@@ -5525,13 +5575,34 @@ function renderTeamPerformanceDynamic() {
     html += '</div>';
     html += '<button class="btn-reset" onclick="resetTeamPerfData()" style="font-size: 0.85rem; padding: 0.5rem 1rem; display: inline-flex; align-items: center; gap: 0.4rem;"><span style="display: inline-flex;">' + ((window.ICONS && window.ICONS.folder) || '') + '</span> Upload New Team Data</button>';
     html += '</div>';
-    
+
+    // Run rate active banner — make the projection obvious in the visualization
+    if (rrFactor !== 1) {
+        var rrDim = new Date(parseInt(selectedYYYYMM.split('-')[0], 10), parseInt(selectedYYYYMM.split('-')[1], 10), 0).getDate();
+        var rrDay = Math.max(1, parseInt(runRateState.day, 10) || 1);
+        html += '<div style="display: flex; align-items: center; gap: 0.6rem; background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 10px; padding: 0.7rem 1.1rem; margin-bottom: 1.5rem; color: #9A3412; font-weight: 600; font-size: 0.875rem;">' +
+            '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EA580C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>' +
+            'Run Rate projection active — ' + formatYYYYMM(selectedYYYYMM) + ' figures projected to full month ' +
+            '(day ' + rrDay + ' of ' + rrDim + ', ×' + rrFactor.toFixed(2) + '). GWP cards, tables &amp; charts show projected values.' +
+            '</div>';
+    }
+
+    // Metric card GWP value — when run rate is on, show actual-to-date struck
+    // through + the projected value in amber (same style as the detail tables).
+    function metricGwpValue(projGwpMB) {
+        if (rrFactor === 1) return '<div class="metric-value">' + projGwpMB + ' MB</div>';
+        var actualMB = (parseFloat(projGwpMB) / rrFactor).toFixed(2);
+        return '<div class="metric-value">' +
+            '<span style="color: #94A3B8; text-decoration: line-through; font-weight: 500; font-size: 0.6em;">' + actualMB + '</span> ' +
+            '<span style="color: #E8A33D;">' + projGwpMB + ' MB</span></div>';
+    }
+
     // Metrics cards
     html += '<div class="metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">';
-    
+
     html += '<div class="metric-card">';
     html += '<div class="metric-label">Focus Team GWP</div>';
-    html += '<div class="metric-value">' + focusGwpMB + ' MB</div>';
+    html += metricGwpValue(focusGwpMB);
     html += '<div class="metric-subtitle">' + displayMonth;
     if (focusChange !== 0) {
         var changeClass = focusChange >= 0 ? 'positive' : '';
@@ -5542,7 +5613,7 @@ function renderTeamPerformanceDynamic() {
     
     html += '<div class="metric-card">';
     html += '<div class="metric-label">Mid-Tier GWP</div>';
-    html += '<div class="metric-value">' + midtierGwpMB + ' MB</div>';
+    html += metricGwpValue(midtierGwpMB);
     html += '<div class="metric-subtitle">' + displayMonth;
     if (midtierChange !== 0) {
         var mChangeClass = midtierChange >= 0 ? 'positive' : '';
@@ -5568,7 +5639,7 @@ function renderTeamPerformanceDynamic() {
     // Monthly contribution stacked chart
     html += '<div class="chart-section" style="margin-bottom: 2rem;">';
     html += '<div class="chart-card">';
-    html += '<h3 class="chart-title">Monthly Contribution by Channel</h3>';
+    html += '<h3 class="chart-title">Monthly Contribution by Channel' + rrTag + '</h3>';
     html += '<div style="position: relative; height: 380px;"><canvas id="dynKamContributionChart"></canvas></div>';
     html += '</div>';
     html += '</div>';
@@ -5577,12 +5648,12 @@ function renderTeamPerformanceDynamic() {
     html += '<div class="chart-section" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">';
     
     html += '<div class="chart-card">';
-    html += '<h3 class="chart-title">Focus Team GWP Trend (Last 6 Months)</h3>';
+    html += '<h3 class="chart-title">Focus Team GWP Trend (Last 6 Months)' + rrTag + '</h3>';
     html += '<div style="position: relative; height: 350px;"><canvas id="dynFocusTrendChart"></canvas></div>';
     html += '</div>';
     
     html += '<div class="chart-card">';
-    html += '<h3 class="chart-title">Mid-Tier GWP Trend (Last 6 Months)</h3>';
+    html += '<h3 class="chart-title">Mid-Tier GWP Trend (Last 6 Months)' + rrTag + '</h3>';
     html += '<div style="position: relative; height: 350px;"><canvas id="dynMidtierTrendChart"></canvas></div>';
     html += '</div>';
     
@@ -5644,22 +5715,22 @@ function renderTeamPerformanceDynamic() {
     html += '</div>';
     
     // Focus Teams Detail Table
-    html += buildTeamTable('Focus Team Performance Detail - ' + displayMonth, focusArr, totalFocusGwp);
-    
+    html += buildTeamTable('Focus Team Performance Detail - ' + displayMonth, focusArr, totalFocusGwp, rrFactor);
+
     // Mid-Tier Teams Detail Table
     if (midtierArr.length > 0) {
-        html += buildTeamTable('Mid-Tier Team Performance Detail - ' + displayMonth, midtierArr, totalMidtierGwp);
+        html += buildTeamTable('Mid-Tier Team Performance Detail - ' + displayMonth, midtierArr, totalMidtierGwp, rrFactor);
     }
     
     dynamicContent.innerHTML = html;
     
     // Render charts after DOM update
     setTimeout(function() {
-        renderDynContributionChart('dynKamContributionChart', trendMonths, focusTrend, midtierTrend);
-        renderDynTrendChart('dynFocusTrendChart', trendMonths, focusTrend, '#FF6B35', 'Focus Team GWP');
-        renderDynTrendChart('dynMidtierTrendChart', trendMonths, midtierTrend, '#00D9A3', 'Mid-Tier GWP');
-        renderDynDistChart('dynFocusDistChart', focusArr, '#FF6B35');
-        renderDynDistChart('dynMidtierDistChart', midtierArr, '#00D9A3');
+        renderDynContributionChart('dynKamContributionChart', trendMonths, focusTrend, midtierTrend, rrFactor);
+        renderDynTrendChart('dynFocusTrendChart', trendMonths, focusTrendProj, '#FF6B35', 'Focus Team GWP', rrFactor !== 1);
+        renderDynTrendChart('dynMidtierTrendChart', trendMonths, midtierTrendProj, '#00D9A3', 'Mid-Tier GWP', rrFactor !== 1);
+        renderDynDistChart('dynFocusDistChart', focusArr, '#FF6B35', rrFactor);
+        renderDynDistChart('dynMidtierDistChart', midtierArr, '#00D9A3', rrFactor);
     }, 100);
 }
 
@@ -5670,25 +5741,43 @@ function buildHighlightItem(num, content) {
         '</div>';
 }
 
-function buildTeamTable(title, teams, totalGwp) {
+function buildTeamTable(title, teams, totalGwp, rrFactor) {
+    var hasRR = rrFactor && rrFactor !== 1;
     var html = '<div class="table-section" style="background: var(--card-bg); border-radius: 12px; padding: 2rem; box-shadow: var(--shadow-md); border: 1px solid var(--border); overflow-x: auto; margin-bottom: 2rem;">';
-    html += '<h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 1rem; color: var(--primary);">' + title + '</h2>';
+    html += '<h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: ' + (hasRR ? '0.4rem' : '1rem') + '; color: var(--primary);">' + title + '</h2>';
+    if (hasRR) {
+        html += '<div style="display: inline-flex; align-items: center; gap: 0.4rem; background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 8px; padding: 0.35rem 0.7rem; margin-bottom: 1rem; color: #9A3412; font-size: 0.8rem; font-weight: 600;">' +
+            '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#EA580C" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>' +
+            'GWP projected to full month via run rate (×' + rrFactor.toFixed(2) + ') — actual-to-date = GWP ÷ ' + rrFactor.toFixed(2) + '</div>';
+    }
     html += '<table class="data-table"><thead><tr>';
-    html += '<th>Rank</th><th>Team Name</th><th>Code</th><th>Province</th><th>GWP (MB)</th><th>Active Agents</th><th>Sales</th><th>GWP/Agent</th><th>% of Total</th>';
+    html += '<th>Rank</th><th>Team Name</th><th>Code</th><th>Province</th><th>GWP (MB)' + (hasRR ? ' *' : '') + '</th><th>Active Agents</th><th>Sales</th><th>GWP/Agent</th><th>% of Total</th>';
     html += '</tr></thead><tbody>';
     
+    // GWP cell: when run-rate is on, show actual-to-date struck through + the
+    // projected value in amber so it's clear the headline number is a projection.
+    function gwpCell(projectedGwp) {
+        var projMB = (projectedGwp / 1000000).toFixed(2);
+        if (!hasRR) {
+            return '<td style="font-family: \'Google Sans Text\', monospace; font-weight: 600; color: var(--accent);">' + projMB + ' MB</td>';
+        }
+        var actualMB = (projectedGwp / rrFactor / 1000000).toFixed(2);
+        return '<td style="font-family: \'Google Sans Text\', monospace; white-space: nowrap;">' +
+            '<span style="color: #94A3B8; text-decoration: line-through; font-weight: 500;">' + actualMB + '</span> ' +
+            '<span style="color: #E8A33D; font-weight: 700;">' + projMB + ' MB</span></td>';
+    }
+
     teams.forEach(function(team, idx) {
         var name = agentNameMap[team.code] || team.code;
-        var gwpMB = (team.gwp / 1000000).toFixed(2);
         var pct = totalGwp > 0 ? (team.gwp / totalGwp * 100).toFixed(1) : '0.0';
         var gwpPerAgent = team.activeAgent > 0 ? (team.gwp / team.activeAgent).toFixed(0) : 'N/A';
-        
+
         html += '<tr>';
         html += '<td>' + (idx + 1) + '</td>';
         html += '<td style="font-weight: 600; color: var(--text-primary);">' + name + '</td>';
         html += '<td style="font-family: \'Google Sans Text\', monospace; font-size: 0.85rem; color: var(--text-secondary);">' + team.code + '</td>';
         html += '<td>' + team.province + '</td>';
-        html += '<td style="font-family: \'Google Sans Text\', monospace; font-weight: 600; color: var(--accent);">' + gwpMB + ' MB</td>';
+        html += gwpCell(team.gwp);
         html += '<td style="font-family: \'Google Sans Text\', monospace;">' + team.activeAgent.toLocaleString() + '</td>';
         html += '<td style="font-family: \'Google Sans Text\', monospace;">' + team.sales.toLocaleString() + '</td>';
         html += '<td style="font-family: \'Google Sans Text\', monospace;">' + (gwpPerAgent === 'N/A' ? gwpPerAgent : parseFloat(gwpPerAgent).toLocaleString()) + '</td>';
@@ -5697,12 +5786,11 @@ function buildTeamTable(title, teams, totalGwp) {
     });
     
     // Total row
-    var totalGwpMB = (totalGwp / 1000000).toFixed(2);
     var totalAgents = teams.reduce(function(s, t) { return s + t.activeAgent; }, 0);
     var totalSales = teams.reduce(function(s, t) { return s + t.sales; }, 0);
     html += '<tr style="background: var(--bg); font-weight: 700; border-top: 2px solid var(--accent);">';
     html += '<td></td><td>Total</td><td></td><td></td>';
-    html += '<td style="font-family: \'Google Sans Text\', monospace; color: var(--accent);">' + totalGwpMB + ' MB</td>';
+    html += gwpCell(totalGwp);
     html += '<td style="font-family: \'Google Sans Text\', monospace;">' + totalAgents.toLocaleString() + '</td>';
     html += '<td style="font-family: \'Google Sans Text\', monospace;">' + totalSales.toLocaleString() + '</td>';
     html += '<td></td><td>100%</td>';
@@ -5712,45 +5800,73 @@ function buildTeamTable(title, teams, totalGwp) {
     return html;
 }
 
-function renderDynContributionChart(canvasId, months, focusValues, midtierValues) {
+// Diagonal-hatched yellow pattern used to mark run-rate-projected portions.
+function makeRunRateHatch(ctx) {
+    try {
+        var c = document.createElement('canvas');
+        c.width = 8; c.height = 8;
+        var cx = c.getContext('2d');
+        cx.fillStyle = '#FCE6A8';          // light yellow base
+        cx.fillRect(0, 0, 8, 8);
+        cx.strokeStyle = '#E8A33D';        // amber stripes
+        cx.lineWidth = 2;
+        cx.beginPath(); cx.moveTo(0, 8); cx.lineTo(8, 0);
+        cx.moveTo(-2, 2); cx.lineTo(2, -2);
+        cx.moveTo(6, 10); cx.lineTo(10, 6); cx.stroke();
+        return ctx.createPattern(c, 'repeat') || '#F4C66B';
+    } catch (e) {
+        return '#F4C66B'; // solid amber fallback
+    }
+}
+
+function renderDynContributionChart(canvasId, months, focusValues, midtierValues, rrFactor) {
     var canvas = document.getElementById(canvasId);
     if (!canvas) return;
-    
+
     var ctx = canvas.getContext('2d');
     var labels = months.map(function(m) { return formatYYYYMM(m); });
-    
+
+    // Run-rate uplift = projected growth on the current (last) month only.
+    var lastIdx = months.length - 1;
+    var hasUplift = rrFactor && rrFactor !== 1 && lastIdx >= 0;
+    var uplift = months.map(function(_, i) {
+        if (!hasUplift || i !== lastIdx) return 0;
+        return (focusValues[i] + midtierValues[i]) * (rrFactor - 1);
+    });
+
+    var datasets = [
+        { label: 'focus_team', data: focusValues, backgroundColor: '#FF6B35', borderRadius: 4, maxBarThickness: 46 },
+        { label: 'mid-tier_team', data: midtierValues, backgroundColor: '#00D9A3', borderRadius: 4, maxBarThickness: 46 }
+    ];
+    if (hasUplift) {
+        datasets.push({
+            label: 'Run rate (projected)',
+            data: uplift,
+            backgroundColor: makeRunRateHatch(ctx),
+            borderColor: '#E8A33D',
+            borderWidth: { top: 2, left: 0, right: 0, bottom: 0 },
+            borderRadius: 4,
+            maxBarThickness: 46,
+            _skipValueLabel: true
+        });
+    }
+
     teamPerfChartInstances[canvasId] = new Chart(ctx, {
         type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'focus_team',
-                    data: focusValues,
-                    backgroundColor: '#FF6B35',
-                    borderRadius: 6,
-                    maxBarThickness: 46
-                },
-                {
-                    label: 'mid-tier_team',
-                    data: midtierValues,
-                    backgroundColor: '#00D9A3',
-                    borderRadius: 6,
-                    maxBarThickness: 46
-                }
-            ]
-        },
+        data: { labels: labels, datasets: datasets },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            layout: { padding: { top: 22 } },
+            layout: { padding: { top: 26 } },
             plugins: {
                 legend: { display: true, position: 'bottom', labels: { usePointStyle: true, padding: 14 } },
                 barValueLabels: { formatter: function(v) { return v.toFixed(1) + ' MB'; }, stacked: true, color: '#fff', totals: true },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + ' MB';
+                            var lbl = context.dataset.label === 'Run rate (projected)'
+                                ? 'Run rate uplift' : context.dataset.label;
+                            return lbl + ': ' + context.parsed.y.toFixed(2) + ' MB';
                         }
                     }
                 }
@@ -5768,13 +5884,18 @@ function renderDynContributionChart(canvasId, months, focusValues, midtierValues
     });
 }
 
-function renderDynTrendChart(canvasId, months, values, color, label) {
+function renderDynTrendChart(canvasId, months, values, color, label, projected) {
     var canvas = document.getElementById(canvasId);
     if (!canvas) return;
-    
+
     var ctx = canvas.getContext('2d');
     var labels = months.map(function(m) { return formatYYYYMMShort(m); });
-    
+    var lastIdx = values.length - 1;
+    var rrColor = '#E8A33D';
+    // When the current month is run-rate-projected, mark its point yellow and
+    // draw the final (projected) segment dashed yellow.
+    var pointColors = values.map(function(_, i) { return (projected && i === lastIdx) ? rrColor : color; });
+
     teamPerfChartInstances[canvasId] = new Chart(ctx, {
         type: 'line',
         data: {
@@ -5789,9 +5910,13 @@ function renderDynTrendChart(canvasId, months, values, color, label) {
                 tension: 0.4,
                 pointRadius: 5,
                 pointHoverRadius: 7,
-                pointBackgroundColor: color,
+                pointBackgroundColor: pointColors,
                 pointBorderColor: '#fff',
-                pointBorderWidth: 2
+                pointBorderWidth: 2,
+                segment: projected ? {
+                    borderColor: function(c) { return c.p1DataIndex === lastIdx ? rrColor : color; },
+                    borderDash: function(c) { return c.p1DataIndex === lastIdx ? [6, 5] : undefined; }
+                } : undefined
             }]
         },
         options: {
@@ -5801,7 +5926,10 @@ function renderDynTrendChart(canvasId, months, values, color, label) {
                 legend: { display: true, position: 'bottom', labels: { usePointStyle: true, padding: 15 } },
                 tooltip: {
                     callbacks: {
-                        label: function(context) { return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + ' MB'; }
+                        label: function(context) {
+                            var suffix = (projected && context.dataIndex === lastIdx) ? ' (run rate projected)' : '';
+                            return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + ' MB' + suffix;
+                        }
                     }
                 }
             },
@@ -5818,50 +5946,69 @@ function renderDynTrendChart(canvasId, months, values, color, label) {
     });
 }
 
-function renderDynDistChart(canvasId, teams, baseColor) {
+function renderDynDistChart(canvasId, teams, baseColor, rrFactor) {
     var canvas = document.getElementById(canvasId);
     if (!canvas) return;
-    
+
     var ctx = canvas.getContext('2d');
     var topTeams = teams.slice(0, 10);
     var labels = topTeams.map(function(t) { return agentNameMap[t.code] || t.code; });
-    var data = topTeams.map(function(t) { return (t.gwp / 1000000); });
-    
+    var hasUplift = rrFactor && rrFactor !== 1;
+
+    // Split each team's (already projected) GWP into actual-to-date + run-rate uplift.
+    var actual = topTeams.map(function(t) { var mb = t.gwp / 1000000; return hasUplift ? mb / rrFactor : mb; });
+    var uplift = topTeams.map(function(t) { var mb = t.gwp / 1000000; return hasUplift ? mb - mb / rrFactor : 0; });
+
     // Generate gradient colors
     var colors = topTeams.map(function(_, i) {
         var opacity = 0.9 - (i * 0.06);
         if (opacity < 0.3) opacity = 0.3;
         return baseColor + Math.round(opacity * 255).toString(16).padStart(2, '0');
     });
-    
+
+    var datasets = [{
+        label: 'GWP (MB)',
+        data: actual,
+        backgroundColor: colors,
+        borderColor: baseColor,
+        borderWidth: 2,
+        borderRadius: hasUplift ? 0 : 8
+    }];
+    if (hasUplift) {
+        datasets.push({
+            label: 'Run rate (projected)',
+            data: uplift,
+            backgroundColor: makeRunRateHatch(ctx),
+            borderColor: '#E8A33D',
+            borderWidth: 1,
+            borderRadius: 6,
+            _skipValueLabel: true
+        });
+    }
+
     teamPerfChartInstances[canvasId] = new Chart(ctx, {
         type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'GWP (MB)',
-                data: data,
-                backgroundColor: colors,
-                borderColor: baseColor,
-                borderWidth: 2,
-                borderRadius: 8
-            }]
-        },
+        data: { labels: labels, datasets: datasets },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             layout: { padding: { top: 22 } },
             plugins: {
                 legend: { display: false },
-                barValueLabels: { formatter: function(v) { return v.toFixed(1); } },
+                barValueLabels: hasUplift
+                    ? { formatter: function(v) { return v.toFixed(1); }, stacked: true, color: '#fff', totals: true, totalColor: '#334155' }
+                    : { formatter: function(v) { return v.toFixed(1); } },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
                             var team = topTeams[context.dataIndex];
+                            if (context.dataset.label === 'Run rate (projected)') {
+                                return 'Run rate uplift: +' + context.parsed.y.toFixed(2) + ' MB';
+                            }
                             return [
                                 'Team: ' + (agentNameMap[team.code] || team.code),
                                 'Province: ' + team.province,
-                                'GWP: ' + (team.gwp / 1000000).toFixed(2) + ' MB'
+                                (hasUplift ? 'Actual to date: ' : 'GWP: ') + context.parsed.y.toFixed(2) + ' MB'
                             ];
                         }
                     }
@@ -5869,11 +6016,12 @@ function renderDynDistChart(canvasId, teams, baseColor) {
             },
             scales: {
                 y: {
+                    stacked: hasUplift,
                     beginAtZero: true,
                     title: { display: true, text: 'GWP (MB)' },
                     grid: { color: 'rgba(0,0,0,0.05)' }
                 },
-                x: { grid: { display: false }, ticks: { maxRotation: 45, minRotation: 0 } }
+                x: { stacked: hasUplift, grid: { display: false }, ticks: { maxRotation: 45, minRotation: 0 } }
             }
         }
     });
@@ -6731,9 +6879,314 @@ function renderFleetChart(months, targets, actuals, currentMonthIdx, scaleFactor
 
 console.log('✅ Fleet Analysis module loaded');
 
+/* ============================================================================
+   Contribution GWP (Segmentation) — KAM Analysis tab
+   Stacked-bar chart + detailed table (Month / %Growth / %Contribution),
+   auto-fetched from the segmentation tab of the OKR Google Sheet.
+   ============================================================================ */
+var segContribData = null; // cached { months, byMonth } for lazy chart redraw
+var segContribChartInstance = null; // dedicated holder — NOT in teamPerfChartInstances,
+                                    // which renderTeamPerformanceDynamic wipes wholesale
+var SEG_CONTRIB_SHEET_ID = '1M51L7xRu_Y8MRO5ziDVZ4pbWtqi0Mxb1-oJ6WyfwKU0';
+var SEG_CONTRIB_GID = '251006707';
+var SEG_CONTRIB_MONTHS = 6; // how many recent (complete) months to show
+
+// owner_type -> display config (order = stack order, bottom to top).
+// Colors follow the dashboard theme: orange accent / teal success / neutral slate.
+var SEG_TYPES = [
+    { key: 'NON_FOCUS',    label: 'Non-Keyman',   color: '#64748B', textColor: '#ffffff' },
+    { key: 'KEYMAN',       label: 'Keyman',       color: '#00D9A3', textColor: '#0A0E27' },
+    { key: 'FOCUS_KEYMAN', label: 'Focus Keyman', color: '#FF6B35', textColor: '#ffffff' }
+];
+
+function segFmtMoney(v) { return Math.round(v).toLocaleString('en-US'); }
+function segFmtM(v) { return (v / 1e6).toFixed(1) + 'M'; }
+function segFmtPct(v) { return (v === null || isNaN(v)) ? '–' : v.toFixed(2) + '%'; }
+function segCurrentYYYYMM() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+
+function fetchSegmentationContribution() {
+    var csvUrl = 'https://docs.google.com/spreadsheets/d/' + SEG_CONTRIB_SHEET_ID +
+        '/export?format=csv&gid=' + SEG_CONTRIB_GID;
+    showUploadStatus('segContribStatus', 'loading', 'Fetching segmentation data from Google Sheets...');
+    fetch(csvUrl)
+        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+        .then(function(csvText) {
+            Papa.parse(csvText, {
+                header: true, skipEmptyLines: true,
+                transformHeader: function(h) { return h.trim(); },
+                complete: function(results) { _processSegContribResults(results); },
+                error: function(err) { showUploadStatus('segContribStatus', 'error', '' + err.message); _markSourceLoaded(); }
+            });
+        })
+        .catch(function(err) { showUploadStatus('segContribStatus', 'error', '' + err.message); _markSourceLoaded(); });
+}
+
+function _processSegContribResults(results) {
+    // Aggregate gwp by month -> owner_type
+    var byMonth = {}; // { '2026-05': { FOCUS_KEYMAN: n, KEYMAN: n, NON_FOCUS: n } }
+    results.data.forEach(function(row) {
+        var month = (row.month || '').trim();
+        var type = (row.owner_type || '').trim().toUpperCase();
+        if (!month || !type) return;
+        var gwp = parseFloat(String(row.gwp || '0').replace(/,/g, '')) || 0;
+        if (!byMonth[month]) byMonth[month] = {};
+        byMonth[month][type] = (byMonth[month][type] || 0) + gwp;
+    });
+
+    // Recent complete months only (exclude the in-progress current calendar month)
+    var current = segCurrentYYYYMM();
+    var months = Object.keys(byMonth).filter(function(m) { return m !== current; }).sort();
+    months = months.slice(-SEG_CONTRIB_MONTHS);
+
+    if (months.length === 0) {
+        showUploadStatus('segContribStatus', 'error', 'No segmentation rows found in sheet');
+        _markSourceLoaded();
+        return;
+    }
+
+    showUploadStatus('segContribStatus', 'success', 'Loaded ' + months.length + ' months (through ' + formatYYYYMM(months[months.length - 1]) + ')');
+    _markSourceLoaded();
+    segContribData = { months: months, byMonth: byMonth };
+    renderSegContributionTable(months, byMonth); // table first — always shows
+    renderSegContributionChart(months, byMonth); // chart may be blank until tab visible
+}
+
+// Re-draw the segmentation chart with the cached data. Called when the KAM
+// Analysis tab becomes visible, since a chart created while the tab is
+// display:none renders into a zero-size canvas.
+function refreshSegContributionChart() {
+    if (!segContribData) return;
+    // Recreate from scratch (renderSegContributionChart destroys any existing
+    // instance first) so the canvas sizes to the now-visible container. Force the
+    // draw — this is only called when the tab is meant to be visible (switchTab, or
+    // embed mode), and offsetParent can misreport inside an iframe.
+    renderSegContributionChart(segContribData.months, segContribData.byMonth, true);
+}
+
+function renderSegContributionChart(months, byMonth, force) {
+    var canvas = document.getElementById('segContributionChart');
+    if (!canvas) return;
+    // Skip rendering while the tab is hidden (zero-size container) — a chart built
+    // then gets an oversized canvas that overflows the card. The switchTab hook
+    // (refreshSegContributionChart) renders it once the tab becomes visible, passing
+    // force=true to bypass this guard (offsetParent is unreliable inside iframes).
+    if (!force && canvas.offsetParent === null) return;
+    if (segContribChartInstance) {
+        segContribChartInstance.destroy();
+    }
+
+    var totals = months.map(function(m) {
+        return SEG_TYPES.reduce(function(s, t) { return s + (byMonth[m][t.key] || 0); }, 0);
+    });
+
+    // Two-line x labels: "May 2026" / "Σ 144.6M"
+    var labels = months.map(function(m, i) { return [formatYYYYMM(m), 'Total ' + segFmtM(totals[i])]; });
+
+    var datasets = SEG_TYPES.map(function(t) {
+        return {
+            label: t.label,
+            data: months.map(function(m) { return byMonth[m][t.key] || 0; }),
+            backgroundColor: t.color,
+            _textColor: t.textColor,
+            borderRadius: 4,
+            maxBarThickness: 70
+        };
+    });
+
+    // Inline plugin: per-segment values (M) + month-over-month %growth above each bar
+    var segLabelsPlugin = {
+        id: 'segLabels',
+        afterDatasetsDraw: function(chart) {
+            var ctx = chart.ctx;
+            ctx.save();
+            // Segment values
+            ctx.font = "600 11px 'Google Sans Text', sans-serif";
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            chart.data.datasets.forEach(function(ds, di) {
+                var meta = chart.getDatasetMeta(di);
+                if (!meta || meta.hidden) return;
+                ctx.fillStyle = ds._textColor || '#334155';
+                meta.data.forEach(function(el, i) {
+                    var v = ds.data[i];
+                    if (!el || !v) return;
+                    var top = el.y, base = (el.base !== undefined ? el.base : el.y);
+                    if (Math.abs(base - top) < 16) return; // too short to label
+                    ctx.fillText(segFmtM(v), el.x, (top + base) / 2);
+                });
+            });
+            // %Growth above each bar (total MoM)
+            ctx.font = "700 13px 'Google Sans Text', sans-serif";
+            ctx.textBaseline = 'bottom';
+            var count = chart.data.labels.length;
+            for (var i = 0; i < count; i++) {
+                var sum = 0, topY = Infinity, x = null;
+                chart.data.datasets.forEach(function(ds, di) {
+                    var meta = chart.getDatasetMeta(di);
+                    if (!meta || meta.hidden) return;
+                    var el = meta.data[i];
+                    if (!el) return;
+                    sum += ds.data[i] || 0;
+                    if (el.y < topY) topY = el.y;
+                    x = el.x;
+                });
+                if (x === null || !isFinite(topY) || i === 0) continue;
+                var prev = 0;
+                chart.data.datasets.forEach(function(ds) { prev += ds.data[i - 1] || 0; });
+                if (prev <= 0) continue;
+                var growth = (sum - prev) / prev * 100;
+                ctx.fillStyle = growth >= 0 ? '#2e9e5b' : '#d64545';
+                ctx.fillText((growth >= 0 ? '+' : '') + growth.toFixed(1) + '%', x, topY - 6);
+            }
+            ctx.restore();
+        }
+    };
+
+    segContribChartInstance = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: { labels: labels, datasets: datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: { top: 30 } },
+            plugins: {
+                legend: { display: true, position: 'top', reverse: true, labels: { usePointStyle: true, padding: 16, boxWidth: 10 } },
+                barValueLabels: { enabled: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(c) { return c.dataset.label + ': ' + segFmtMoney(c.parsed.y); }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    stacked: true, beginAtZero: true,
+                    ticks: { callback: function(v) { return segFmtM(v); } },
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                },
+                x: { stacked: true, grid: { display: false }, ticks: { font: { weight: '600' } } }
+            }
+        },
+        plugins: [segLabelsPlugin]
+    });
+}
+
+function renderSegContributionTable(months, byMonth) {
+    var container = document.getElementById('segContributionTableContainer');
+    if (!container) return;
+
+    var n = months.length;
+    var monthShort = months.map(function(m) { return formatYYYYMMShort(m); });
+    var totals = months.map(function(m) {
+        return SEG_TYPES.reduce(function(s, t) { return s + (byMonth[m][t.key] || 0); }, 0);
+    });
+
+    // Display rows ordered top-of-stack first (Focus Keyman, Keyman, Non-Keyman)
+    var rowTypes = SEG_TYPES.slice().reverse();
+
+    var html = '<div class="table-section" style="background: var(--card-bg); border-radius: 12px; padding: 1.5rem 2rem; box-shadow: var(--shadow-md); border: 1px solid var(--border); overflow-x: auto;">';
+    html += '<table class="data-table" style="font-size: 0.85rem;">';
+
+    // Group header row
+    html += '<thead><tr>';
+    html += '<th rowspan="2" style="vertical-align: middle; background: var(--primary); color: #fff;">Agent Type</th>';
+    html += '<th colspan="' + n + '" style="text-align: center; background: var(--primary); color: #fff;">Month</th>';
+    html += '<th colspan="' + (n - 1) + '" style="text-align: center; background: #FF6B35; color: #fff;">%Growth</th>';
+    html += '<th colspan="' + n + '" style="text-align: center; background: #00D9A3; color: #0A0E27;">%Contribution</th>';
+    html += '</tr><tr>';
+    monthShort.forEach(function(m) { html += '<th style="text-align: right; background: #1A1F3A; color: #fff;">' + m + '</th>'; });
+    monthShort.slice(1).forEach(function(m) { html += '<th style="text-align: right; background: #FF8C5E; color: #fff;">' + m + '</th>'; });
+    monthShort.forEach(function(m) { html += '<th style="text-align: right; background: #33E0B5; color: #0A0E27;">' + m + '</th>'; });
+    html += '</tr></thead><tbody>';
+
+    rowTypes.forEach(function(t) {
+        var vals = months.map(function(m) { return byMonth[m][t.key] || 0; });
+        html += '<tr>';
+        html += '<td style="font-weight: 600; color: var(--text-primary);">' + t.label + '</td>';
+        // Month values
+        vals.forEach(function(v) {
+            html += '<td style="text-align: right; font-family: \'Google Sans Text\', monospace;">' + segFmtMoney(v) + '</td>';
+        });
+        // %Growth (MoM)
+        for (var i = 1; i < n; i++) {
+            var g = vals[i - 1] > 0 ? (vals[i] - vals[i - 1]) / vals[i - 1] * 100 : null;
+            var gc = g === null ? 'var(--text-secondary)' : (g >= 0 ? '#2e9e5b' : '#d64545');
+            html += '<td style="text-align: right; font-family: \'Google Sans Text\', monospace; color: ' + gc + ';">' + segFmtPct(g) + '</td>';
+        }
+        // %Contribution
+        vals.forEach(function(v, i) {
+            var pct = totals[i] > 0 ? v / totals[i] * 100 : 0;
+            html += '<td style="text-align: right; font-family: \'Google Sans Text\', monospace;">' + pct.toFixed(2) + '%</td>';
+        });
+        html += '</tr>';
+    });
+
+    // Grand Total row
+    html += '<tr style="background: var(--bg); font-weight: 700; border-top: 2px solid var(--accent);">';
+    html += '<td>Grand Total</td>';
+    totals.forEach(function(v) {
+        html += '<td style="text-align: right; font-family: \'Google Sans Text\', monospace;">' + segFmtMoney(v) + '</td>';
+    });
+    for (var i = 1; i < n; i++) {
+        var g = totals[i - 1] > 0 ? (totals[i] - totals[i - 1]) / totals[i - 1] * 100 : null;
+        var gc = g === null ? 'var(--text-secondary)' : (g >= 0 ? '#2e9e5b' : '#d64545');
+        html += '<td style="text-align: right; font-family: \'Google Sans Text\', monospace; color: ' + gc + ';">' + segFmtPct(g) + '</td>';
+    }
+    months.forEach(function() {
+        html += '<td style="text-align: right; font-family: \'Google Sans Text\', monospace;">100%</td>';
+    });
+    html += '</tr>';
+
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+}
+
+console.log('✅ Segmentation Contribution module loaded');
+
+// ---- Universal controls bridge (KAM workspace header drives this embed) ----
+function yyyymmToMonthLabel(yyyymm) {
+    var p = String(yyyymm).split('-');
+    var names = ['January', 'February', 'March', 'April', 'May', 'June',
+                 'July', 'August', 'September', 'October', 'November', 'December'];
+    var idx = parseInt(p[1], 10) - 1;
+    if (idx < 0 || idx > 11 || !p[0]) return '';
+    return names[idx] + ', ' + p[0];
+}
+function _reRenderTeamPerf() {
+    if (typeof renderTeamPerformanceDynamic === 'function' && teamPerfRawData && teamPerfRawData.length) {
+        renderTeamPerformanceDynamic();
+    }
+}
+window.addEventListener('message', function (e) {
+    var d = e.data || {};
+    if (d.type === 'monthChange' && d.month) {
+        var label = yyyymmToMonthLabel(d.month);
+        if (!label) return;
+        selectedMonth = label;
+        runRateState.month = label;
+        var mf = document.getElementById('monthFilter');
+        if (mf) { for (var i = 0; i < mf.options.length; i++) { if (mf.options[i].value === label) { mf.value = label; break; } } }
+        _reRenderTeamPerf();
+    } else if (d.type === 'runRateChange') {
+        runRateState.enabled = !!d.enabled;
+        if (d.day) runRateState.day = parseInt(d.day, 10) || runRateState.day;
+        if (d.month) { var lbl = yyyymmToMonthLabel(d.month); if (lbl) runRateState.month = lbl; }
+        // keep the (hidden) internal panel in sync
+        var cb = document.getElementById('runRateCheckbox'); if (cb) cb.checked = runRateState.enabled;
+        var di = document.getElementById('runRateDayInput'); if (di) di.value = runRateState.day;
+        var ms = document.getElementById('runRateMonthSelect'); if (ms && runRateState.month) ms.value = runRateState.month;
+        var panel = document.getElementById('runRateControls'); if (panel) panel.dataset.active = String(runRateState.enabled);
+        _reRenderTeamPerf();
+    }
+});
+
 // Auto-fetch all data on page load
 fetchOKRSheetData();
 fetchFirstTransactingData();
 fetchEarlyRetentionData();
 fetchTeamPerfData();
 fetchFleetData();
+fetchSegmentationContribution();

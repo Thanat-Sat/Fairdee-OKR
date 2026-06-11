@@ -131,6 +131,17 @@
             box-shadow: 0 8px 24px rgba(6, 182, 212, 0.3);
         }
 
+        .hub-card-icon.kam {
+            background: linear-gradient(135deg, #EC4899 0%, #DB2777 100%);
+            box-shadow: 0 8px 24px rgba(236, 72, 153, 0.3);
+        }
+
+        .hub-card-icon.taskflow {
+            background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+            box-shadow: 0 8px 24px rgba(245, 158, 11, 0.3);
+        }
+
+
         .hub-card-title {
             font-size: 1.25rem;
             font-weight: 700;
@@ -187,6 +198,25 @@
             background: rgba(6, 182, 212, 0.25);
             color: #22D3EE;
         }
+
+        .hub-card.kam:hover .hub-card-arrow {
+            background: rgba(236, 72, 153, 0.25);
+            color: #F472B6;
+        }
+
+        .hub-card.kam:hover {
+            border-color: rgba(236, 72, 153, 0.5);
+        }
+
+        .hub-card.taskflow:hover .hub-card-arrow {
+            background: rgba(245, 158, 11, 0.25);
+            color: #FBBF24;
+        }
+
+        .hub-card.taskflow:hover {
+            border-color: rgba(245, 158, 11, 0.5);
+        }
+
 
         .hub-footer {
             margin-top: 3rem;
@@ -273,6 +303,25 @@
             </div>
         </a>
 
+        <a class="hub-card kam" href="kam-dashboard.html">
+            <div class="hub-card-icon kam" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+            </div>
+            <div class="hub-card-title">KAM</div>
+            <p class="hub-card-desc">KAM team performance — every visualization from KAM Analysis and the Focus Team Performance dashboard in one workspace.</p>
+            <div class="hub-card-arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <path d="M5 12h14"></path>
+                    <path d="m13 6 6 6-6 6"></path>
+                </svg>
+            </div>
+        </a>
+
         <a class="hub-card mm" href="mm.html">
             <div class="hub-card-icon mm" aria-hidden="true">
                 <svg viewBox="0 0 24 24">
@@ -333,6 +382,25 @@
                 </svg>
             </div>
         </a>
+
+        <a class="hub-card taskflow" href="https://taskflow-be186.web.app/" target="_blank" rel="noopener">
+            <div class="hub-card-icon taskflow" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <rect x="8" y="2" width="8" height="4" rx="1"></rect>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                    <path d="m9 13 2 2 4-4"></path>
+                </svg>
+            </div>
+            <div class="hub-card-title">TaskFlow</div>
+            <p class="hub-card-desc">Plan, assign, and track tasks and workflows for the team.</p>
+            <div class="hub-card-arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <path d="M5 12h14"></path>
+                    <path d="m13 6 6 6-6 6"></path>
+                </svg>
+            </div>
+        </a>
+
     </div>
 
     <div class="hub-footer">
