@@ -1,0 +1,48 @@
+rules_version = '2';
+
+// =====================================================================
+// Firestore rules for the Fairdee data project: fairdee-monthly-metr
+// (this is the project in public/firebase-config.js — NOT fairdee-okr)
+//
+// Deploy with:
+//   firebase deploy --only firestore:rules --project fairdee-monthly-metr
+// or paste into Firebase Console → Firestore Database → Rules.
+// =====================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Any signed-in @fairdee.co.th account
+    function isFairdee() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email.matches('.*@fairdee[.]co[.]th$');
+    }
+
+    // Hub admins — can manage the Central Hub cards & folders
+    function isHubAdmin() {
+      return isFairdee() && request.auth.token.email in [
+        'thanat.s@fairdee.co.th',
+        'nichakan@fairdee.co.th'
+      ];
+    }
+
+    // ---- Central Hub cards & folders ----
+    // Everyone at Fairdee sees the same cards; only admins can change them.
+    match /hubItems/{itemId} {
+      allow read:  if isFairdee();
+      allow write: if isHubAdmin();
+    }
+
+    // ---- User profiles ----
+    match /users/{uid} {
+      allow read:  if isFairdee();
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // ---- Monthly Metrics targets ----
+    match /targets/{targetId} {
+      allow read, write: if isFairdee();
+    }
+  }
+}

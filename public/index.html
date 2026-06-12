@@ -54,8 +54,8 @@
 
         .hub-cards {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
             max-width: 1320px;
             width: 100%;
         }
@@ -63,8 +63,8 @@
         .hub-card {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 2.5rem 2rem;
+            border-radius: 16px;
+            padding: 1.75rem 1.25rem;
             text-decoration: none;
             cursor: pointer;
             transition: all 0.25s ease;
@@ -84,25 +84,25 @@
 
         .hub-card:hover {
             background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 107, 53, 0.5);
+            border-color: var(--accent, rgba(255, 107, 53, 0.5));
             transform: translateY(-4px);
             box-shadow: 0 20px 48px rgba(0, 0, 0, 0.3);
         }
 
         .hub-card-icon {
-            width: 72px;
-            height: 72px;
-            border-radius: 18px;
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
             color: #fff;
         }
 
         .hub-card-icon svg {
-            width: 34px;
-            height: 34px;
+            width: 26px;
+            height: 26px;
             display: block;
             fill: none;
             stroke: currentColor;
@@ -143,10 +143,10 @@
 
 
         .hub-card-title {
-            font-size: 1.25rem;
+            font-size: 1rem;
             font-weight: 700;
             color: #fff;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.5rem;
         }
 
         .hub-card-desc {
@@ -156,9 +156,9 @@
         }
 
         .hub-card-arrow {
-            margin-top: 1.75rem;
-            width: 36px;
-            height: 36px;
+            margin-top: 1rem;
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.08);
             display: flex;
@@ -268,6 +268,150 @@
             animation: spin 0.8s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ===== Dynamic hub: accent-driven hover ===== */
+        .hub-card:hover .hub-card-arrow {
+            background: var(--accent-soft, rgba(255, 107, 53, 0.25));
+            color: var(--accent, #FF6B35);
+        }
+
+        /* ===== Admin toolbar ===== */
+        .hub-toolbar {
+            display: flex;
+            gap: 0.75rem;
+            margin: 0 0 1.25rem;
+            width: 100%;
+            max-width: 1320px;
+            justify-content: flex-end;
+        }
+        .hub-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.75);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+        .hub-btn:hover { border-color: rgba(255, 107, 53, 0.5); color: #FF6B35; }
+        .hub-btn.primary {
+            background: linear-gradient(135deg, #FF6B35, #E85A2B);
+            border: none; color: #fff;
+        }
+        .hub-btn.primary:hover { color: #fff; filter: brightness(1.08); }
+
+        /* ===== Edit-mode card controls ===== */
+        .hub-card { position: relative; }
+        .card-controls {
+            position: absolute;
+            top: 0.5rem; right: 0.5rem;
+            display: flex; gap: 0.3rem;
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.15s ease;
+        }
+        .hub-cards.editing .card-controls { opacity: 1; pointer-events: auto; }
+        .card-ctrl {
+            width: 26px; height: 26px;
+            border-radius: 7px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(15, 23, 42, 0.9);
+            color: rgba(255, 255, 255, 0.7);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 13px; line-height: 1;
+            transition: all 0.15s ease;
+        }
+        .card-ctrl:hover { color: #fff; border-color: rgba(255, 255, 255, 0.4); }
+        .card-ctrl.del:hover { color: #F87171; border-color: rgba(239, 68, 68, 0.5); }
+        .hub-cards.editing .hub-card { cursor: default; }
+
+        /* ===== Add tile ===== */
+        .add-tile {
+            border: 1px dashed rgba(255, 255, 255, 0.25);
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 16px;
+            display: none;
+            flex-direction: column;
+            align-items: center; justify-content: center;
+            gap: 0.5rem;
+            min-height: 150px;
+            color: rgba(255, 255, 255, 0.45);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.85rem; font-weight: 600;
+        }
+        .hub-cards.editing .add-tile { display: flex; }
+        .add-tile:hover { border-color: rgba(255, 107, 53, 0.6); color: #FF6B35; }
+        .add-tile .plus { font-size: 1.8rem; line-height: 1; }
+
+        /* ===== Modal ===== */
+        .modal-backdrop {
+            position: fixed; inset: 0;
+            background: rgba(2, 6, 23, 0.75);
+            backdrop-filter: blur(4px);
+            display: none; align-items: center; justify-content: center;
+            z-index: 1000; padding: 1rem;
+        }
+        .modal-backdrop.open { display: flex; }
+        .modal {
+            background: #111827;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 1.75rem;
+            width: min(480px, 94vw);
+            max-height: 90vh; overflow: auto;
+        }
+        .modal.wide { width: min(960px, 94vw); }
+        .modal h3 { margin: 0 0 1.25rem; color: #fff; font-size: 1.1rem; }
+        .field { margin-bottom: 1rem; }
+        .field label {
+            display: block; font-size: 0.78rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 0.4rem; font-weight: 600;
+        }
+        .field input[type=text], .field input[type=url], .field select {
+            width: 100%; box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px; padding: 0.6rem 0.75rem;
+            color: #fff; font-family: inherit; font-size: 0.9rem;
+        }
+        .field input:focus, .field select:focus { outline: none; border-color: #FF6B35; }
+        .field select option { background: #111827; }
+        .field.check { display: flex; align-items: center; gap: 0.5rem; }
+        .field.check input { width: auto; }
+        .field.check label { margin: 0; }
+        .seg { display: flex; gap: 0.5rem; }
+        .seg button {
+            flex: 1; padding: 0.55rem; border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.04);
+            color: rgba(255, 255, 255, 0.7);
+            font-family: inherit; font-weight: 600; font-size: 0.85rem; cursor: pointer;
+        }
+        .seg button.sel { border-color: #FF6B35; color: #fff; background: rgba(255, 107, 53, 0.15); }
+        .icon-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.4rem; }
+        .icon-opt {
+            aspect-ratio: 1; border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.04);
+            display: flex; align-items: center; justify-content: center;
+            color: rgba(255, 255, 255, 0.7); cursor: pointer;
+        }
+        .icon-opt.sel { border-color: #FF6B35; color: #fff; background: rgba(255, 107, 53, 0.15); }
+        .icon-opt svg { width: 20px; height: 20px; }
+        .color-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .color-opt {
+            width: 30px; height: 30px; border-radius: 50%;
+            cursor: pointer; border: 2px solid transparent;
+        }
+        .color-opt.sel { border-color: #fff; }
+        .modal-actions { display: flex; align-items: center; margin-top: 1.5rem; gap: 0.75rem; }
+        .modal-actions .right { display: flex; gap: 0.75rem; margin-left: auto; }
+        .modal-error { color: #F87171; font-size: 0.8rem; min-height: 1rem; }
+        .folder-empty { color: rgba(255, 255, 255, 0.4); text-align: center; padding: 2rem 0; }
     </style>
 </head>
 <body>
@@ -282,130 +426,76 @@
         <p class="hub-subtitle">Choose a workspace to open</p>
     </div>
 
-    <div class="hub-cards">
-        <a class="hub-card" href="okr-dashboard.html">
-            <div class="hub-card-icon okr" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="9"></circle>
-                    <circle cx="12" cy="12" r="5"></circle>
-                    <circle cx="12" cy="12" r="1.5"></circle>
-                    <path d="M12 3v3"></path>
-                    <path d="M21 12h-3"></path>
-                </svg>
-            </div>
-            <div class="hub-card-title">OKR Dashboard</div>
-            <p class="hub-card-desc">Track objectives and key results, KAM performance, fleet analysis, and monthly targets.</p>
-            <div class="hub-card-arrow" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                    <path d="M5 12h14"></path>
-                    <path d="m13 6 6 6-6 6"></path>
-                </svg>
-            </div>
-        </a>
-
-        <a class="hub-card kam" href="kam-dashboard.html">
-            <div class="hub-card-icon kam" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="9" cy="7" r="4"></circle>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                </svg>
-            </div>
-            <div class="hub-card-title">KAM</div>
-            <p class="hub-card-desc">KAM team performance — every visualization from KAM Analysis and the Focus Team Performance dashboard in one workspace.</p>
-            <div class="hub-card-arrow" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                    <path d="M5 12h14"></path>
-                    <path d="m13 6 6 6-6 6"></path>
-                </svg>
-            </div>
-        </a>
-
-        <a class="hub-card mm" href="mm.html">
-            <div class="hub-card-icon mm" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                    <path d="M4 19V5"></path>
-                    <path d="M4 19h16"></path>
-                    <rect x="7" y="11" width="3" height="5" rx="1"></rect>
-                    <rect x="12" y="8" width="3" height="8" rx="1"></rect>
-                    <rect x="17" y="4" width="3" height="12" rx="1"></rect>
-                </svg>
-            </div>
-            <div class="hub-card-title">Monthly Metrics</div>
-            <p class="hub-card-desc">Executive summary, channel overview, MLM, focus team, agency, segment, and renewal dashboards.</p>
-            <div class="hub-card-arrow" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                    <path d="M5 12h14"></path>
-                    <path d="m13 6 6 6-6 6"></path>
-                </svg>
-            </div>
-        </a>
-
-        <a class="hub-card crm" href="https://crm.fairdee-crm.xyz/">
-            <div class="hub-card-icon crm" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                    <path d="M3 21V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v16"></path>
-                    <path d="M16 8h3a2 2 0 0 1 2 2v11"></path>
-                    <path d="M7 7h4"></path>
-                    <path d="M7 11h4"></path>
-                    <path d="M7 15h4"></path>
-                    <path d="M10 21v-3"></path>
-                </svg>
-            </div>
-            <div class="hub-card-title">Fairdee CRM</div>
-            <p class="hub-card-desc">Open the Fairdee CRM workspace for AE and BM.</p>
-            <div class="hub-card-arrow" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                    <path d="M5 12h14"></path>
-                    <path d="m13 6 6 6-6 6"></path>
-                </svg>
-            </div>
-        </a>
-
-        <a class="hub-card fleet" href="https://fairdee-fleet.web.app/" target="_blank" rel="noopener">
-            <div class="hub-card-icon fleet" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                    <rect x="3" y="11" width="18" height="10" rx="2"></rect>
-                    <circle cx="12" cy="5" r="2"></circle>
-                    <path d="M12 7v4"></path>
-                    <line x1="8" y1="16" x2="8" y2="16"></line>
-                    <line x1="16" y1="16" x2="16" y2="16"></line>
-                </svg>
-            </div>
-            <div class="hub-card-title">Fairdee Fleet bot</div>
-            <p class="hub-card-desc">Spreadsheet for fleet submissions — paste from Excel, email to insurers as xlsx, automate Portal and Monday uploads.</p>
-            <div class="hub-card-arrow" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                    <path d="M5 12h14"></path>
-                    <path d="m13 6 6 6-6 6"></path>
-                </svg>
-            </div>
-        </a>
-
-        <a class="hub-card taskflow" href="https://taskflow-be186.web.app/" target="_blank" rel="noopener">
-            <div class="hub-card-icon taskflow" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                    <rect x="8" y="2" width="8" height="4" rx="1"></rect>
-                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-                    <path d="m9 13 2 2 4-4"></path>
-                </svg>
-            </div>
-            <div class="hub-card-title">TaskFlow</div>
-            <p class="hub-card-desc">Plan, assign, and track tasks and workflows for the team.</p>
-            <div class="hub-card-arrow" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                    <path d="M5 12h14"></path>
-                    <path d="m13 6 6 6-6 6"></path>
-                </svg>
-            </div>
-        </a>
-
+    <div class="hub-toolbar" id="hubToolbar">
+        <button class="hub-btn" id="addCardBtn">+ Add card</button>
+        <button class="hub-btn" id="addFolderBtn">+ Add folder</button>
+        <button class="hub-btn" id="editToggleBtn">Edit hub</button>
     </div>
+
+    <div class="hub-cards" id="hubCards"></div>
 
     <div class="hub-footer">
         <span class="hub-user" id="hubUserEmail"></span>
         <button class="hub-signout" id="hubSignOut">Sign Out</button>
+    </div>
+
+    <!-- Folder view modal -->
+    <div class="modal-backdrop" id="folderBackdrop">
+        <div class="modal wide">
+            <h3 id="folderTitle">Folder</h3>
+            <div class="hub-cards" id="folderCards" style="max-width:none;"></div>
+            <div class="modal-actions">
+                <div class="right">
+                    <button class="hub-btn" id="folderClose">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add / edit card modal -->
+    <div class="modal-backdrop" id="editBackdrop">
+        <div class="modal">
+            <h3 id="editTitle">Add card</h3>
+            <div class="field" id="typeField">
+                <label>Type</label>
+                <div class="seg">
+                    <button type="button" data-type="card" class="sel">Card</button>
+                    <button type="button" data-type="folder">Folder</button>
+                </div>
+            </div>
+            <div class="field">
+                <label>Title</label>
+                <input type="text" id="fTitle" placeholder="e.g. Sales Reports" maxlength="60">
+            </div>
+            <div class="field cardonly">
+                <label>Link (URL or page)</label>
+                <input type="text" id="fHref" placeholder="https://… or page.html">
+            </div>
+            <div class="field check cardonly">
+                <input type="checkbox" id="fNewTab">
+                <label for="fNewTab">Open in a new tab</label>
+            </div>
+            <div class="field cardonly">
+                <label>Location</label>
+                <select id="fParent"></select>
+            </div>
+            <div class="field">
+                <label>Icon</label>
+                <div class="icon-grid" id="fIconGrid"></div>
+            </div>
+            <div class="field">
+                <label>Color</label>
+                <div class="color-row" id="fColorRow"></div>
+            </div>
+            <div class="modal-error" id="editError"></div>
+            <div class="modal-actions">
+                <button class="hub-btn" id="editDelete" style="display:none;color:#F87171;border-color:rgba(239,68,68,.4);">Delete</button>
+                <div class="right">
+                    <button class="hub-btn" id="editCancel">Cancel</button>
+                    <button class="hub-btn primary" id="editSave">Save</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Firebase SDK -->
@@ -416,24 +506,349 @@
     <script src="icons.js"></script>
 
     <script>
-        function waitForAuth() {
-            if (!window.authManager) { setTimeout(waitForAuth, 100); return; }
+    // ===================================================================
+    // Dynamic hub — cards & folders stored in Firestore (collection: hubItems)
+    // Editable by admins; visible (read-only) to everyone, live-synced.
+    // ===================================================================
+    const ADMIN_EMAILS = ['thanat.s@fairdee.co.th', 'nichakan@fairdee.co.th'];
+    const COLL = 'hubItems';
 
-            authManager.onAuthStateChanged((user) => {
-                if (!user) {
-                    window.location.href = 'login.html';
-                    return;
-                }
-                document.getElementById('hubUserEmail').textContent = user.email;
-                document.getElementById('authOverlay').classList.add('hidden');
-            });
+    const ICON_CHOICES = ['target','bar-chart','trending-up','trophy','file-text',
+        'folder','calendar','refresh','tool','user','check-circle','sparkle',
+        'alert','trending-down'];
+    const COLOR_CHOICES = ['#FF6B35','#EC4899','#6366F1','#10B981','#06B6D4',
+        '#F59E0B','#8B5CF6','#EF4444','#14B8A6','#3B82F6','#84CC16','#F472B6'];
 
-            document.getElementById('hubSignOut').addEventListener('click', async () => {
-                await authManager.signOut();
-                window.location.href = 'login.html';
-            });
+    // Seed data — the original built-in cards (used only if the collection is empty)
+    const DEFAULTS = [
+        { type:'card', title:'OKR Dashboard',    href:'okr-dashboard.html',           newTab:false, icon:'target',       color:'#FF6B35' },
+        { type:'card', title:'KAM',              href:'https://fairdee-kam.web.app/', newTab:true,  icon:'user',         color:'#EC4899' },
+        { type:'card', title:'Monthly Metrics',  href:'https://fairdee-monthly-metr.web.app/', newTab:true, icon:'bar-chart', color:'#6366F1' },
+        { type:'card', title:'Fairdee CRM',      href:'https://crm.fairdee-crm.xyz/', newTab:false, icon:'file-text',    color:'#10B981' },
+        { type:'card', title:'Fairdee Fleet bot',href:'https://fairdee-fleet.web.app/',newTab:true, icon:'tool',         color:'#06B6D4' },
+        { type:'card', title:'TaskFlow',         href:'https://taskflow-be186.web.app/',newTab:true,icon:'check-circle', color:'#F59E0B' },
+    ];
+
+    let DB = null, IS_ADMIN = false, EDITING = false, ITEMS = [];
+    let seedAttempted = false;
+
+    // ---------- color helpers ----------
+    function shade(hex, p) {
+        const n = parseInt(hex.slice(1), 16);
+        const cl = v => Math.max(0, Math.min(255, Math.round(v)));
+        const r = cl(((n>>16)&255)*(1+p)), g = cl(((n>>8)&255)*(1+p)), b = cl((n&255)*(1+p));
+        return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+    }
+    function rgba(hex, a) {
+        const n = parseInt(hex.slice(1), 16);
+        return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+    }
+    function esc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+            ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    const ARROW = '<svg viewBox="0 0 24 24"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg>';
+
+    // ---------- card element ----------
+    function buildCard(item) {
+        const isFolder = item.type === 'folder';
+        const el = document.createElement(isFolder ? 'div' : 'a');
+        el.className = 'hub-card';
+        const color = item.color || '#FF6B35';
+        el.style.setProperty('--accent', color);
+        el.style.setProperty('--accent-soft', rgba(color, 0.22));
+
+        if (!isFolder) {
+            el.href = item.href || '#';
+            if (item.newTab) { el.target = '_blank'; el.rel = 'noopener'; }
         }
-        waitForAuth();
+
+        const grad = `linear-gradient(135deg, ${color} 0%, ${shade(color,-0.18)} 100%)`;
+        const iconName = isFolder ? (item.icon || 'folder') : (item.icon || 'target');
+        el.innerHTML = `
+            <div class="hub-card-icon" aria-hidden="true"
+                 style="background:${grad};box-shadow:0 8px 24px ${rgba(color,0.3)};">
+                ${window.icon(iconName, { size: '26px' })}
+            </div>
+            <div class="hub-card-title">${esc(item.title)}</div>
+            <div class="hub-card-arrow" aria-hidden="true">${ARROW}</div>
+            <div class="card-controls">
+                <button class="card-ctrl move-up"   title="Move left">&#9664;</button>
+                <button class="card-ctrl move-down" title="Move right">&#9654;</button>
+                <button class="card-ctrl edit"       title="Edit">&#9998;</button>
+                <button class="card-ctrl del"        title="Delete">&times;</button>
+            </div>`;
+
+        // controls
+        el.querySelector('.edit').addEventListener('click', e => { stop(e); openEdit(item); });
+        el.querySelector('.del').addEventListener('click', e => { stop(e); deleteItem(item); });
+        el.querySelector('.move-up').addEventListener('click', e => { stop(e); moveItem(item, -1); });
+        el.querySelector('.move-down').addEventListener('click', e => { stop(e); moveItem(item, 1); });
+
+        // navigation / folder open
+        el.addEventListener('click', e => {
+            if (e.target.closest('.card-controls')) return;
+            // Folders always open (in view OR edit mode) so their cards are reachable
+            if (isFolder) { e.preventDefault(); openFolder(item); return; }
+            // Plain cards don't navigate while editing
+            if (EDITING) e.preventDefault();
+        });
+        return el;
+    }
+    function stop(e){ e.preventDefault(); e.stopPropagation(); }
+
+    function addTile(parentId) {
+        const t = document.createElement('div');
+        t.className = 'add-tile';
+        t.innerHTML = `<span class="plus">+</span><span>Add card</span>`;
+        t.addEventListener('click', () => openEdit(null, parentId));
+        return t;
+    }
+
+    // ---------- rendering ----------
+    function siblings(parentId) {
+        return ITEMS.filter(i => (i.parentId || null) === (parentId || null))
+                    .sort((a,b) => (a.order||0) - (b.order||0));
+    }
+    function render() {
+        const grid = document.getElementById('hubCards');
+        grid.classList.toggle('editing', EDITING);
+        grid.innerHTML = '';
+        // Fallback: if nothing is stored yet, show the built-in defaults read-only
+        if (!ITEMS.length) {
+            DEFAULTS.forEach(d => grid.appendChild(buildCard(d)));
+            return;
+        }
+        siblings(null).forEach(i => grid.appendChild(buildCard(i)));
+        if (IS_ADMIN) grid.appendChild(addTile(null));
+        // refresh open folder view if any
+        if (openFolderId) {
+            const f = ITEMS.find(i => i.id === openFolderId);
+            if (f) renderFolder(f); else closeFolder();
+        }
+    }
+
+    let openFolderId = null;
+    function openFolder(folder) {
+        openFolderId = folder.id;
+        renderFolder(folder);
+        document.getElementById('folderBackdrop').classList.add('open');
+    }
+    function renderFolder(folder) {
+        document.getElementById('folderTitle').textContent = folder.title;
+        const grid = document.getElementById('folderCards');
+        grid.classList.toggle('editing', EDITING);
+        grid.innerHTML = '';
+        const kids = siblings(folder.id);
+        if (!kids.length && !IS_ADMIN) {
+            grid.innerHTML = '<div class="folder-empty">This folder is empty.</div>';
+        }
+        kids.forEach(i => grid.appendChild(buildCard(i)));
+        if (IS_ADMIN) grid.appendChild(addTile(folder.id));
+    }
+    function closeFolder() {
+        openFolderId = null;
+        document.getElementById('folderBackdrop').classList.remove('open');
+    }
+
+    // ---------- Firestore CRUD ----------
+    async function moveItem(item, dir) {
+        const sibs = siblings(item.parentId || null);
+        const idx = sibs.findIndex(s => s.id === item.id);
+        const swap = sibs[idx + dir];
+        if (!swap) return;
+        const batch = DB.batch();
+        batch.update(DB.collection(COLL).doc(item.id), { order: swap.order });
+        batch.update(DB.collection(COLL).doc(swap.id), { order: item.order });
+        await batch.commit();
+    }
+    async function deleteItem(item) {
+        const kids = item.type === 'folder' ? siblings(item.id) : [];
+        const msg = kids.length
+            ? `Delete folder "${item.title}"? Its ${kids.length} card(s) will move to the top level.`
+            : `Delete "${item.title}"?`;
+        if (!confirm(msg)) return;
+        const batch = DB.batch();
+        kids.forEach(k => batch.update(DB.collection(COLL).doc(k.id), { parentId: null }));
+        batch.delete(DB.collection(COLL).doc(item.id));
+        await batch.commit();
+    }
+
+    // ---------- edit modal ----------
+    let editState = { id:null, type:'card', icon:'target', color:'#FF6B35', parentId:null };
+
+    function buildPickers() {
+        const ig = document.getElementById('fIconGrid');
+        ig.innerHTML = '';
+        ICON_CHOICES.forEach(name => {
+            const b = document.createElement('div');
+            b.className = 'icon-opt';
+            b.dataset.icon = name;
+            b.innerHTML = window.icon(name, { size: '20px' });
+            b.addEventListener('click', () => { editState.icon = name; syncPickers(); });
+            ig.appendChild(b);
+        });
+        const cr = document.getElementById('fColorRow');
+        cr.innerHTML = '';
+        COLOR_CHOICES.forEach(hex => {
+            const b = document.createElement('div');
+            b.className = 'color-opt';
+            b.dataset.color = hex;
+            b.style.background = hex;
+            b.addEventListener('click', () => { editState.color = hex; syncPickers(); });
+            cr.appendChild(b);
+        });
+    }
+    function syncPickers() {
+        document.querySelectorAll('#fIconGrid .icon-opt').forEach(o =>
+            o.classList.toggle('sel', o.dataset.icon === editState.icon));
+        document.querySelectorAll('#fColorRow .color-opt').forEach(o =>
+            o.classList.toggle('sel', o.dataset.color === editState.color));
+        document.querySelectorAll('#typeField .seg button').forEach(o =>
+            o.classList.toggle('sel', o.dataset.type === editState.type));
+        document.querySelectorAll('.cardonly').forEach(el =>
+            el.style.display = editState.type === 'folder' ? 'none' : '');
+    }
+    function fillParentSelect(currentId) {
+        const sel = document.getElementById('fParent');
+        sel.innerHTML = '<option value="">Top level</option>';
+        ITEMS.filter(i => i.type === 'folder').forEach(f => {
+            const o = document.createElement('option');
+            o.value = f.id; o.textContent = f.title;
+            sel.appendChild(o);
+        });
+        sel.value = currentId || '';
+    }
+    function openEdit(item, presetParent) {
+        const isNew = !item;
+        editState = {
+            id: item ? item.id : null,
+            type: item ? item.type : 'card',
+            icon: item ? (item.icon || 'target') : 'target',
+            color: item ? (item.color || '#FF6B35') : '#FF6B35',
+            parentId: item ? (item.parentId || null) : (presetParent || null),
+        };
+        document.getElementById('editTitle').textContent = isNew ? 'Add item' : 'Edit item';
+        document.getElementById('fTitle').value = item ? (item.title || '') : '';
+        document.getElementById('fHref').value = item ? (item.href || '') : '';
+        document.getElementById('fNewTab').checked = item ? !!item.newTab : false;
+        document.getElementById('editError').textContent = '';
+        document.getElementById('editDelete').style.display = isNew ? 'none' : '';
+        document.getElementById('typeField').style.display = isNew ? '' : 'none'; // type fixed after creation
+        fillParentSelect(editState.parentId);
+        syncPickers();
+        document.getElementById('editBackdrop').classList.add('open');
+    }
+    function closeEdit() { document.getElementById('editBackdrop').classList.remove('open'); }
+
+    async function saveEdit() {
+        const title = document.getElementById('fTitle').value.trim();
+        const err = document.getElementById('editError');
+        if (!title) { err.textContent = 'Title is required.'; return; }
+        const data = {
+            type: editState.type,
+            title: title,
+            icon: editState.icon,
+            color: editState.color,
+            parentId: editState.type === 'folder' ? null
+                      : (document.getElementById('fParent').value || null),
+        };
+        if (editState.type === 'card') {
+            const href = document.getElementById('fHref').value.trim();
+            if (!href) { err.textContent = 'Link is required for a card.'; return; }
+            data.href = href;
+            data.newTab = document.getElementById('fNewTab').checked;
+        }
+        const user = authManager.getCurrentUser();
+        try {
+            if (editState.id) {
+                await DB.collection(COLL).doc(editState.id).update(data);
+            } else {
+                const sibs = siblings(data.parentId);
+                data.order = sibs.length ? Math.max(...sibs.map(s => s.order||0)) + 1 : 0;
+                data.createdBy = user ? user.email : null;
+                data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                await DB.collection(COLL).add(data);
+            }
+            closeEdit();
+        } catch (e) {
+            console.error(e);
+            err.textContent = 'Save failed: ' + (e.message || e.code || 'unknown error');
+        }
+    }
+
+    // ---------- seeding ----------
+    async function seedDefaults() {
+        if (seedAttempted) return;
+        seedAttempted = true;
+        const batch = DB.batch();
+        DEFAULTS.forEach((d, i) => {
+            const ref = DB.collection(COLL).doc();
+            batch.set(ref, { ...d, parentId: null, order: i,
+                createdBy: 'seed', createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+        });
+        try { await batch.commit(); console.log('✅ Seeded default hub cards'); }
+        catch (e) { console.warn('Seed failed (likely no permission):', e.message); }
+    }
+
+    // ---------- wiring ----------
+    function wireAdminUI() {
+        document.getElementById('hubToolbar').style.display = IS_ADMIN ? 'flex' : 'none';
+        if (!IS_ADMIN) return;
+        buildPickers();
+        document.getElementById('editToggleBtn').addEventListener('click', () => {
+            EDITING = !EDITING;
+            document.getElementById('editToggleBtn').textContent = EDITING ? 'Done' : 'Edit hub';
+            render();
+        });
+        document.getElementById('addCardBtn').addEventListener('click', () => { editState.type='card'; openEdit(null); });
+        document.getElementById('addFolderBtn').addEventListener('click', () => { const it=null; openEdit(null); editState.type='folder'; syncPickers(); });
+        document.querySelectorAll('#typeField .seg button').forEach(b =>
+            b.addEventListener('click', () => { editState.type = b.dataset.type; syncPickers(); }));
+        document.getElementById('editCancel').addEventListener('click', closeEdit);
+        document.getElementById('editSave').addEventListener('click', saveEdit);
+        document.getElementById('editDelete').addEventListener('click', async () => {
+            const item = ITEMS.find(i => i.id === editState.id);
+            if (item) { closeEdit(); await deleteItem(item); }
+        });
+    }
+
+    function listen() {
+        DB.collection(COLL).onSnapshot(snap => {
+            ITEMS = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            if (!ITEMS.length && IS_ADMIN) seedDefaults();
+            render();
+        }, err => console.error('Hub snapshot error:', err));
+    }
+
+    function waitForAuth() {
+        if (!window.authManager || !window.icon) { setTimeout(waitForAuth, 80); return; }
+        DB = firebase.firestore();
+
+        authManager.onAuthStateChanged((user) => {
+            if (!user) { window.location.href = 'login.html'; return; }
+            document.getElementById('hubUserEmail').textContent = user.email;
+            IS_ADMIN = ADMIN_EMAILS.includes((user.email || '').toLowerCase());
+            wireAdminUI();
+            listen();
+            document.getElementById('authOverlay').classList.add('hidden');
+        });
+
+        document.getElementById('hubSignOut').addEventListener('click', async () => {
+            await authManager.signOut();
+            window.location.href = 'login.html';
+        });
+
+        // modal backdrop / close handlers
+        document.getElementById('folderClose').addEventListener('click', closeFolder);
+        document.getElementById('folderBackdrop').addEventListener('click', e => {
+            if (e.target.id === 'folderBackdrop') closeFolder();
+        });
+        document.getElementById('editBackdrop').addEventListener('click', e => {
+            if (e.target.id === 'editBackdrop') closeEdit();
+        });
+    }
+    waitForAuth();
     </script>
 </body>
 </html>

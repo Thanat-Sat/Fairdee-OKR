@@ -842,9 +842,9 @@
                 <button class="tab" onclick="switchTab(this, 'tableView')">Table View</button>
                 <button class="tab" onclick="switchTab(this, 'topMovers')">Top Movers</button>
                 <button class="tab" onclick="switchTab(this, 'monthlyProgress')">Monthly Progress</button>
-                <button class="tab" onclick="switchTab(this, 'hunterAnalysis')">Hunter Analysis</button>
-                <button class="tab" onclick="switchTab(this, 'teamPerformance')">KAM Analysis</button>
-                <button class="tab" onclick="switchTab(this, 'fleetAnalysis')">Fleet Analysis</button>
+                <!-- Hunter / KAM / Fleet Analysis tabs moved to the Monthly Metrics site.
+                     Their content divs and logic are kept below so the KAM workspace
+                     embed (okr-dashboard.html?embed=kam) keeps working same-origin. -->
                 <button class="tab" onclick="switchTab(this, 'actionItems')">Action Items</button>
                 <button class="tab" id="settingsTab" style="display: none;" onclick="switchTab(this, 'settings')">Settings</button>
             </div>
