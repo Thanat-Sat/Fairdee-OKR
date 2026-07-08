@@ -2025,111 +2025,176 @@ function renderTopMovers() {
     }
 }
 
-// Render Executive Summary (Agency = KR 1.1+1.2+1.3, IG = KR 1.4, EB = KR 2)
-function renderExecutiveSummary() {
-    const container = document.getElementById('executiveSummaryContainer');
-    if (!container) return;
+// ---- Shared Executive Summary computation (used by dashboard, PDF, and email) ----
+// Channels and the hard-coded YTD full-year targets (the sheet has no reliable annual
+// target). Kept here as the single source of truth so all three surfaces agree.
+var EXEC_SUMMARY_CATEGORIES = [
+    { key: 'agency', label: 'Agency (MLM/FD/AO)', krNumbers: ['1.1', '1.2', '1.3'], color: '#2563EB', r: 37,  g: 99,  b: 235 },
+    { key: 'ig',     label: 'IG',                 krNumbers: ['1.4'],                color: '#7C3AED', r: 124, g: 58,  b: 237 },
+    { key: 'eb',     label: 'Corporate (EB)',     krNumbers: ['2'],                  color: '#EA580C', r: 234, g: 88,  b: 12  }
+];
+var YTD_FY_TARGET_OVERRIDE = { agency: 1949096767, ig: 1178626610, eb: 450050000 };
+var YTD_TOTAL_TARGET = 3824656074;
 
-    const categories = [
-        { key: 'agency', label: 'Agency (MLM/FD/AO)', krNumbers: ['1.1', '1.2', '1.3'], color: '#2563EB' },
-        { key: 'ig',     label: 'IG',                 krNumbers: ['1.4'],                color: '#7C3AED' },
-        { key: 'eb',     label: 'Corporate (EB)',     krNumbers: ['2'],                  color: '#EA580C' }
-    ];
-
-    const matchKR = (row, numbers) => {
-        const info = parseKRLevel(row.kr_name);
-        return numbers.includes(info.number);
-    };
-
-    const buckets = categories.map(cat => {
-        const rows = filteredData.filter(r => matchKR(r, cat.krNumbers));
-        let totalCurrent = 0;
-        let totalTarget = 0;
-        let unit = '';
-        rows.forEach(r => {
-            const c = getLatestValue(r);
-            const t = getTarget(r);
+// Compute the executive summary buckets + overall for a given mode.
+// isYTD=false -> latest month vs monthly target; isYTD=true -> YTD vs full-year target
+// (with the hard-coded per-channel and total targets above).
+function computeExecSummary(isYTD) {
+    function matchKR(row, numbers) {
+        return numbers.indexOf(parseKRLevel(row.kr_name).number) !== -1;
+    }
+    var buckets = EXEC_SUMMARY_CATEGORIES.map(function (cat) {
+        var rows = filteredData.filter(function (r) { return matchKR(r, cat.krNumbers); });
+        var totalCurrent = 0, totalTarget = 0, unit = '';
+        rows.forEach(function (r) {
+            var c = isYTD ? getYTDValue(r) : getLatestValue(r);
+            var t = isYTD ? getFullYearTarget(r) : getTarget(r);
             if (typeof c === 'number' && !isNaN(c)) totalCurrent += c;
             if (typeof t === 'number' && !isNaN(t)) totalTarget += t;
             if (!unit && r.unit_name) unit = r.unit_name;
         });
-        const pct = totalTarget > 0 ? (totalCurrent / totalTarget) * 100 : 0;
-        return { ...cat, rows, totalCurrent, totalTarget, pct, unit };
+        if (isYTD && Object.prototype.hasOwnProperty.call(YTD_FY_TARGET_OVERRIDE, cat.key)) {
+            totalTarget = YTD_FY_TARGET_OVERRIDE[cat.key];
+        }
+        return {
+            key: cat.key, label: cat.label, krNumbers: cat.krNumbers, krs: cat.krNumbers,
+            color: cat.color, r: cat.r, g: cat.g, b: cat.b,
+            rows: rows, totalCurrent: totalCurrent, totalTarget: totalTarget,
+            pct: totalTarget > 0 ? (totalCurrent / totalTarget) * 100 : 0, unit: unit
+        };
     });
+    var valid = buckets.filter(function (b) { return b.rows.length > 0; });
+    var overallCurrent = valid.reduce(function (s, b) { return s + b.totalCurrent; }, 0);
+    var overallTarget = isYTD ? YTD_TOTAL_TARGET : valid.reduce(function (s, b) { return s + b.totalTarget; }, 0);
+    var overallUnit = '';
+    for (var i = 0; i < valid.length; i++) { if (valid[i].unit) { overallUnit = valid[i].unit; break; } }
+    return {
+        buckets: valid,
+        overallCurrent: overallCurrent,
+        overallTarget: overallTarget,
+        overallPct: overallTarget > 0 ? (overallCurrent / overallTarget) * 100 : 0,
+        overallUnit: overallUnit
+    };
+}
 
-    const validBuckets = buckets.filter(b => b.rows.length > 0);
-    if (validBuckets.length === 0) {
+// Render Executive Summary (Agency = KR 1.1+1.2+1.3, IG = KR 1.4, EB = KR 2)
+// Shows BOTH a monthly block (latest month vs monthly target) and a
+// year-to-date block (this year's actual vs full-year target), stacked.
+function renderExecutiveSummary() {
+    const container = document.getElementById('executiveSummaryContainer');
+    if (!container) return;
+
+    // Build one full summary block (header row + channel cards) for a given mode.
+    // isYTD=false -> latest month vs monthly target; isYTD=true -> YTD vs full-year target.
+    function buildBlock(isYTD) {
+        const summary = computeExecSummary(isYTD);
+        const validBuckets = summary.buckets;
+        if (validBuckets.length === 0) return '';
+
+        const overallCurrent = summary.overallCurrent;
+        const overallTarget  = summary.overallTarget;
+        const overallPct     = summary.overallPct;
+        const overallUnit    = summary.overallUnit;
+
+        const overallColor = overallPct >= 100 ? '#10B981' : overallPct >= 90 ? '#F59E0B' : '#EF4444';
+        const overallLabel = isYTD
+            ? `${overallPct.toFixed(1)}% to target`
+            : overallPct >= 100
+                ? `Exceeding target by ${(overallPct - 100).toFixed(1)}%`
+                : overallPct >= 90
+                    ? `Slightly under target (${overallPct.toFixed(1)}%)`
+                    : `Under target (${overallPct.toFixed(1)}%)`;
+        const overallToGo = Math.max(0, overallTarget - overallCurrent);
+
+        const targetWord   = isYTD ? 'yearly target' : 'monthly target';
+        const heroLabel    = isYTD ? 'GWP — Actual YTD' : 'GWP Total';
+        const heroUnit     = isYTD ? ytdUnitLabel(overallUnit) : overallUnit;
+        const overallTitle = isYTD ? 'GWP Actual YTD — All Channels' : 'GWP Total — All Channels';
+        const targetLead   = isYTD ? 'Yearly target' : 'Target';
+        const sectionTitle = isYTD ? 'Year to date' : 'This month';
+        const sectionSub   = isYTD ? 'Actual YTD vs full-year target' : 'Latest month vs monthly target';
+
+        const cards = validBuckets.map(b => {
+            const isAbove = b.pct >= 100;
+            const isSlight = b.pct >= 90 && b.pct < 100;
+            const badgeColor = isAbove ? '#10B981' : isSlight ? '#F59E0B' : '#EF4444';
+            const badgeBg    = isAbove ? '#F0FDF4' : isSlight ? '#FFFBEB' : '#FEF2F2';
+            const badgeText  = isAbove ? 'Above Target' : isSlight ? 'Near Target' : 'Below Target';
+            const barWidth = Math.max(0, Math.min(100, b.pct));
+            const toGo = Math.max(0, b.totalTarget - b.totalCurrent);
+            const hasTarget = b.totalTarget > 0;
+            const targetLine = isYTD
+                ? `${targetLead}: ${hasTarget ? formatNumber(b.totalTarget) + (b.unit ? ' ' + b.unit : '') : '— not set'}`
+                : `(${formatNumber(b.totalTarget)}${b.unit ? ' ' + b.unit : ''})`;
+
+            return `
+                <div style="background: white; border-radius: 16px; padding: 1.75rem 2rem; box-shadow: 0 2px 6px rgba(0,0,0,0.06); border: 1px solid #E5E7EB; display: flex; flex-direction: column; gap: 1rem;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
+                        <div style="font-weight: 800; font-size: 1.35rem; color: ${b.color}; letter-spacing: -0.01em;">${b.label}</div>
+                        <span style="display: inline-block; padding: 0.35rem 0.9rem; background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeColor}; border-radius: 999px; font-size: 0.8rem; font-weight: 700; white-space: nowrap;">
+                            ${badgeText}
+                        </span>
+                    </div>
+                    <div style="color: var(--text-secondary); font-size: 1rem; line-height: 1.4;">
+                        Achieved <strong style="color: ${badgeColor}; font-size: 1.1rem;">${b.pct.toFixed(1)}%</strong> of ${targetWord}
+                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.15rem;">${targetLine}</div>
+                    </div>
+                    <div style="background: ${b.color}; color: white; border-radius: 12px; padding: 1rem 1.25rem; font-weight: 700; display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; flex-wrap: wrap;">
+                        <span style="font-size: 1.05rem; opacity: 0.95;">${heroLabel}</span>
+                        <span style="font-family: 'Google Sans Text', sans-serif; font-size: 1.65rem; font-weight: 800; letter-spacing: -0.02em;">
+                            ${formatNumber(b.totalCurrent)}${b.unit ? ' <span style="font-size: 0.85rem; font-weight: 500; opacity: 0.85;">' + b.unit + '</span>' : ''}
+                        </span>
+                    </div>
+                    <div style="height: 8px; background: #F1F5F9; border-radius: 999px; overflow: hidden;">
+                        <div style="width: ${barWidth}%; height: 100%; background: ${badgeColor}; transition: width 0.4s ease;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; font-size: 0.78rem; color: var(--text-muted);">
+                        <span>Includes ${b.rows.length} KR${b.rows.length === 1 ? '' : 's'}: ${b.krNumbers.map(n => 'KR ' + n).join(', ')}</span>
+                        ${isYTD && hasTarget ? `<span style="font-weight: 700; color: ${badgeColor}; white-space: nowrap;">${formatNumber(toGo)}${b.unit ? ' ' + b.unit : ''} to go</span>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem;">
+                <span style="font-size: 1rem; font-weight: 800; color: var(--primary); letter-spacing: -0.01em;">${sectionTitle}</span>
+                <span style="font-size: 0.78rem; color: var(--text-muted);">${sectionSub}</span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.75rem;">
+                <div style="flex: 1; min-width: 280px;">
+                    <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem;">${overallTitle}</div>
+                    <div style="font-size: 2.75rem; font-weight: 800; color: var(--primary); font-family: 'Google Sans Text', sans-serif; line-height: 1.05; letter-spacing: -0.02em;">
+                        ${formatNumber(overallCurrent)}${heroUnit ? ' <span style="font-size: 1.25rem; color: var(--text-secondary); font-weight: 600;">' + heroUnit + '</span>' : ''}
+                    </div>
+                    <div style="font-size: 0.95rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                        ${targetLead}: <strong style="color: var(--primary);">${formatNumber(overallTarget)}${overallUnit ? ' ' + overallUnit : ''}</strong>
+                        ${isYTD && overallTarget > 0 ? ` &nbsp;·&nbsp; <strong style="color: ${overallColor};">${formatNumber(overallToGo)}${overallUnit ? ' ' + overallUnit : ''}</strong> to go` : ''}
+                    </div>
+                </div>
+                <span style="display: inline-block; padding: 0.6rem 1.25rem; background: ${overallColor}; color: white; border-radius: 999px; font-size: 0.95rem; font-weight: 700; white-space: nowrap;">
+                    ${overallLabel}
+                </span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(${validBuckets.length}, 1fr); gap: 1.25rem;">
+                ${cards}
+            </div>
+        `;
+    }
+
+    const monthlyBlock = buildBlock(false);
+    const ytdBlock = buildBlock(true);
+
+    if (!monthlyBlock && !ytdBlock) {
         container.innerHTML = '<div class="no-data">No KR data available for the executive summary.</div>';
         return;
     }
 
-    const overallCurrent = validBuckets.reduce((s, b) => s + b.totalCurrent, 0);
-    const overallTarget  = validBuckets.reduce((s, b) => s + b.totalTarget,  0);
-    const overallPct = overallTarget > 0 ? (overallCurrent / overallTarget) * 100 : 0;
-    const overallUnit = validBuckets.find(b => b.unit)?.unit || '';
+    const divider = (monthlyBlock && ytdBlock)
+        ? '<div style="height: 1px; background: #E5E7EB; margin: 2rem 0;"></div>'
+        : '';
 
-    const overallColor = overallPct >= 100 ? '#10B981' : overallPct >= 90 ? '#F59E0B' : '#EF4444';
-    const overallLabel = overallPct >= 100
-        ? `Exceeding target by ${(overallPct - 100).toFixed(1)}%`
-        : overallPct >= 90
-            ? `Slightly under target (${overallPct.toFixed(1)}%)`
-            : `Under target (${overallPct.toFixed(1)}%)`;
-
-    const cards = validBuckets.map(b => {
-        const isAbove = b.pct >= 100;
-        const isSlight = b.pct >= 90 && b.pct < 100;
-        const badgeColor = isAbove ? '#10B981' : isSlight ? '#F59E0B' : '#EF4444';
-        const badgeBg    = isAbove ? '#F0FDF4' : isSlight ? '#FFFBEB' : '#FEF2F2';
-        const badgeText  = isAbove ? 'Above Target' : isSlight ? 'Near Target' : 'Below Target';
-        const barWidth = Math.max(0, Math.min(100, b.pct));
-
-        return `
-            <div style="background: white; border-radius: 16px; padding: 1.75rem 2rem; box-shadow: 0 2px 6px rgba(0,0,0,0.06); border: 1px solid #E5E7EB; display: flex; flex-direction: column; gap: 1rem;">
-                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
-                    <div style="font-weight: 800; font-size: 1.35rem; color: ${b.color}; letter-spacing: -0.01em;">${b.label}</div>
-                    <span style="display: inline-block; padding: 0.35rem 0.9rem; background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeColor}; border-radius: 999px; font-size: 0.8rem; font-weight: 700; white-space: nowrap;">
-                        ${badgeText}
-                    </span>
-                </div>
-                <div style="color: var(--text-secondary); font-size: 1rem; line-height: 1.4;">
-                    Achieved <strong style="color: ${badgeColor}; font-size: 1.1rem;">${b.pct.toFixed(1)}%</strong> of monthly target
-                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.15rem;">(${formatNumber(b.totalTarget)}${b.unit ? ' ' + b.unit : ''})</div>
-                </div>
-                <div style="background: ${b.color}; color: white; border-radius: 12px; padding: 1rem 1.25rem; font-weight: 700; display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; flex-wrap: wrap;">
-                    <span style="font-size: 1.05rem; opacity: 0.95;">GWP Total</span>
-                    <span style="font-family: 'Google Sans Text', sans-serif; font-size: 1.65rem; font-weight: 800; letter-spacing: -0.02em;">
-                        ${formatNumber(b.totalCurrent)}${b.unit ? ' <span style="font-size: 0.85rem; font-weight: 500; opacity: 0.85;">' + b.unit + '</span>' : ''}
-                    </span>
-                </div>
-                <div style="height: 8px; background: #F1F5F9; border-radius: 999px; overflow: hidden;">
-                    <div style="width: ${barWidth}%; height: 100%; background: ${badgeColor}; transition: width 0.4s ease;"></div>
-                </div>
-                <div style="font-size: 0.75rem; color: var(--text-muted);">
-                    Includes ${b.rows.length} KR${b.rows.length === 1 ? '' : 's'}: ${b.krNumbers.map(n => 'KR ' + n).join(', ')}
-                </div>
-            </div>
-        `;
-    }).join('');
-
-    container.innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.75rem;">
-            <div style="flex: 1; min-width: 280px;">
-                <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem;">GWP Total — All Channels</div>
-                <div style="font-size: 2.75rem; font-weight: 800; color: var(--primary); font-family: 'Google Sans Text', sans-serif; line-height: 1.05; letter-spacing: -0.02em;">
-                    ${formatNumber(overallCurrent)}${overallUnit ? ' <span style="font-size: 1.25rem; color: var(--text-secondary); font-weight: 600;">' + overallUnit + '</span>' : ''}
-                </div>
-                <div style="font-size: 0.95rem; color: var(--text-secondary); margin-top: 0.5rem;">
-                    Target: <strong style="color: var(--primary);">${formatNumber(overallTarget)}${overallUnit ? ' ' + overallUnit : ''}</strong>
-                </div>
-            </div>
-            <span style="display: inline-block; padding: 0.6rem 1.25rem; background: ${overallColor}; color: white; border-radius: 999px; font-size: 0.95rem; font-weight: 700; white-space: nowrap;">
-                ${overallLabel}
-            </span>
-        </div>
-        <div style="display: grid; grid-template-columns: repeat(${validBuckets.length}, 1fr); gap: 1.25rem;">
-            ${cards}
-        </div>
-    `;
+    container.innerHTML = monthlyBlock + divider + ytdBlock;
 }
 
 // Render KR Status Overview (counts of achieved / slightly under / under)
@@ -2997,7 +3062,115 @@ function exportTableToPDF() {
         }
 
         // =============================================
-        // PAGE 2: KR Status Overview
+        // PAGE 2: Yearly GWP — Actual YTD vs Full-Year Target
+        // =============================================
+        doc.addPage();
+        drawPageHeader('OKR Dashboard - Yearly GWP (Year to Date)');
+
+        var ytd = computeExecSummary(true);
+        var ytdBuckets = ytd.buckets;
+
+        if (ytdBuckets.length === 0) {
+            doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(148, 163, 184);
+            doc.text('No KR data available for the yearly GWP summary.', pageWidth / 2, pageHeight / 2, { align: 'center' });
+        } else {
+            var yCurrent = ytd.overallCurrent;
+            var yTarget  = ytd.overallTarget;
+            var yPct     = ytd.overallPct;
+            var yUnit    = ytd.overallUnit;
+            var yToGo    = Math.max(0, yTarget - yCurrent);
+            var yYtdUnit = ytdUnitLabel(yUnit);
+
+            var yR, yG, yB;
+            if (yPct >= 100)     { yR = 16;  yG = 185; yB = 129; }
+            else if (yPct >= 90) { yR = 245; yG = 158; yB = 11;  }
+            else                 { yR = 239; yG = 68;  yB = 68;  }
+            var yLabel = yPct.toFixed(1) + '% to target';
+
+            // Hero: overall YTD total
+            var yHeroY = 32;
+            doc.setFillColor(248, 250, 252);
+            doc.roundedRect(14, yHeroY, pageWidth - 28, 30, 3, 3, 'F');
+            doc.setDrawColor(226, 232, 240);
+            doc.roundedRect(14, yHeroY, pageWidth - 28, 30, 3, 3, 'S');
+
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(100, 116, 139);
+            doc.text('GWP ACTUAL YTD - ALL CHANNELS', 20, yHeroY + 8);
+
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(15, 23, 42);
+            doc.text(formatNumber(yCurrent) + (yYtdUnit ? '  ' + yYtdUnit : ''), 20, yHeroY + 18);
+
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(71, 85, 105);
+            doc.text('Yearly target: ' + formatNumber(yTarget) + (yUnit ? ' ' + yUnit : '') +
+                '   |   ' + formatNumber(yToGo) + (yUnit ? ' ' + yUnit : '') + ' to go', 20, yHeroY + 25);
+
+            // Status pill on the right
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+            var yPillW = doc.getTextWidth(yLabel) + 8;
+            var yPillX = pageWidth - 14 - yPillW - 6;
+            doc.setFillColor(yR, yG, yB);
+            doc.roundedRect(yPillX, yHeroY + 12, yPillW, 8, 4, 4, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.text(yLabel, yPillX + yPillW / 2, yHeroY + 17.5, { align: 'center' });
+
+            // Three category cards
+            var yCardsY = yHeroY + 36;
+            var yCardW = (pageWidth - 28 - 6 * (ytdBuckets.length - 1)) / ytdBuckets.length;
+            var yCardH = 50;
+
+            ytdBuckets.forEach(function(b, i) {
+                var cx = 14 + i * (yCardW + 6);
+
+                var badgeR, badgeG, badgeB, badgeTxt;
+                if (b.pct >= 100)     { badgeR = 16;  badgeG = 185; badgeB = 129; badgeTxt = 'Above Target'; }
+                else if (b.pct >= 90) { badgeR = 245; badgeG = 158; badgeB = 11;  badgeTxt = 'Near Target'; }
+                else                  { badgeR = 239; badgeG = 68;  badgeB = 68;  badgeTxt = 'Below Target'; }
+
+                doc.setFillColor(255, 255, 255);
+                doc.roundedRect(cx, yCardsY, yCardW, yCardH, 2, 2, 'F');
+                doc.setDrawColor(226, 232, 240);
+                doc.roundedRect(cx, yCardsY, yCardW, yCardH, 2, 2, 'S');
+
+                doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(b.r, b.g, b.b);
+                doc.text(b.label, cx + 4, yCardsY + 7);
+
+                doc.setFontSize(6.5);
+                var badgeW = doc.getTextWidth(badgeTxt) + 4;
+                doc.setFillColor(badgeR, badgeG, badgeB);
+                doc.roundedRect(cx + yCardW - badgeW - 4, yCardsY + 3.5, badgeW, 5, 1.5, 1.5, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.text(badgeTxt, cx + yCardW - badgeW / 2 - 4, yCardsY + 7, { align: 'center' });
+
+                doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(71, 85, 105);
+                doc.text('Achieved ' + b.pct.toFixed(1) + '% of yearly target', cx + 4, yCardsY + 13);
+                doc.setTextColor(148, 163, 184); doc.setFontSize(6.5);
+                doc.text('Yearly target: ' + formatNumber(b.totalTarget) + (b.unit ? ' ' + b.unit : ''), cx + 4, yCardsY + 17);
+
+                var yBarY = yCardsY + 21;
+                doc.setFillColor(b.r, b.g, b.b);
+                doc.roundedRect(cx + 4, yBarY, yCardW - 8, 10, 1.5, 1.5, 'F');
+                doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(255, 255, 255);
+                doc.text('GWP Actual YTD', cx + 6, yBarY + 6.5);
+                doc.setFontSize(10);
+                doc.text(formatNumber(b.totalCurrent) + (b.unit ? ' ' + b.unit : ''), cx + yCardW - 6, yBarY + 6.5, { align: 'right' });
+
+                var yMiniBarY = yCardsY + 35;
+                doc.setFillColor(241, 245, 249);
+                doc.roundedRect(cx + 4, yMiniBarY, yCardW - 8, 2, 1, 1, 'F');
+                var yFillW = (yCardW - 8) * Math.max(0, Math.min(100, b.pct)) / 100;
+                if (yFillW > 0) {
+                    doc.setFillColor(badgeR, badgeG, badgeB);
+                    doc.roundedRect(cx + 4, yMiniBarY, yFillW, 2, 1, 1, 'F');
+                }
+
+                doc.setFont('helvetica', 'normal'); doc.setFontSize(5.5); doc.setTextColor(148, 163, 184);
+                var yToGoCard = Math.max(0, b.totalTarget - b.totalCurrent);
+                doc.text(formatNumber(yToGoCard) + (b.unit ? ' ' + b.unit : '') + ' to go', cx + 4, yCardsY + yCardH - 3);
+            });
+        }
+
+        // =============================================
+        // PAGE 3: KR Status Overview
         // =============================================
         doc.addPage();
         drawPageHeader('OKR Dashboard - KR Status Overview');
@@ -3636,6 +3809,37 @@ function buildDashboardEmailBody(intro) {
         });
     }
 
+    // ---------- Yearly GWP (Year to Date) ----------
+    lines.push('==============================');
+    lines.push('YEARLY GWP (YEAR TO DATE)');
+    lines.push('==============================');
+
+    var ytdSummary = computeExecSummary(true);
+    if (ytdSummary.buckets.length === 0) {
+        lines.push('(No KR data available)');
+    } else {
+        var yOverallUnit = ytdSummary.overallUnit;
+        var yYtdUnitTxt = ytdUnitLabel(yOverallUnit);
+        var yToGoTxt = Math.max(0, ytdSummary.overallTarget - ytdSummary.overallCurrent);
+        lines.push('GWP Actual YTD - All Channels: ' + formatNumber(ytdSummary.overallCurrent) + (yYtdUnitTxt ? ' ' + yYtdUnitTxt : ''));
+        lines.push('Yearly target:                 ' + formatNumber(ytdSummary.overallTarget)  + (yOverallUnit ? ' ' + yOverallUnit : ''));
+        lines.push('Progress:                      ' + ytdSummary.overallPct.toFixed(1) + '% to target');
+        lines.push('To go:                         ' + formatNumber(yToGoTxt) + (yOverallUnit ? ' ' + yOverallUnit : ''));
+        lines.push('');
+
+        ytdSummary.buckets.forEach(function(b) {
+            var status = b.pct >= 100 ? 'ABOVE TARGET' : b.pct >= 90 ? 'NEAR TARGET' : 'BELOW TARGET';
+            var bToGo = Math.max(0, b.totalTarget - b.totalCurrent);
+            lines.push('- ' + b.label + '  [' + status + ']');
+            lines.push('    GWP Actual YTD: ' + formatNumber(b.totalCurrent) + (b.unit ? ' ' + b.unit : ''));
+            lines.push('    Yearly target:  ' + formatNumber(b.totalTarget)  + (b.unit ? ' ' + b.unit : ''));
+            lines.push('    Achievement:    ' + b.pct.toFixed(1) + '% of yearly target');
+            lines.push('    To go:          ' + formatNumber(bToGo) + (b.unit ? ' ' + b.unit : ''));
+            lines.push('    KRs:            ' + b.krs.map(function(n) { return 'KR ' + n; }).join(', '));
+            lines.push('');
+        });
+    }
+
     // ---------- KR Status Overview ----------
     lines.push('==============================');
     lines.push('KR STATUS OVERVIEW');
@@ -3914,6 +4118,63 @@ function buildDashboardEmailHTML(intro) {
                     '<td style="padding: 12px 14px; color: #ffffff; font-size: 17px; font-weight: 800; text-align: right; letter-spacing: -0.02em;">' + esc(formatNumber(b.totalCurrent)) + (b.unit ? ' <span style="font-size: 11px; font-weight: 500; opacity: 0.85;">' + esc(b.unit) + '</span>' : '') + '</td>' +
                 '</tr></table>' +
                 '<div style="font-size: 10px; color: #94A3B8; margin-top: 10px;">' + b.rows.length + ' KR' + (b.rows.length === 1 ? '' : 's') + ': ' + b.krs.map(function(n) { return 'KR ' + esc(n); }).join(', ') + '</div>' +
+            '</td>';
+        });
+        html += '</tr></table>';
+    }
+
+    // =========================================
+    // Yearly GWP (Year to Date)
+    // =========================================
+    html += '<h2 style="margin: 28px 0 12px; font-size: 18px; color: #0F172A; border-left: 4px solid #10B981; padding-left: 10px;">Yearly GWP &mdash; Year to Date</h2>';
+
+    var ytdHtml = computeExecSummary(true);
+    if (ytdHtml.buckets.length === 0) {
+        html += '<p style="color: #64748B; font-style: italic;">No KR data available for the yearly GWP summary.</p>';
+    } else {
+        var yCur = ytdHtml.overallCurrent, yTgt = ytdHtml.overallTarget, yPct = ytdHtml.overallPct, yUnit = ytdHtml.overallUnit;
+        var yToGo = Math.max(0, yTgt - yCur);
+        var yYtdUnit = ytdUnitLabel(yUnit);
+        var yColor = yPct >= 100 ? '#10B981' : yPct >= 90 ? '#F59E0B' : '#EF4444';
+        var yLabelTxt = yPct.toFixed(1) + '% to target';
+
+        // Hero box
+        html += '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; background: #F8FAFC; border: 1px solid #E5E7EB; border-radius: 12px; margin-bottom: 16px;">' +
+            '<tr><td style="padding: 22px 26px;">' +
+                '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;"><tr>' +
+                    '<td style="vertical-align: top;">' +
+                        '<div style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: #64748B; text-transform: uppercase; margin-bottom: 6px;">GWP Actual YTD &mdash; All Channels</div>' +
+                        '<div style="font-size: 28px; font-weight: 800; color: #0F172A; letter-spacing: -0.02em; line-height: 1.1;">' + esc(formatNumber(yCur)) + (yYtdUnit ? ' <span style="font-size: 14px; color: #64748B; font-weight: 600;">' + esc(yYtdUnit) + '</span>' : '') + '</div>' +
+                        '<div style="font-size: 13px; color: #475569; margin-top: 6px;">Yearly target: <strong>' + esc(formatNumber(yTgt)) + (yUnit ? ' ' + esc(yUnit) : '') + '</strong> &middot; <strong style="color: ' + yColor + ';">' + esc(formatNumber(yToGo)) + (yUnit ? ' ' + esc(yUnit) : '') + '</strong> to go</div>' +
+                    '</td>' +
+                    '<td style="vertical-align: top; text-align: right; white-space: nowrap;">' +
+                        '<span style="display: inline-block; padding: 8px 16px; background: ' + yColor + '; color: #ffffff; border-radius: 999px; font-size: 13px; font-weight: 700;">' + esc(yLabelTxt) + '</span>' +
+                    '</td>' +
+                '</tr></table>' +
+            '</td></tr>' +
+        '</table>';
+
+        // Category cards
+        html += '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: separate; border-spacing: 8px 0; margin-bottom: 20px;"><tr>';
+        ytdHtml.buckets.forEach(function(b) {
+            var badgeColor, badgeBg, badgeTxt;
+            if (b.pct >= 100)     { badgeColor = '#10B981'; badgeBg = '#ECFDF5'; badgeTxt = 'Above Target'; }
+            else if (b.pct >= 90) { badgeColor = '#F59E0B'; badgeBg = '#FFFBEB'; badgeTxt = 'Near Target'; }
+            else                  { badgeColor = '#EF4444'; badgeBg = '#FEF2F2'; badgeTxt = 'Below Target'; }
+            var bToGo = Math.max(0, b.totalTarget - b.totalCurrent);
+
+            html += '<td style="vertical-align: top; width: 33%; background: #ffffff; border: 1px solid #E5E7EB; border-radius: 12px; padding: 18px 20px;">' +
+                '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; margin-bottom: 10px;"><tr>' +
+                    '<td style="font-weight: 800; font-size: 15px; color: ' + b.color + ';">' + esc(b.label) + '</td>' +
+                    '<td style="text-align: right; white-space: nowrap;"><span style="display: inline-block; padding: 4px 10px; background: ' + badgeBg + '; color: ' + badgeColor + '; border: 1px solid ' + badgeColor + '; border-radius: 999px; font-size: 10px; font-weight: 700;">' + esc(badgeTxt) + '</span></td>' +
+                '</tr></table>' +
+                '<div style="font-size: 13px; color: #475569; margin-bottom: 4px;">Achieved <strong style="color: ' + badgeColor + ';">' + b.pct.toFixed(1) + '%</strong> of yearly target</div>' +
+                '<div style="font-size: 11px; color: #94A3B8; margin-bottom: 14px;">Yearly target: ' + esc(formatNumber(b.totalTarget)) + (b.unit ? ' ' + esc(b.unit) : '') + '</div>' +
+                '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; background: ' + b.color + '; border-radius: 8px;"><tr>' +
+                    '<td style="padding: 12px 14px; color: #ffffff; font-size: 12px; font-weight: 700;">GWP Actual YTD</td>' +
+                    '<td style="padding: 12px 14px; color: #ffffff; font-size: 17px; font-weight: 800; text-align: right; letter-spacing: -0.02em;">' + esc(formatNumber(b.totalCurrent)) + (b.unit ? ' <span style="font-size: 11px; font-weight: 500; opacity: 0.85;">' + esc(b.unit) + '</span>' : '') + '</td>' +
+                '</tr></table>' +
+                '<div style="font-size: 10px; color: #94A3B8; margin-top: 10px;">' + esc(formatNumber(bToGo)) + (b.unit ? ' ' + esc(b.unit) : '') + ' to go &middot; ' + b.krs.map(function(n) { return 'KR ' + esc(n); }).join(', ') + '</div>' +
             '</td>';
         });
         html += '</tr></table>';
