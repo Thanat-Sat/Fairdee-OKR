@@ -843,6 +843,31 @@ function getYTDValue(row) {
     return found ? sum : null;
 }
 
+// True year-to-date, INDEPENDENT of the month selector: always sums from the start
+// of the latest data year up to the latest available month. Used by the executive
+// summary's YTD block so it reflects the real YTD regardless of the selected month.
+function getYTDValueUnbound(row) {
+    if (!row || !row.monthlyData) return null;
+    let latest = null;
+    for (let i = allMonths.length - 1; i >= 0; i--) {
+        if (row.monthlyData.has(allMonths[i])) { latest = allMonths[i]; break; }
+    }
+    const effNorm = normalizeMonth(latest);
+    if (!effNorm) return null;
+    const effYear = effNorm.slice(0, 4);
+    let sum = 0;
+    let found = false;
+    for (const m of allMonths) {
+        const norm = normalizeMonth(m);
+        if (!norm || norm.slice(0, 4) !== effYear || norm > effNorm) continue;
+        if (row.monthlyData.has(m)) {
+            sum += row.monthlyData.get(m);
+            found = true;
+        }
+    }
+    return found ? sum : null;
+}
+
 // Year-to-date average of the row's monthly values (start of year up to the effective
 // month). Used for percentage/rate KRs, where summing months is meaningless.
 function getYTDAverage(row) {
@@ -2047,7 +2072,8 @@ function computeExecSummary(isYTD) {
         var rows = filteredData.filter(function (r) { return matchKR(r, cat.krNumbers); });
         var totalCurrent = 0, totalTarget = 0, unit = '';
         rows.forEach(function (r) {
-            var c = isYTD ? getYTDValue(r) : getLatestValue(r);
+            // YTD block is unbound from the month selector — always true year-to-date.
+            var c = isYTD ? getYTDValueUnbound(r) : getLatestValue(r);
             var t = isYTD ? getFullYearTarget(r) : getTarget(r);
             if (typeof c === 'number' && !isNaN(c)) totalCurrent += c;
             if (typeof t === 'number' && !isNaN(t)) totalTarget += t;
