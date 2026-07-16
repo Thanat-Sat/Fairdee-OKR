@@ -73,6 +73,11 @@ db-tools/.env
 db-tools/.env.local
 db-tools/node_modules/
 
+# Service-account / credential keys — NEVER commit
+*firebase-adminsdk*.json
+*serviceaccount*.json
+sa-*.json
+
 # Redshift export data — deployed to hosting but kept out of git because it
 # contains employee emails (kr_owner_name). Regenerate with db-tools/export-okr.js.
 public/data/
