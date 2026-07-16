@@ -203,7 +203,7 @@ function _setOkrProgressBanner(state, title, pct) {
 }
 
 // Show banner on initial load
-_setOkrProgressBanner('show', 'Fetching Google Sheets · 0 of ' + _totalSources, 0);
+_setOkrProgressBanner('show', 'Fetching data · 0 of ' + _totalSources, 0);
 
 function _getOkrFetchErrorCount() {
     return _sheetFetchStatusIds.reduce(function(count, id) {
@@ -221,14 +221,14 @@ function _markSourceLoaded() {
     if (fill) fill.style.width = pct + '%';
     if (countEl) countEl.textContent = _loadedCount + ' / ' + _totalSources;
     if (_loadedCount < _totalSources) {
-        _setOkrSheetSyncStatus('loading', 'Fetching Google Sheets ' + _loadedCount + ' / ' + _totalSources);
-        _setOkrProgressBanner('show', 'Fetching Google Sheets · ' + _loadedCount + ' of ' + _totalSources, pct);
+        _setOkrSheetSyncStatus('loading', 'Fetching data ' + _loadedCount + ' / ' + _totalSources);
+        _setOkrProgressBanner('show', 'Fetching data · ' + _loadedCount + ' of ' + _totalSources, pct);
     }
     if (_loadedCount >= _totalSources) {
         var errorCount = _getOkrFetchErrorCount();
         var syncText = errorCount
-            ? 'Google Sheets fetch complete with ' + errorCount + ' issue' + (errorCount === 1 ? '' : 's')
-            : 'Google Sheets synced at ' + _formatSyncTime(new Date());
+            ? 'Data sync complete with ' + errorCount + ' issue' + (errorCount === 1 ? '' : 's')
+            : 'Data synced at ' + _formatSyncTime(new Date());
         if (textEl) textEl.textContent = syncText;
         _setOkrSheetSyncStatus(errorCount ? 'warning' : 'success', syncText);
         _setOkrProgressBanner('complete', syncText, 100);
@@ -4710,9 +4710,9 @@ function resetDashboard() {
     if (bar) bar.style.display = 'flex';
     if (fill) fill.style.width = '0%';
     if (countEl) countEl.textContent = '0 / ' + _totalSources;
-    if (textEl) textEl.textContent = 'Fetching data from Google Sheets...';
-    _setOkrSheetSyncStatus('loading', 'Fetching Google Sheets...');
-    _setOkrProgressBanner('show', 'Fetching Google Sheets · 0 of ' + _totalSources, 0);
+    if (textEl) textEl.textContent = 'Fetching data...';
+    _setOkrSheetSyncStatus('loading', 'Fetching data...');
+    _setOkrProgressBanner('show', 'Fetching data · 0 of ' + _totalSources, 0);
 
     // Re-fetch all data (OKR from Redshift export; others still from Google Sheets)
     fetchOKRData();
