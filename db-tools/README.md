@@ -28,29 +28,47 @@ node explore.js sample public.some_table 10  # preview 10 rows
 
 It only runs SELECT / catalog queries and never prints your password.
 
-## Export the OKR data for the dashboard (Option A: scheduled export)
+## Mirror the OKR data into Firestore (secure + free)
 
 Source table: `th_datamart.fm_fairdee_okr_2026`.
 
+The dashboard reads OKR data from a single **Firestore** document
+`okr_data/okr-2026` in the **fairdee-monthly-metr** project. Firestore security
+rules only allow signed-in `@fairdee.co.th` users to read it, so the numbers are
+NOT published to any public file. (One document = one Firestore read per page load
+= comfortably inside the free tier.)
+
+`export-okr-firestore.js` reads Redshift and writes that document via the Admin
+SDK (which bypasses the client rules).
+
+Local run:
+
 ```bash
 cd db-tools
-node export-okr.js        # writes ../public/data/okr-2026.json
+npm install
+# Service account for the fairdee-monthly-metr project (Firebase console →
+# Project settings → Service accounts → Generate new private key):
+GOOGLE_APPLICATION_CREDENTIALS=./sa-monthly-metr.json node export-okr-firestore.js
 ```
 
-The dashboard's front-end (`fetchOKRData()` in public/script.js) loads that JSON
-instead of the Google Sheet. If the JSON is missing/unreachable it automatically
-falls back to the old Google Sheet, so nothing breaks.
+Keep the service-account JSON OUT of git (it's a credential). The `db-tools/.env`
+still holds the Redshift creds.
 
-After a successful export, deploy (deploy does NOT connect to Redshift):
+## Automated (GitHub Action)
+
+`.github/workflows/refresh-okr-data.yml` runs `export-okr-firestore.js` daily at
+09:00 ICT (02:00 UTC) and on manual dispatch. Repo secrets required:
+
+- Redshift: `PGHOST` `PGPORT` `PGDATABASE` `PGUSER` `PGPASSWORD`
+- Firestore: `FIRESTORE_SA_JSON` — the fairdee-monthly-metr service-account JSON,
+  pasted as a single secret value.
+
+No data or credentials are ever committed or published to hosting.
+
+## Deploy the Firestore rules (once)
 
 ```bash
-cd ..
-firebase deploy --only hosting
+firebase deploy --only firestore:rules --project fairdee-monthly-metr
 ```
 
-## Automating (later)
-
-Move `node export-okr.js` into a GitHub Action on a cron schedule, with the
-Redshift creds stored as **repo secrets** (PGHOST/PGPORT/PGDATABASE/PGUSER/
-PGPASSWORD). The action exports, commits `public/data/okr-2026.json`, and
-deploys — so credentials never live in the browser or in the repo.
+(or paste `firestore.rules` into Firebase console → Firestore → Rules.)

@@ -44,5 +44,14 @@ service cloud.firestore {
     match /targets/{targetId} {
       allow read, write: if isFairdee();
     }
+
+    // ---- OKR data snapshot (daily Redshift mirror) ----
+    // Read: any signed-in @fairdee.co.th user. Write: nobody from the client —
+    // only the GitHub Action's Admin SDK writes it (the Admin SDK bypasses these
+    // rules), so the numbers can't be read anonymously or altered from a browser.
+    match /okr_data/{docId} {
+      allow read:  if isFairdee();
+      allow write: if false;
+    }
   }
 }

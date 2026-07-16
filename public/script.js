@@ -663,30 +663,45 @@ function fetchOKRSheetData() {
         });
 }
 
-// Fetch OKR data from the Redshift export (public/data/okr-2026.json), produced by
-// db-tools/export-okr.js. Falls back to the Google Sheet if the export isn't there
-// yet or fails to load, so the dashboard never ends up empty.
+// Fetch OKR data from Firestore (okr_data/okr-2026), a daily mirror of the Redshift
+// table written by the GitHub Action. The document is readable ONLY by a signed-in
+// @fairdee.co.th user (enforced by Firestore security rules), so the numbers are not
+// publicly accessible. There is deliberately NO public-Google-Sheet fallback here —
+// that would defeat the access control.
+let _okrDataLoaded = false;
 function fetchOKRData() {
-    const JSON_URL = 'data/okr-2026.json?t=' + Date.now();
+    if (typeof db === 'undefined' || !db) {
+        showUploadStatus('dataFileStatus', 'error', 'Firestore not available.');
+        _markSourceLoaded();
+        return;
+    }
 
-    showUploadStatus('dataFileStatus', 'loading', 'Fetching OKR data from Redshift export...');
+    // The Firestore read requires an authenticated @fairdee.co.th user. If nobody is
+    // signed in yet, wait — onAuthStateChanged (below) calls this again after sign-in.
+    const user = (typeof auth !== 'undefined' && auth) ? auth.currentUser : null;
+    if (!user) {
+        showUploadStatus('dataFileStatus', 'loading', 'Sign in with your @fairdee.co.th account to load OKR data…');
+        return;
+    }
 
-    fetch(JSON_URL)
-        .then(function(r) {
-            if (!r.ok) throw new Error('HTTP ' + r.status);
-            return r.json();
-        })
-        .then(function(payload) {
-            const rows = Array.isArray(payload) ? payload
-                : (payload && (payload.rows || payload.data)) || [];
-            if (!rows.length) throw new Error('empty dataset');
+    if (_okrDataLoaded) return; // already loaded this session
+    showUploadStatus('dataFileStatus', 'loading', 'Loading OKR data…');
+
+    db.collection('okr_data').doc('okr-2026').get()
+        .then(function(snap) {
+            if (!snap.exists) throw new Error('okr_data/okr-2026 not found — run the refresh workflow');
+            const payload = snap.data() || {};
+            const rows = payload.rows || [];
+            if (!rows.length) throw new Error('no rows in okr_data');
+            _okrDataLoaded = true;
             const fields = Object.keys(rows[0]);
             // Reuse the exact same processing path as the CSV/Sheet source.
-            processOKRParsedData({ data: rows, meta: { fields: fields } }, 'Redshift export');
+            processOKRParsedData({ data: rows, meta: { fields: fields } }, 'Redshift mirror');
         })
         .catch(function(err) {
-            console.warn('Redshift export load failed (' + err.message + '); falling back to Google Sheets.');
-            fetchOKRSheetData();
+            console.error('OKR Firestore load failed:', err);
+            showUploadStatus('dataFileStatus', 'error', 'Could not load OKR data: ' + (err && err.message || err));
+            _markSourceLoaded();
         });
 }
 
@@ -1097,10 +1112,16 @@ async function saveSettingsAccess(emails) {
     }
 }
 
-// Load all OKR settings once the user is authenticated (Firestore reads need the auth token).
+// Load all OKR settings AND the OKR data once the user is authenticated
+// (both Firestore reads need the auth token / @fairdee.co.th claim).
 (function initOkrSettings() {
     if (typeof auth !== 'undefined' && auth) {
-        auth.onAuthStateChanged(function(user) { if (user) loadOkrSettings(); });
+        auth.onAuthStateChanged(function(user) {
+            if (user) {
+                loadOkrSettings();
+                if (typeof fetchOKRData === 'function') fetchOKRData();
+            }
+        });
     } else {
         loadOkrSettings();
     }
@@ -4714,7 +4735,8 @@ function resetDashboard() {
     _setOkrSheetSyncStatus('loading', 'Fetching data...');
     _setOkrProgressBanner('show', 'Fetching data · 0 of ' + _totalSources, 0);
 
-    // Re-fetch all data (OKR from Redshift export; others still from Google Sheets)
+    // Re-fetch all data (OKR from the Firestore Redshift mirror; others from Sheets)
+    _okrDataLoaded = false; // allow a manual refresh to reload
     fetchOKRData();
     fetchFirstTransactingData();
     fetchEarlyRetentionData();
