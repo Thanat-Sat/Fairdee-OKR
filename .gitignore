@@ -68,8 +68,10 @@ node_modules/
 # dataconnect generated files
 .dataconnect
 
-# Local DB exploration tooling (never commit)
-db-tools/
+# DB tooling: commit the scripts (CI needs them) but NEVER the secrets/deps
+db-tools/.env
+db-tools/.env.local
+db-tools/node_modules/
 
 # Redshift export data — deployed to hosting but kept out of git because it
 # contains employee emails (kr_owner_name). Regenerate with db-tools/export-okr.js.

@@ -1,0 +1,14 @@
+{
+  "name": "fairdee-okr-db-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Read-only Redshift explorer + OKR export for the Fairdee OKR dashboard.",
+  "scripts": {
+    "export": "node export-okr.js",
+    "explore": "node explore.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "pg": "^8.11.5"
+  }
+}

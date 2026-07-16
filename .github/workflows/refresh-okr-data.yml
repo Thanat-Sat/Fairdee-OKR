@@ -1,0 +1,56 @@
+name: Refresh OKR data from Redshift
+
+# Runs the Redshift export and deploys the dashboard so the OKR numbers stay fresh.
+# The generated public/data/okr-2026.json is NOT committed (it contains employee
+# emails and the repo is public) — the job builds it and deploys it directly.
+
+on:
+  schedule:
+    # 09:00 Asia/Bangkok (ICT, UTC+7) == 02:00 UTC, every day.
+    # (GitHub cron is always UTC and has no DST — Thailand has no DST either.)
+    - cron: '0 2 * * *'
+  workflow_dispatch: {}   # allow manual "Run workflow" from the Actions tab
+
+concurrency:
+  group: refresh-okr-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install db-tools dependencies
+        working-directory: db-tools
+        run: npm install --no-audit --no-fund
+
+      - name: Export OKR data from Redshift
+        working-directory: db-tools
+        env:
+          PGHOST: ${{ secrets.PGHOST }}
+          PGPORT: ${{ secrets.PGPORT }}
+          PGDATABASE: ${{ secrets.PGDATABASE }}
+          PGUSER: ${{ secrets.PGUSER }}
+          PGPASSWORD: ${{ secrets.PGPASSWORD }}
+          PGSSL: ${{ secrets.PGSSL || 'require' }}
+        run: node export-okr.js
+
+      - name: Verify the export produced data
+        run: |
+          test -s public/data/okr-2026.json || { echo "Export produced no data"; exit 1; }
+          node -e "const p=require('./public/data/okr-2026.json'); if(!(p.rows&&p.rows.length)){console.error('empty rows');process.exit(1)} console.log('rows:',p.rowCount,'months:',(p.months||[]).join(', '))"
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Deploy to Firebase Hosting
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: firebase deploy --only hosting --project fairdee-okr --token "$FIREBASE_TOKEN" --non-interactive
