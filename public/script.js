@@ -663,6 +663,33 @@ function fetchOKRSheetData() {
         });
 }
 
+// Fetch OKR data from the Redshift export (public/data/okr-2026.json), produced by
+// db-tools/export-okr.js. Falls back to the Google Sheet if the export isn't there
+// yet or fails to load, so the dashboard never ends up empty.
+function fetchOKRData() {
+    const JSON_URL = 'data/okr-2026.json?t=' + Date.now();
+
+    showUploadStatus('dataFileStatus', 'loading', 'Fetching OKR data from Redshift export...');
+
+    fetch(JSON_URL)
+        .then(function(r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        })
+        .then(function(payload) {
+            const rows = Array.isArray(payload) ? payload
+                : (payload && (payload.rows || payload.data)) || [];
+            if (!rows.length) throw new Error('empty dataset');
+            const fields = Object.keys(rows[0]);
+            // Reuse the exact same processing path as the CSV/Sheet source.
+            processOKRParsedData({ data: rows, meta: { fields: fields } }, 'Redshift export');
+        })
+        .catch(function(err) {
+            console.warn('Redshift export load failed (' + err.message + '); falling back to Google Sheets.');
+            fetchOKRSheetData();
+        });
+}
+
 // Populate filter dropdowns
 function populateFilters() {
     // Populate month dropdown
@@ -4687,8 +4714,8 @@ function resetDashboard() {
     _setOkrSheetSyncStatus('loading', 'Fetching Google Sheets...');
     _setOkrProgressBanner('show', 'Fetching Google Sheets · 0 of ' + _totalSources, 0);
 
-    // Re-fetch all data from Google Sheets
-    fetchOKRSheetData();
+    // Re-fetch all data (OKR from Redshift export; others still from Google Sheets)
+    fetchOKRData();
     fetchFirstTransactingData();
     fetchEarlyRetentionData();
     fetchTeamPerfData();
@@ -7471,7 +7498,7 @@ window.addEventListener('message', function (e) {
 });
 
 // Auto-fetch all data on page load
-fetchOKRSheetData();
+fetchOKRData();
 fetchFirstTransactingData();
 fetchEarlyRetentionData();
 fetchTeamPerfData();

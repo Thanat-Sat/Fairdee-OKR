@@ -67,3 +67,10 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# Local DB exploration tooling (never commit)
+db-tools/
+
+# Redshift export data — deployed to hosting but kept out of git because it
+# contains employee emails (kr_owner_name). Regenerate with db-tools/export-okr.js.
+public/data/
