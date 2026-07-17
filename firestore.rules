@@ -53,5 +53,15 @@ service cloud.firestore {
       allow read:  if isFairdee();
       allow write: if false;
     }
+
+    // ---- Monthly Metrics sheet mirror (daily Google Sheets mirror) ----
+    // Same shape as okr_data: written only by the Fairdee_MM repo's GitHub
+    // Action ("Refresh Monthly Metrics data") via the Admin SDK, so the
+    // spreadsheets can be unpublished and the numbers can't be read anonymously.
+    // Reader: public/mm-data-store.js in the Fairdee_MM repo.
+    match /mm_data/{docId} {
+      allow read:  if isFairdee();
+      allow write: if false;
+    }
   }
 }
